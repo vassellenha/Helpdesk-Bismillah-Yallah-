@@ -2,11 +2,14 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditTrailController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\SlaPolicyController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketDetailController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +21,17 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/support', [DashboardController::class, 'support'])->name('support');
     Route::get('/team-lead', [DashboardController::class, 'teamLead'])->name('team-lead');
     Route::get('/eva', [DashboardController::class, 'eva'])->name('eva');
+});
+
+Route::prefix('requester')->name('requester.')->group(function () {
+    Route::get('/tickets', [DashboardController::class, 'myTickets'])->name('tickets');
+    Route::get('/tickets/{ticket}', [TicketDetailController::class, 'show'])->name('tickets.show');
+    Route::post('/tickets/{ticket}/comments', [TicketDetailController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/tickets/{ticket}/reopen', [TicketDetailController::class, 'reopen'])->name('tickets.reopen');
+    Route::post('/tickets/{ticket}/close', [TicketDetailController::class, 'close'])->name('tickets.close');
+    Route::post('/tickets/{ticket}/attachment', [TicketDetailController::class, 'uploadAttachment'])->name('tickets.attachment');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -60,3 +74,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // Read by any workspace that needs live SLA data (Requester new-ticket form).
 Route::get('/api/sla-policies/active', [SlaPolicyController::class, 'activeForRequester'])->name('sla-policies.active');
 Route::post('/api/tickets', [TicketController::class, 'store'])->name('tickets.store');
+Route::get('/api/catalog', [CatalogController::class, 'tree'])->name('catalog.tree');
+Route::get('/api/approvers', [CatalogController::class, 'approvers'])->name('approvers.index');
