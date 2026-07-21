@@ -148,7 +148,7 @@ class ServiceCatalogController extends Controller
     {
         $data = $request->validate([
             'support_agent_id' => 'nullable|integer|exists:support_agents,id',
-            'support_level' => 'required|integer|min:1|max:3',
+            'support_level' => 'required|integer|min:1|max:2',
         ]);
         $actor = CurrentActor::admin();
 
@@ -280,7 +280,7 @@ class ServiceCatalogController extends Controller
             'subject' => 'required|string|max:255',
             'requires_approval' => 'required|boolean',
             'support_agent_id' => 'nullable|integer|exists:support_agents,id',
-            'support_level' => 'required|integer|min:1|max:3',
+            'support_level' => 'required|integer|min:1|max:2',
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);
     }

@@ -5,7 +5,7 @@ import { LEVEL_DESCRIPTIONS } from '../../lib/formatters';
 
 const ISSUE_CATEGORIES = ['Incident', 'Service Request', 'Access Request'];
 
-export default function ServiceCatalogFormModal({ subject, services, subcategories, supportAgents, onClose, onSaved }) {
+export default function ServiceCatalogFormModal({ subject, supportAgents, onClose, onSaved }) {
     const isEdit = !!subject && !subject.__duplicate;
     const [form, setForm] = useState({
         issue_category: subject?.issue_category ?? 'Incident',
@@ -81,17 +81,11 @@ export default function ServiceCatalogFormModal({ subject, services, subcategori
                 </Field>
 
                 <Field label="Layanan">
-                    <input list="layanan-options" value={form.layanan} onChange={(e) => set('layanan', e.target.value)} placeholder="mis. SAP, VPN, Printer" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
-                    <datalist id="layanan-options">
-                        {services.map((s) => <option key={s.id} value={s.name} />)}
-                    </datalist>
+                    <input value={form.layanan} onChange={(e) => set('layanan', e.target.value)} placeholder="mis. SAP, VPN, Printer" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
                 </Field>
 
                 <Field label="Sub Category">
-                    <input list="subcategory-options" value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)} placeholder="mis. Login SAP" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
-                    <datalist id="subcategory-options">
-                        {subcategories.map((s) => <option key={s.id} value={s.name} />)}
-                    </datalist>
+                    <input value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)} placeholder="mis. Login SAP" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
                 </Field>
 
                 <Field label="Subject">
@@ -112,7 +106,7 @@ export default function ServiceCatalogFormModal({ subject, services, subcategori
                             onChange={(e) => setForm((prev) => ({ ...prev, support_level: e.target.value, support_agent_id: '' }))}
                             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none"
                         >
-                            {[1, 2, 3].map((lvl) => (
+                            {[1, 2].map((lvl) => (
                                 <option key={lvl} value={lvl}>Level {lvl} — {LEVEL_DESCRIPTIONS[lvl]}</option>
                             ))}
                         </select>

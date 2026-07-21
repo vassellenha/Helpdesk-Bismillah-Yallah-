@@ -1,5 +1,5 @@
 export default function AvgResolutionBar({ data = [] }) {
-    const max = Math.max(...data.map((d) => d.hours));
+    const max = Math.max(0, ...data.map((d) => d.hours));
     const worst = data.reduce((a, b) => (b.hours > a.hours ? b : a), data[0]);
 
     return (
@@ -10,8 +10,8 @@ export default function AvgResolutionBar({ data = [] }) {
                         <span className="w-40 shrink-0 text-gray-600">{d.label}</span>
                         <div className="h-3 flex-1 overflow-hidden rounded-full bg-gray-100">
                             <div
-                                className={`h-full rounded-full ${d.label === worst.label ? 'bg-amber-500' : 'bg-blue-600'}`}
-                                style={{ width: `${(d.hours / max) * 100}%` }}
+                                className={`h-full rounded-full ${max > 0 && d.label === worst.label ? 'bg-amber-500' : 'bg-blue-600'}`}
+                                style={{ width: max > 0 ? `${(d.hours / max) * 100}%` : '0%' }}
                             />
                         </div>
                         <span className="w-16 shrink-0 text-right font-semibold text-gray-900">
@@ -21,7 +21,11 @@ export default function AvgResolutionBar({ data = [] }) {
                 ))}
             </ul>
             <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-                <strong>{worst.label}</strong> memiliki rata-rata waktu penyelesaian tertinggi dan perlu ditinjau pada proses approval serta ketersediaan stok.
+                {max > 0 ? (
+                    <><strong>{worst.label}</strong> memiliki rata-rata waktu penyelesaian tertinggi dan perlu ditinjau pada proses approval serta ketersediaan stok.</>
+                ) : (
+                    'Belum ada tiket yang selesai (Resolved/Closed), sehingga rata-rata waktu penyelesaian belum dapat dihitung.'
+                )}
             </p>
         </div>
     );

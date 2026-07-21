@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\TicketManagementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\CatalogController;
@@ -40,7 +41,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/sla', [SlaPolicyController::class, 'index'])->name('sla');
     Route::get('/audit-trail', [AuditTrailController::class, 'index'])->name('audit-trail');
     Route::get('/service-catalog', [ServiceCatalogController::class, 'index'])->name('service-catalog');
-    Route::get('/ticket-management', fn () => app(AdminController::class)->placeholder('Ticket Management'))->name('ticket-management');
+    Route::get('/ticket-management', [TicketManagementController::class, 'index'])->name('ticket-management');
+    Route::get('/ticket-management/export', [TicketManagementController::class, 'export'])->name('ticket-management.export');
 
     Route::prefix('sla-policies')->name('sla-policies.')->group(function () {
         Route::get('/', [SlaPolicyController::class, 'list'])->name('list');
