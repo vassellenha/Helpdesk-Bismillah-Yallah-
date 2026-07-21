@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SupportAgent extends Model
 {
-    protected $fillable = ['name', 'type', 'is_active'];
+    protected $fillable = ['name', 'email', 'type', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
 }

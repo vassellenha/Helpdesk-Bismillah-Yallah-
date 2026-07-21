@@ -20,6 +20,7 @@ class UserRoleSeeder extends Seeder
     ];
 
     private const USERS = [
+        ['name' => 'Andi Pratama', 'nip' => '19950418102', 'email' => 'andi.pratama@adhi.co.id', 'whatsapp' => '+6281200011122', 'unit' => 'IT & Operations Bureau', 'jabatan' => 'Requester', 'roles' => ['Requester'], 'status' => 'active'],
         ['name' => 'Marcell Laforteza', 'nip' => '19870114001', 'email' => 'marcell.laforteza@adhi.co.id', 'whatsapp' => '+6281234567890', 'unit' => 'Dept. Strategi Korporasi', 'jabatan' => 'Administrator Sistem', 'roles' => ['Administrator', 'Requester'], 'status' => 'active'],
         ['name' => 'Karina Putri', 'nip' => '19900322014', 'email' => 'karina.putri@adhi.co.id', 'whatsapp' => '+6281298765432', 'unit' => 'Dept. Pengendali Operasi', 'jabatan' => 'Manager Dept. Pengendali Operasi', 'roles' => ['Approver', 'Team Lead', 'Requester'], 'status' => 'active'],
         ['name' => 'Rizky Hidayat', 'nip' => '19880609027', 'email' => 'rizky.hidayat@adhi.co.id', 'whatsapp' => '+6281322233344', 'unit' => 'Dept. Supply Chain Management', 'jabatan' => 'Team Lead', 'roles' => ['Team Lead', 'Requester'], 'status' => 'active'],

@@ -16,4 +16,9 @@ class CurrentActor
     {
         return User::where('email', 'marcell.laforteza@adhi.co.id')->firstOrFail();
     }
+
+    public static function requester(): User
+    {
+        return User::where('email', 'andi.pratama@adhi.co.id')->firstOrFail();
+    }
 }
