@@ -6,12 +6,11 @@
     $stats = [
         ['label' => 'TOTAL USER', 'value' => $totalUsers, 'icon' => 'users', 'bg' => 'bg-blue-50', 'color' => 'text-blue-600'],
         ['label' => 'ROLE AKTIF', 'value' => $activeRoles, 'icon' => 'check', 'bg' => 'bg-emerald-50', 'color' => 'text-emerald-600'],
-        ['label' => 'SERVICE CATALOG', 'value' => 32, 'icon' => 'catalog', 'bg' => 'bg-amber-50', 'color' => 'text-amber-600'],
-        ['label' => 'APPROVAL MATRIX', 'value' => 18, 'icon' => 'gear', 'bg' => 'bg-blue-50', 'color' => 'text-blue-600'],
+        ['label' => 'SERVICE CATALOG', 'value' => $serviceCatalogCount, 'icon' => 'catalog', 'bg' => 'bg-amber-50', 'color' => 'text-amber-600'],
+        ['label' => 'APPROVAL MATRIX', 'value' => $approvalMatrixCount, 'icon' => 'gear', 'bg' => 'bg-blue-50', 'color' => 'text-blue-600'],
         ['label' => 'SLA POLICY AKTIF', 'value' => $slaPolicyActiveCount, 'icon' => 'dot', 'bg' => 'bg-red-50', 'color' => 'text-red-600'],
         ['label' => 'AUDIT LOG HARI INI', 'value' => $auditLogToday, 'icon' => 'doc', 'bg' => 'bg-gray-100', 'color' => 'text-gray-600'],
     ];
-    $totalTiket = collect($categoryDistribution)->sum('value') > 0 ? 1248 : 0;
 @endphp
 
 @section('content')
@@ -65,7 +64,7 @@
     <div class="space-y-6">
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="text-base font-bold text-gray-900">Distribusi Tiket per Kategori</h2>
-            <div class="mt-4" data-react="TicketCategoryDonut" data-props="{{ json_encode(['data' => $categoryDistribution, 'total' => $totalTiket]) }}"></div>
+            <div class="mt-4" data-react="TicketCategoryDonut" data-props="{{ json_encode(['data' => $categoryDistribution, 'total' => $totalTicketCount]) }}"></div>
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -96,7 +95,7 @@
         <p class="mb-3 text-sm text-gray-400">Analisis pelanggaran SLA berdasarkan prioritas tiket dalam 6 bulan terakhir.</p>
         <div data-react="SlaTrendChart" data-props="{{ json_encode(['data' => $slaTrend]) }}"></div>
         <p class="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-            Pelanggaran SLA kategori Medium dan High meningkat dalam 3 bulan terakhir. Administrator perlu meninjau SLA policy, routing tiket, dan kapasitas support.
+            {{ $slaTrendInsight }}
         </p>
     </div>
 
@@ -113,7 +112,7 @@
         <p class="mb-3 text-sm text-gray-400">Perbandingan jumlah tiket Incident, Service Request, dan Access Request dalam 6 bulan terakhir.</p>
         <div data-react="TicketTrendChart" data-props="{{ json_encode(['data' => $ticketTrend]) }}"></div>
         <p class="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-            Incident dan Access Request menunjukkan kenaikan konsisten dalam 3 bulan terakhir. Administrator perlu mengevaluasi service catalog, knowledge base, dan kapasitas support.
+            {{ $ticketTrendInsight }}
         </p>
     </div>
 
@@ -122,7 +121,7 @@
         <p class="mb-3 text-sm text-gray-400">Analisis layanan yang paling sering diajukan pengguna pada bulan berjalan.</p>
         <div data-react="TopServiceBarChart" data-props="{{ json_encode(['data' => $topServiceCatalog]) }}"></div>
         <p class="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-            <strong>Reset Password</strong> dan <strong>SAP Login Error</strong> menjadi layanan dengan volume tertinggi. Administrator dapat mempertimbangkan peningkatan FAQ, troubleshooting guide, dan automation untuk mengurangi tiket berulang.
+            {!! $topServiceInsight !!}
         </p>
     </div>
 </div>

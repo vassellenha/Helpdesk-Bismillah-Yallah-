@@ -17,6 +17,7 @@ import SlaPolicyConsole from './admin/SlaPolicyConsole';
 import NewTicketModal from './NewTicketModal';
 import ServiceCatalogConsole from './admin/ServiceCatalogConsole';
 import AuditTrailConsole from './admin/AuditTrailConsole';
+import TicketManagementConsole from './admin/TicketManagementConsole';
 import RequesterTopNav from './requester/RequesterTopNav';
 import RequesterDashboard from './requester/RequesterDashboard';
 import MyTicketsPage from './requester/MyTicketsPage';
@@ -44,6 +45,7 @@ export const registry = {
     NewTicketModal,
     ServiceCatalogConsole,
     AuditTrailConsole,
+    TicketManagementConsole,
     RequesterTopNav,
     RequesterDashboard,
     MyTicketsPage,

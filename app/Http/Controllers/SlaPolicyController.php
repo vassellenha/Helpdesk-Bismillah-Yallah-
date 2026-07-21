@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditTrail;
 use App\Models\SlaPolicy;
+use App\Models\Ticket;
 use App\Support\AuditDescriber;
 use App\Support\CurrentActor;
 use App\Support\DummyData;
@@ -18,7 +19,6 @@ class SlaPolicyController extends Controller
     private const FIELD_LABELS = [
         'policy_name' => 'Nama Policy',
         'priority' => 'Priority',
-        'service_type' => 'Jenis Layanan',
         'response_time_minutes' => 'Response Time',
         'resolution_time_minutes' => 'Resolution Time',
         'warning_threshold_percent' => 'Warning Threshold',
@@ -32,8 +32,30 @@ class SlaPolicyController extends Controller
             'currentUser' => DummyData::currentAdmin(),
             'notifications' => DummyData::notifications(),
             'policies' => SlaPolicy::orderBy('id')->get(),
-            'ticketSlaBreakdown' => DummyData::slaStatus(),
+            'ticketSlaBreakdown' => $this->ticketSlaBreakdown(),
         ]);
+    }
+
+    /**
+     * Same "active tickets with a computable SLA state" scope used by the
+     * Admin Dashboard and Requester's own SLA donut, so this page's
+     * within/warning/breach percentages never disagree with theirs.
+     */
+    private function ticketSlaBreakdown(): array
+    {
+        $active = Ticket::whereIn('status', Ticket::ACTIVE_STATUSES)->get()
+            ->filter(fn (Ticket $t) => $t->sla_minutes_remaining !== null);
+
+        $onTrack = $active->filter(fn (Ticket $t) => $t->sla_kind === 'ontrack')->count();
+        $warning = $active->filter(fn (Ticket $t) => $t->sla_kind === 'warning')->count();
+        $breach = $active->filter(fn (Ticket $t) => $t->sla_kind === 'breach')->count();
+        $total = max($onTrack + $warning + $breach, 1);
+
+        return [
+            ['label' => 'Within SLA', 'percent' => (int) round($onTrack / $total * 100), 'color' => '#10b981'],
+            ['label' => 'Warning', 'percent' => (int) round($warning / $total * 100), 'color' => '#f59e0b'],
+            ['label' => 'Breach', 'percent' => (int) round($breach / $total * 100), 'color' => '#ef4444'],
+        ];
     }
 
     public function list(): JsonResponse
@@ -144,24 +166,23 @@ class SlaPolicyController extends Controller
         $data = $request->validate([
             'policy_name' => 'required|string|max:255',
             'priority' => ['required', Rule::in(['Critical', 'High', 'Medium', 'Low'])],
-            'service_type' => ['required', Rule::in(['Incident', 'Service Request', 'Access Request'])],
             'response_time_minutes' => 'required|integer|min:1',
             'resolution_time_minutes' => 'required|integer|gt:response_time_minutes',
             'warning_threshold_percent' => 'required|integer|min:1|max:100',
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);
 
-        // Scoped to *active* rows only, matching the "no duplicate active
-        // policy per priority+service" business rule.
+        // Scoped to *active* rows only. A Requester picks an SLA policy by
+        // priority alone (no service is bound to a specific SLA — see
+        // NewTicketModal), so only one active policy per priority may exist.
         if ($data['status'] === 'active') {
             $duplicate = SlaPolicy::active()
                 ->where('priority', $data['priority'])
-                ->where('service_type', $data['service_type'])
                 ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
                 ->exists();
 
             if ($duplicate) {
-                abort(422, 'Sudah ada SLA Policy aktif untuk kombinasi priority dan jenis layanan ini.');
+                abort(422, 'Sudah ada SLA Policy aktif untuk priority ini.');
             }
         }
 

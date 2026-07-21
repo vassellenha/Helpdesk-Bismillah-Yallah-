@@ -3,14 +3,12 @@ import Modal, { ModalFooter, ModalHeader } from './Modal';
 import { apiFetch } from '../../lib/api';
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
-const SERVICE_TYPES = ['Incident', 'Service Request', 'Access Request'];
 
 export default function SlaPolicyModal({ policy, onClose, onSaved }) {
     const isEdit = !!policy;
     const [form, setForm] = useState({
         policy_name: policy?.policy_name ?? '',
         priority: policy?.priority ?? '',
-        service_type: policy?.service_type ?? '',
         response_time_minutes: policy?.response_time_minutes ?? '',
         resolution_time_minutes: policy?.resolution_time_minutes ?? '',
         warning_threshold_percent: policy?.warning_threshold_percent ?? '',
@@ -59,13 +57,6 @@ export default function SlaPolicyModal({ policy, onClose, onSaved }) {
                     <select value={form.priority} onChange={(e) => set('priority', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
                         <option value="">Pilih...</option>
                         {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                </Field>
-
-                <Field label="Jenis Layanan">
-                    <select value={form.service_type} onChange={(e) => set('service_type', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                        <option value="">Pilih...</option>
-                        {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </Field>
 
