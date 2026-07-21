@@ -1,0 +1,134 @@
+issue_category,layanan,subcategory,subject,requires_approval,support_level,support_type
+Incident,SAP,LOGIN SAP,Password Expired,0,2,IT
+Incident,SAP,LOGIN SAP,User Locked,0,2,IT
+Incident,SAP,LOGIN SAP,SAP GUI Error,0,2,IT
+Incident,SAP,AUTHORIZATION,Akses Ditolak pada Transaksi,0,2,IT
+Incident,SAP,AUTHORIZATION,Authorization Error,0,2,IT
+Incident,SAP,MASTER DATA,Data Tidak Ditemukan/ Tidak Muncul,0,2,IT
+Incident,SAP,MASTER DATA,Data Tidak Sesuai,0,2,IT
+Incident,SAP,REPORT,Report Tidak Muncul,0,2,IT
+Incident,SAP,REPORT,Data Report Tidak Sesuai,0,2,IT
+Incident,SAP,REPORT,Report Lambat,0,2,IT
+Incident,SAP,INTEGRATION,Data Tidak Terkirim,0,2,IT
+Incident,SAP,INTEGRATION,Data Tidak Sinkron,0,2,IT
+Incident,SAP,INTEGRATION,Interface Error,0,2,IT
+Incident,SAP,PRINTING,Gagal Print,0,2,IT
+Incident,SAP,PRINTING,Output Tidak Muncul,0,2,IT
+Incident,SAP,PRINTING,Format Output Salah,0,2,IT
+Incident,SAP,PERFORMANCE,SAP Lambat,0,2,IT
+Incident,SAP,PERFORMANCE,Timeout,0,2,IT
+Incident,SAP,PERFORMANCE,Not Responding,0,2,IT
+Incident,SAP,DATA,Data Duplikat,0,2,IT
+Incident,SAP,DATA,Data Hilang,0,2,IT
+Incident,SAP,DATA,Data Tidak Sinkron,0,2,IT
+Incident,SAP,TRANSAKSI MM,Faulty PO Header Data,0,3,Tim IT
+Incident,SAP,TRANSAKSI MM,Quantity & Value Exceeded,0,3,Tim IT
+Incident,SAP,TRANSAKSI MM,Kode Material tidak sesuai kewenangan,0,3,Tim IT
+Incident,SAP,TRANSAKSI MM,Release Strategy tidak sesuai,0,3,Tim IT
+Incident,SAP,TRANSAKSI MM,Transaksi PR/ PO tidak terbaca saat penarikan / tidak bisa adopt transaksi,0,3,Tim IT
+Incident,SAP,TRANSAKSI MM,Posting period is not open for variant,0,3,Tim IT
+Incident,SAP,TRANSAKSI MM,Purchase Requisition Can't Be Released,0,3,Tim IT
+Incident,SAP,TRANSAKSI MM,GI - Defisit Stock,0,3,Tim IT
+Incident,SAP,TRANSAKSI PS,Budget Update (Revisi Budget berbeda dengan proses sebelumnya),0,3,Tim IT
+Incident,SAP,TRANSAKSI PS,Budget Update (Budget Exceeded),0,3,Tim IT
+Incident,SAP,TRANSAKSI PS,Report PS (Error Dump),0,3,Tim IT
+Incident,SAP,TRANSAKSI PS,Error Approval Budget Original & Update,0,3,Tim IT
+Incident,SAP,TRANSAKSI FICO,Maintain New GL Account to Financial Statement,0,2,IT
+Incident,SAP,TRANSAKSI FICO,Maintain Reconcilliation Account for Vendor,0,2,IT
+Incident,SAP,TRANSAKSI FICO,Maintain Reconcilliation Account for Customer,0,2,IT
+Incident,SAP,TRANSAKSI FICO,"Balancing field ""Profit Center"" in line item 001 not filled",0,2,IT
+Incident,SAP,TRANSAKSI FICO,Direct Fico saldo Asset,0,2,IT
+Incident,SAP,TRANSAKSI FICO,Year end Closing preparation,0,2,IT
+Incident,SAP,TRANSAKSI FICO,Maintain Account for Upload Jurnal,0,3,Tim IT
+Incident,SAP,TRANSAKSI FICO,Maintain Account for Reclass Utang,0,3,Tim IT
+Incident,SAP,TRANSAKSI FICO,Maintain Account for Report Budget Access,0,2,IT
+Incident,ELISA,VENDOR MANAGEMENT,Tidak bisa release vendor,0,3,Tim IT
+Incident,ELISA,VENDOR MANAGEMENT,Tidak bisa verifikasi vendor,0,3,Tim IT
+Incident,ELISA,VENDOR MANAGEMENT,Business Field tidak sesuai dengan SAP (rilis vendor),0,3,Tim IT
+Incident,ELISA,EPROCUREMENT,Reschedule jadwal tender,0,3,Tim IT
+Incident,ELISA,CONTRACT MANAGEMENT,Tidak bisa submit kontrak,0,3,Tim IT
+Incident,ADELE,Account & Profile Issues,User Session Belum Logout,0,2,IT
+Incident,ADELE,Account & Profile Issues,Username tidak ditemukan,0,2,IT
+Incident,ADELE,Account & Profile Issues,Unit Kerja Belum Update,0,2,IT
+Incident,ARISE,Employee Self-Service (ESS) Features,Tidak bisa presensi,0,3,Tim IT
+Incident,ARISE,Employee Self-Service (ESS) Features,Tidak bisa update CV,0,3,Tim IT
+Incident,ERISKA,Risk Data & Reporting,Gagal Submit Data Risiko / Upload Eviden,0,1,
+Incident,ERISKA,Risk Data & Reporting,Dashboard Risiko Tidak Sesuai,0,1,
+Incident,ERISKA,Risk Data & Reporting,Gagal Export Risk Register,0,1,
+Incident,SINTA,Akses & Data Karyawan,Data profil tidak sesuai,0,3,Tim IT
+Incident,SINTA,Akses & Data Karyawan,Slip gaji tidak bisa didownload,0,3,Tim IT
+Incident,SINTA,Akses & Data Karyawan,Tidak bisa akses ke Aplikasi Internal,0,2,IT
+Incident,CLOUDIA,Pengelolaan File & Sinkronisasi,Menu / tombol hilang,0,2,IT
+Incident,CLOUDIA,Pengelolaan File & Sinkronisasi,Share link expired,0,2,IT
+Incident,CLOUDIA,Pengelolaan File & Sinkronisasi,Kuota habis,0,1,
+Incident,CLOUDIA,Pengelolaan File & Sinkronisasi,Gagal sinkronisasi pada desktop,0,2,IT
+Incident,NETWORK,INTERNET,Tidak bisa akses internet,0,2,IT
+Incident,NETWORK,INTERNET,Internet lambat,0,2,IT
+Incident,NETWORK,INTERNET,Koneksi internet putus-putus,0,2,IT
+Incident,NETWORK,WiFi,Tidak bisa terhubung WiFi,0,2,IT
+Incident,NETWORK,WiFi,Sinyal WiFi lemah,0,2,IT
+Incident,NETWORK,WiFi,WiFi lambat,0,2,IT
+Incident,NETWORK,VPN,Tidak bisa login VPN,0,2,IT
+Incident,NETWORK,VPN,VPN terputus,0,2,IT
+Incident,NETWORK,VPN,VPN lambat,0,2,IT
+Incident,NETWORK,LAINNYA,…........................................,0,1,
+Incident,PERANGKAT,PRINTER JARINGAN,Tidak bisa cetak ke printer jaringan,0,3,Tim IT
+Incident,PERANGKAT,PRINTER JARINGAN,Printer tidak ditemukan,0,3,Tim IT
+Incident,PERANGKAT,PRINTER JARINGAN,Printer offline,0,3,Tim IT
+Service Request,SAP,MASTER DATA,Pembuatan Data Master (Vendor / Customer / Material),1,3,Tim IT
+Service Request,SAP,MASTER DATA,Perubahan Data Master,1,3,Tim IT
+Service Request,SAP,MASTER DATA,Koreksi Data Master,1,3,Tim IT
+Service Request,SAP,MASTER DATA,Aktivasi / Penonaktifan Data Master,1,3,Tim IT
+Service Request,SAP,TRANSACTION SUPPORT,Bantuan Input Transaksi (PR / PO / GR / GI / MIRO),1,3,Tim IT
+Service Request,SAP,TRANSACTION SUPPORT,Koreksi Transaksi SAP,1,3,Tim IT
+Service Request,SAP,TRANSACTION SUPPORT,Reversal / Pembatalan Dokumen,1,3,Tim IT
+Service Request,SAP,TRANSACTION SUPPORT,Reposting Dokumen,1,3,Tim IT
+Service Request,SAP,TRANSACTION SUPPORT,Penyesuaian Data Transaksi,1,3,Tim IT
+Service Request,SAP,WORKFLOW SERVICE,Perubahan Alur Approval,1,2,IT
+Service Request,SAP,WORKFLOW SERVICE,Penambahan Tahap Approval,1,2,IT
+Service Request,SAP,WORKFLOW SERVICE,Penyesuaian Rule Approval,1,2,IT
+Service Request,SAP,WORKFLOW SERVICE,Setup Workflow Baru,1,2,IT
+Service Request,SAP,LAYANAN KONSULTASI,Konsultasi Proses Bisnis SAP,1,3,Tim IT
+Service Request,SAP,LAYANAN KONSULTASI,Konsultasi Penggunaan Transaksi SAP,1,3,Tim IT
+Service Request,SAP,LAYANAN KONSULTASI,Konsultasi Data & Laporan SAP,1,3,Tim IT
+Service Request,SAP,LAYANAN KONSULTASI,Konsultasi Alur Approval / Workflow,1,3,Tim IT
+Service Request,SAP,LAYANAN KONSULTASI,Konsultasi Integrasi SAP dengan Sistem Lain,1,3,Tim IT
+Service Request,SAP,LAYANAN KONSULTASI,Konsultasi Requirement / Kebutuhan User,1,3,Tim IT
+Service Request,SAP,LAYANAN KONSULTASI,Konsultasi Perbaikan Proses SAP,1,3,Tim IT
+Service Request,SILO APPS,APLIKASI & SOFTWARE,Instalasi / reinstall aplikasi,1,2,IT
+Service Request,SILO APPS,APLIKASI & SOFTWARE,Update / upgrade aplikasi,1,2,IT
+Service Request,SILO APPS,APLIKASI & SOFTWARE,Perubahan setting aplikasi,1,2,IT
+Service Request,SILO APPS,DATA & DOKUMEN,Permintaan laporan / rekap data,1,3,Tim IT
+Service Request,SILO APPS,DATA & DOKUMEN,Permintaan analisis data,1,3,Tim IT
+Service Request,SILO APPS,DATA & DOKUMEN,Koreksi data / file,1,3,Tim IT
+Service Request,SILO APPS,DATA & DOKUMEN,"Pengolahan data (Excel, dll)",1,3,Tim IT
+Service Request,SILO APPS,EMAIL & KOMUNIKASI,Setup email di perangkat,1,2,IT
+Service Request,SILO APPS,EMAIL & KOMUNIKASI,Backup / restore email,1,2,IT
+Service Request,SILO APPS,EMAIL & KOMUNIKASI,Pengaturan email,1,2,IT
+Service Request,SILO APPS,JARINGAN & KONEKSI,Permintaan koneksi internet tambahan,1,2,IT
+Service Request,SILO APPS,JARINGAN & KONEKSI,Setup WiFi / LAN,1,2,IT
+Service Request,SILO APPS,JARINGAN & KONEKSI,Perubahan jaringan kerja,1,2,IT
+Service Request,SILO APPS,JARINGAN & KONEKSI,Permintaan pengecekan koneksi,1,2,IT
+Service Request,SILO APPS,VPN & REMOTE ACCESS,Instalasi VPN,1,2,IT
+Service Request,SILO APPS,VPN & REMOTE ACCESS,Instalasi FortiClient,1,2,IT
+Service Request,SILO APPS,VPN & REMOTE ACCESS,Setup VPN di laptop / PC,1,2,IT
+Service Request,SILO APPS,KONSULTASI & BANTUAN,Cara penggunaan aplikasi,1,3,Tim IT
+Service Request,SILO APPS,KONSULTASI & BANTUAN,Konsultasi proses kerja,1,3,Tim IT
+Service Request,SILO APPS,KONSULTASI & BANTUAN,Penjelasan fitur sistem,1,3,Tim IT
+Service Request,SILO APPS,KONSULTASI & BANTUAN,Diskusi kebutuhan kerja,1,3,Tim IT
+Access Request,AKUN APLIKASI,SAP,Pembuatan akun baru,1,1,BPO
+Access Request,AKUN APLIKASI,SAP,Aktivasi/ Unlock akun,0,2,IT
+Access Request,AKUN APLIKASI,SAP,Penonaktifan akun,1,3,Tim IT
+Access Request,AKUN APLIKASI,SAP,Perubahan data akun,1,3,Tim IT
+Access Request,AKUN APLIKASI,SAP,Reset Password,0,2,IT
+Access Request,AKUN APLIKASI,SILO (OTHER APPS),Pembuatan akun baru,1,3,Tim IT
+Access Request,AKUN APLIKASI,SILO (OTHER APPS),Penonaktifan akun,1,3,Tim IT
+Access Request,AKUN APLIKASI,SILO (OTHER APPS),Perubahan data akun,1,3,Tim IT
+Access Request,AKUN APLIKASI,SILO (OTHER APPS),Reset Password,0,3,Tim IT
+Access Request,PERUBAHAN AKSES APLIKASI,SAP,Penambahan akses aplikasi,1,3,Tim IT
+Access Request,PERUBAHAN AKSES APLIKASI,SAP,Penghapusan akses aplikasi,1,3,Tim IT
+Access Request,PERUBAHAN AKSES APLIKASI,SAP,Perubahan akses aplikasi,1,3,Tim IT
+Access Request,PERUBAHAN AKSES APLIKASI,SILO (OTHER APPS),Penambahan akses aplikasi,1,3,Tim IT
+Access Request,PERUBAHAN AKSES APLIKASI,SILO (OTHER APPS),Penghapusan akses aplikasi,1,3,Tim IT
+Access Request,PERUBAHAN AKSES APLIKASI,SILO (OTHER APPS),Perubahan akses aplikasi,1,3,Tim IT
+Access Request,VPN,Akses & Aktivasi VPN,Aktivasi VPN Forticlient,1,2,IT
