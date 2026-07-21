@@ -1,0 +1,28 @@
+export default function AvgResolutionBar({ data = [] }) {
+    const max = Math.max(...data.map((d) => d.hours));
+    const worst = data.reduce((a, b) => (b.hours > a.hours ? b : a), data[0]);
+
+    return (
+        <div>
+            <ul className="space-y-3">
+                {data.map((d) => (
+                    <li key={d.label} className="flex items-center gap-3 text-sm">
+                        <span className="w-40 shrink-0 text-gray-600">{d.label}</span>
+                        <div className="h-3 flex-1 overflow-hidden rounded-full bg-gray-100">
+                            <div
+                                className={`h-full rounded-full ${d.label === worst.label ? 'bg-amber-500' : 'bg-blue-600'}`}
+                                style={{ width: `${(d.hours / max) * 100}%` }}
+                            />
+                        </div>
+                        <span className="w-16 shrink-0 text-right font-semibold text-gray-900">
+                            {d.hours.toLocaleString('id-ID', { minimumFractionDigits: 1 })} Jam
+                        </span>
+                    </li>
+                ))}
+            </ul>
+            <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                <strong>{worst.label}</strong> memiliki rata-rata waktu penyelesaian tertinggi dan perlu ditinjau pada proses approval serta ketersediaan stok.
+            </p>
+        </div>
+    );
+}
