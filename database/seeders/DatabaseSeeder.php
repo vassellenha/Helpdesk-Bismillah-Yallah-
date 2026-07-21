@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             UserRoleSeeder::class,
             SlaPolicySeeder::class,
             ServiceCatalogSeeder::class,
+            TicketSeeder::class,
         ]);
     }
 }

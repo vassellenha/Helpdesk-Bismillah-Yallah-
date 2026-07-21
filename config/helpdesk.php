@@ -15,10 +15,9 @@ return [
             'description' => 'Membuat tiket baru, memantau status permintaan, dan melihat riwayat tiket sendiri.',
             'links' => [
                 ['label' => 'Dashboard', 'route' => 'dashboard.requester'],
-                ['label' => 'My Tickets', 'route' => 'dashboard.requester'],
-                ['label' => 'Ticket Detail', 'route' => 'dashboard.requester'],
+                ['label' => 'My Tickets', 'route' => 'requester.tickets'],
             ],
-            'cta' => 'Dashboard · My Tickets · Ticket Detail',
+            'cta' => 'Dashboard · My Tickets →',
         ],
         'approver' => [
             'key' => 'approver',

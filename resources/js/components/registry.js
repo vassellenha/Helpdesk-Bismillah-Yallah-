@@ -17,6 +17,10 @@ import SlaPolicyConsole from './admin/SlaPolicyConsole';
 import NewTicketModal from './NewTicketModal';
 import ServiceCatalogConsole from './admin/ServiceCatalogConsole';
 import AuditTrailConsole from './admin/AuditTrailConsole';
+import RequesterTopNav from './requester/RequesterTopNav';
+import RequesterDashboard from './requester/RequesterDashboard';
+import MyTicketsPage from './requester/MyTicketsPage';
+import TicketDetail from './requester/TicketDetail';
 
 // Central map from `data-react="Name"` (set in Blade) to the component
 // that should be mounted on that node. Add new islands here only.
@@ -40,4 +44,8 @@ export const registry = {
     NewTicketModal,
     ServiceCatalogConsole,
     AuditTrailConsole,
+    RequesterTopNav,
+    RequesterDashboard,
+    MyTicketsPage,
+    TicketDetail,
 };

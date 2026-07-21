@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title') · {{ config('helpdesk.product') }}</title>
+    @viteReactRefresh
+    @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+</head>
+<body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased">
+    <div class="flex min-h-screen flex-col">
+        <header class="sticky top-0 z-20 flex h-[62px] items-center gap-6 border-b border-gray-200 bg-white px-7">
+            <div class="flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-blue-600 text-sm font-extrabold text-white">A</span>
+                <div class="leading-tight">
+                    <p class="text-sm font-bold text-gray-900">Adhi Helpdesk</p>
+                    <p class="text-[10px] text-gray-400">Enterprise ITSM</p>
+                </div>
+            </div>
+
+            <nav class="flex items-center gap-1">
+                <a
+                    href="{{ route('dashboard.requester') }}"
+                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold {{ request()->routeIs('dashboard.requester') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}"
+                >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+                    Dashboards
+                </a>
+                <a
+                    href="{{ route('requester.tickets') }}"
+                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold {{ request()->routeIs('requester.tickets') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}"
+                >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z"/><path d="M14 5v14"/></svg>
+                    My Tickets
+                </a>
+            </nav>
+
+            <div class="flex-1"></div>
+
+            <div
+                data-react="RequesterTopNav"
+                data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'ticketsUrl' => route('requester.tickets'), 'markAllReadUrl' => route('requester.notifications.read-all')]) }}"
+            ></div>
+        </header>
+
+        <main class="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-8 px-7 py-7">
+            @yield('content')
+        </main>
+    </div>
+</body>
+</html>
