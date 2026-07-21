@@ -10,7 +10,6 @@ class SlaPolicy extends Model
     protected $fillable = [
         'policy_name',
         'priority',
-        'service_type',
         'response_time_minutes',
         'resolution_time_minutes',
         'warning_threshold_percent',

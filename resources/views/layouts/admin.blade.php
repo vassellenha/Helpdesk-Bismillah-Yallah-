@@ -31,6 +31,9 @@
                 </nav>
             </div>
             <div class="flex items-center gap-4">
+                <a href="{{ route('portal.index') }}" class="hidden items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 sm:flex">
+                    <span aria-hidden="true">←</span> Kembali ke Portal
+                </a>
                 <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications ?? []]) }}"></div>
                 <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '']) }}"></div>
             </div>

@@ -217,7 +217,6 @@ function PolicyDetailModal({ policy, onClose }) {
                 </div>
                 <div className="grid grid-cols-2 gap-4 px-6 py-5 text-sm">
                     <Detail label="Prioritas" value={policy.priority} />
-                    <Detail label="Jenis Layanan" value={policy.service_type} />
                     <Detail label="Response Time" value={formatMinutes(policy.response_time_minutes)} />
                     <Detail label="Resolution Time" value={formatMinutes(policy.resolution_time_minutes)} />
                     <Detail label="Warning Threshold" value={`${policy.warning_threshold_percent}%`} />
