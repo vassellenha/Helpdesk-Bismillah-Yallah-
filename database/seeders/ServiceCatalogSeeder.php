@@ -10,28 +10,60 @@ use App\Models\SupportAgent;
 use Illuminate\Database\Seeder;
 
 /**
- * One-time import of the master Service Catalog data supplied by the
- * business in "REV Insiden & Service List Issue for Helpdesk 2.0.xlsx"
- * (sheets: INSIDEN, SERVICE, USER ACCESS), pre-flattened into
+ * Import of the master Service Catalog data supplied by the business in
+ * "Insiden & Service List Issue for Helpdesk 2.0 (2).xlsx" (sheets:
+ * MASTER APLIKASI, INSIDEN, SERVICE, USER ACCESS), pre-flattened into
  * database/seeders/data/service_catalog.csv. The database, not this file,
  * is the runtime source of truth from here on — see ServiceCatalogController.
+ *
+ * Every write below is a firstOrCreate, so this seeder is safe to re-run
+ * after the CSV or MASTER_APPLICATIONS list gets updated — it only inserts
+ * what's missing, never duplicates or overwrites existing rows.
  */
 class ServiceCatalogSeeder extends Seeder
 {
     private const IT_AGENTS = ['Aditya Dwi Nugraha', 'Arief Kurniawan', 'Febria Sahrina', 'Agung Wijayanto', 'Naufal Akbar', 'Sarah', 'Kevin', 'Rian'];
     private const BPO_AGENTS = ['Genta Pratama', 'Rio Saputra', 'Lutfi Ramadhan', 'Maya Prameswari'];
 
+    /**
+     * Full company application list from the "MASTER APLIKASI" sheet —
+     * broader than the subset of apps that have Incident/Service/Access
+     * item definitions below. Apps with no defined subcategories still
+     * appear in the New Ticket "Application" picker; their Sub Category
+     * gracefully falls back to "Other" (see NewTicketModal.jsx).
+     */
+    private const MASTER_APPLICATIONS = [
+        'ADELE', 'ADHI MAN-POWER', 'ADHIMIS-JO', 'ADHISEHAT', 'AISO', 'ANDINI', 'ANTISPAM',
+        'APB ERP', 'APG ERP', 'ARINA (DASHBOARD)', 'ARISE', 'Asset Management System', 'BIMO',
+        'CCM', 'CLOUDIA', 'CRM', 'DHIERA', 'EA ADHI', 'ELISA', 'ERISKA', 'FIDA', 'HRIS',
+        'iBLAST', 'ILMU', 'InnoDash', 'INSAP', 'KMS', 'MAIA', 'MAILIA', 'NAGIA', 'Sahabat APP',
+        'SHISAN', 'SKK', 'WIDIA',
+    ];
+
+    private static function agentEmail(string $name): string
+    {
+        $slug = str(str($name)->ascii())->lower()->replace(' ', '.');
+
+        return "{$slug}@adhikarya-helpdesk.test";
+    }
+
     public function run(): void
     {
-        if (ServiceCatalogSubject::exists()) {
-            return;
+        foreach (self::MASTER_APPLICATIONS as $name) {
+            ServiceCatalogService::firstOrCreate(['name' => $name]);
         }
 
         $issueCategories = collect(['Incident', 'Service Request', 'Access Request'])
             ->mapWithKeys(fn ($name) => [$name => IssueCategory::firstOrCreate(['name' => $name])->id]);
 
-        $itAgentIds = collect(self::IT_AGENTS)->map(fn ($name) => SupportAgent::firstOrCreate(['name' => $name, 'type' => 'it'])->id);
-        $bpoAgentIds = collect(self::BPO_AGENTS)->map(fn ($name) => SupportAgent::firstOrCreate(['name' => $name, 'type' => 'bpo'])->id);
+        $itAgentIds = collect(self::IT_AGENTS)->map(fn ($name) => SupportAgent::updateOrCreate(
+            ['name' => $name, 'type' => 'it'],
+            ['email' => self::agentEmail($name)]
+        )->id);
+        $bpoAgentIds = collect(self::BPO_AGENTS)->map(fn ($name) => SupportAgent::updateOrCreate(
+            ['name' => $name, 'type' => 'bpo'],
+            ['email' => self::agentEmail($name)]
+        )->id);
 
         $itCursor = 0;
         $bpoCursor = 0;

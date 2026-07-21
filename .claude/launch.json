@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "laravel",
-      "runtimeExecutable": "php",
-      "runtimeArgs": ["artisan", "serve"],
+      "runtimeExecutable": "C:\\Users\\HP\\.config\\herd\\bin\\php84\\php.exe",
+      "runtimeArgs": ["-d", "opcache.enable=0", "-d", "upload_tmp_dir=C:/Users/HP/Downloads/HELPDESK 2.0 BISMILLAH/storage/app/tmp", "-d", "upload_max_filesize=8M", "-d", "post_max_size=10M", "artisan", "serve"],
       "port": 8000,
       "autoPort": false
     },
