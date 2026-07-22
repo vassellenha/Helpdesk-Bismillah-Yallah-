@@ -5,7 +5,7 @@ import NewTicketModal from '../NewTicketModal';
 const ACTIVE_STATUSES = ['Waiting for Approval', 'Open', 'Assigned', 'In Progress', 'Waiting for Response'];
 const DONE_STATUSES = ['Resolved', 'Completed', 'Closed'];
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
-const PERIOD_DAYS = { 'Last 6 months': 183, 'Last 30 days': 30, 'Last 7 days': 7, 'This year': 366 };
+const PERIOD_DAYS = { 'Last 30 days': 30, 'Last 3 months': 92, 'Last 6 months': 183, 'This year': 366 };
 const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
 const COLUMNS = [
@@ -36,7 +36,9 @@ function sortValue(row, key) {
 export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, approversUrl, submitUrl }) {
     const [tab, setTab] = useState('All');
     const [search, setSearch] = useState('');
-    const [category, setCategory] = useState('All Categories');
+    const [category, setCategory] = useState('All Issue Categories');
+    const [service, setService] = useState('All Layanan');
+    const [subcategory, setSubcategory] = useState('All Sub Category');
     const [priority, setPriority] = useState('All Priorities');
     const [period, setPeriod] = useState('Last 6 months');
     const [sortKey, setSortKey] = useState('createdAt');
@@ -51,14 +53,18 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
         }
     }
 
-    const categories = useMemo(() => ['All Categories', ...new Set(tickets.map((t) => t.category).filter(Boolean))], [tickets]);
+    const categories = useMemo(() => ['All Issue Categories', ...new Set(tickets.map((t) => t.category).filter(Boolean))], [tickets]);
+    const services = useMemo(() => ['All Layanan', ...new Set(tickets.map((t) => t.service).filter(Boolean))], [tickets]);
+    const subcategories = useMemo(() => ['All Sub Category', ...new Set(tickets.map((t) => t.subcategory).filter(Boolean))], [tickets]);
 
     const filtered = useMemo(() => {
         const cutoff = Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
 
         const rows = tickets.filter((t) => {
             if (!inTab(tab, t.status)) return false;
-            if (category !== 'All Categories' && t.category !== category) return false;
+            if (category !== 'All Issue Categories' && t.category !== category) return false;
+            if (service !== 'All Layanan' && t.service !== service) return false;
+            if (subcategory !== 'All Sub Category' && t.subcategory !== subcategory) return false;
             if (priority !== 'All Priorities' && t.priority !== priority) return false;
             if (new Date(t.createdAt).getTime() < cutoff) return false;
             if (search.trim() !== '') {
@@ -75,7 +81,7 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
             return sortDir === 'asc' ? cmp : -cmp;
         });
         return rows;
-    }, [tickets, tab, category, priority, period, search, sortKey, sortDir]);
+    }, [tickets, tab, category, service, subcategory, priority, period, search, sortKey, sortDir]);
 
     const tabs = ['All', 'Draft', 'Active', 'Completed', 'Rejected'];
 
@@ -118,6 +124,12 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
                         className="flex-1 border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-400"
                     />
                 </div>
+                <select value={service} onChange={(e) => setService(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
+                    {services.map((s) => <option key={s}>{s}</option>)}
+                </select>
+                <select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
+                    {subcategories.map((s) => <option key={s}>{s}</option>)}
+                </select>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
                     {categories.map((c) => <option key={c}>{c}</option>)}
                 </select>

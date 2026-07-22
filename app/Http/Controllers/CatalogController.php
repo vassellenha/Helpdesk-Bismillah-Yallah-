@@ -17,11 +17,21 @@ class CatalogController extends Controller
      * services / ~40 subcategories / 133 subjects) that the New Ticket
      * modal filters it client-side instead of round-tripping per cascade
      * step.
+     *
+     * `services` is scoped to ones with at least one active Subject —
+     * ServiceCatalogSeeder also registers a full company app roster
+     * (MASTER_APPLICATIONS) with no Incident/Service/Access items defined
+     * yet, and picking one of those would leave Sub Category empty except
+     * for "Other", so they're excluded here rather than shown as a dead end.
+     * The "Other" fallback itself is unaffected — it's a Sub Category choice
+     * available under any of the services still listed.
      */
     public function tree(): JsonResponse
     {
         return response()->json([
-            'services' => ServiceCatalogService::orderBy('name')->get(['id', 'name']),
+            'services' => ServiceCatalogService::whereHas('subjects', fn ($q) => $q->where('is_active', true))
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'subcategories' => ServiceCatalogSubcategory::orderBy('name')->get(['id', 'service_id', 'name']),
             'subjects' => ServiceCatalogSubject::where('is_active', true)
                 ->with('issueCategory:id,name')

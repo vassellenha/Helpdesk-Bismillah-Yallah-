@@ -13,6 +13,9 @@
         'reopenUrl' => $reopenUrl,
         'closeUrl' => $closeUrl,
         'ticketsUrl' => $ticketsUrl,
+        'editUrl' => $editUrl,
+        'catalogUrl' => $catalogUrl,
+        'approversUrl' => $approversUrl,
     ]) }}"
 ></div>
 @endsection
