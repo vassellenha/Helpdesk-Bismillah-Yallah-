@@ -1,7 +1,6 @@
 import RoleSwitcher from './RoleSwitcher';
 import NotificationBell from './NotificationBell';
 import TicketWorkspace from './TicketWorkspace';
-import ApprovalQueue from './ApprovalQueue';
 import AgentsPanel from './AgentsPanel';
 import SlaChart from './SlaChart';
 import CategoryChart from './CategoryChart';
@@ -22,6 +21,10 @@ import RequesterTopNav from './requester/RequesterTopNav';
 import RequesterDashboard from './requester/RequesterDashboard';
 import MyTicketsPage from './requester/MyTicketsPage';
 import TicketDetail from './requester/TicketDetail';
+import ApproverTopNav from './approver/ApproverTopNav';
+import ApprovalInbox from './approver/ApprovalInbox';
+import ApprovalTicketDetail from './approver/ApprovalTicketDetail';
+import ApprovalHistoryPage from './approver/ApprovalHistoryPage';
 
 // Central map from `data-react="Name"` (set in Blade) to the component
 // that should be mounted on that node. Add new islands here only.
@@ -29,7 +32,6 @@ export const registry = {
     RoleSwitcher,
     NotificationBell,
     TicketWorkspace,
-    ApprovalQueue,
     AgentsPanel,
     SlaChart,
     CategoryChart,
@@ -50,4 +52,8 @@ export const registry = {
     RequesterDashboard,
     MyTicketsPage,
     TicketDetail,
+    ApproverTopNav,
+    ApprovalInbox,
+    ApprovalTicketDetail,
+    ApprovalHistoryPage,
 };

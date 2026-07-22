@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
+use App\Models\TicketApproval;
 use App\Models\TicketComment;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
@@ -154,6 +155,10 @@ class TicketDetailController extends Controller
 
     private function presentTicket(Ticket $t): array
     {
+        $lastApproval = in_array($t->status, ['Draft', 'Open', 'Rejected'], true)
+            ? TicketApproval::where('ticket_id', $t->id)->latest('created_at')->first()
+            : null;
+
         $elapsedPct = 0;
         if ($t->sla_minutes_remaining !== null && $t->resolution_time_minutes > 0) {
             $elapsedPct = (int) round((1 - max($t->sla_minutes_remaining, 0) / $t->resolution_time_minutes) * 100);
@@ -173,6 +178,12 @@ class TicketDetailController extends Controller
             'attachmentDownloadUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
+            'approvalNote' => $lastApproval ? [
+                'decision' => $lastApproval->decision,
+                'note' => $lastApproval->note,
+                'approverName' => $t->approver?->name,
+                'at' => $lastApproval->created_at->format('M j, Y · H:i'),
+            ] : null,
             'sla' => [
                 'label' => $t->sla_label,
                 'kind' => $t->sla_kind,

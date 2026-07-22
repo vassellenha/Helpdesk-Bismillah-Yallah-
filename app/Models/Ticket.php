@@ -64,6 +64,11 @@ class Ticket extends Model
         return $this->hasMany(TicketNotification::class);
     }
 
+    public function approvals()
+    {
+        return $this->hasMany(TicketApproval::class)->orderBy('created_at');
+    }
+
     /**
      * Ticket numbers are unique and far more readable in a URL than the
      * numeric id, so `{ticket}` route params resolve by ticket_no.

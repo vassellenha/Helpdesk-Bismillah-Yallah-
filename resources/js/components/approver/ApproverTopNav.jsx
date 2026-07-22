@@ -2,16 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 
 const ICON_STYLES = {
-    ticket_created: { bg: 'bg-blue-50', color: 'text-blue-700' },
-    ticket_reopened: { bg: 'bg-rose-100', color: 'text-rose-700' },
-    ticket_closed: { bg: 'bg-emerald-50', color: 'text-emerald-600' },
-    sla_warning: { bg: 'bg-amber-50', color: 'text-amber-600' },
     sla_breach: { bg: 'bg-red-50', color: 'text-red-600' },
-    ticket_approved: { bg: 'bg-emerald-50', color: 'text-emerald-600' },
-    ticket_rejected: { bg: 'bg-red-50', color: 'text-red-600' },
+    waiting_decision: { bg: 'bg-blue-50', color: 'text-blue-700' },
+    decision_recorded: { bg: 'bg-emerald-50', color: 'text-emerald-600' },
+    history_updated: { bg: 'bg-gray-100', color: 'text-gray-500' },
 };
 
-export default function RequesterTopNav({ notifications = [], user = {}, ticketsUrl = '/', markAllReadUrl }) {
+export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl = '/', ticketsUrl = '/', markAllReadUrl }) {
     const [items, setItems] = useState(notifications);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -56,7 +53,7 @@ export default function RequesterTopNav({ notifications = [], user = {}, tickets
                         setNotifOpen((v) => !v);
                         setProfileOpen(false);
                     }}
-                    aria-label="Notifications"
+                    aria-label="Notifikasi"
                     className={`relative flex h-9 w-9 items-center justify-center rounded-[10px] text-gray-600 hover:bg-gray-100 ${notifOpen ? 'bg-gray-100' : ''}`}
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.4 5.6a8 8 0 0 1 1.9 8.9c-.5 1.2-.3 2.6.5 3.6l.2.3H3l.2-.3c.8-1 1-2.4.5-3.6a8 8 0 0 1 14.7-8.9Z"/><path d="M10 21h4"/></svg>
@@ -70,14 +67,14 @@ export default function RequesterTopNav({ notifications = [], user = {}, tickets
                 {notifOpen && (
                     <div className="absolute right-0 top-12 z-50 w-[366px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5">
-                            <span className="text-sm font-bold text-gray-900">Notifications</span>
+                            <span className="text-sm font-bold text-gray-900">Notifikasi</span>
                             <button onClick={markAllRead} className="text-[11px] font-semibold text-blue-600 hover:text-blue-800">
-                                Mark all as read
+                                Tandai semua dibaca
                             </button>
                         </div>
                         <div className="max-h-[348px] overflow-y-auto">
                             {items.map((n) => {
-                                const style = ICON_STYLES[n.type] ?? ICON_STYLES.ticket_created;
+                                const style = ICON_STYLES[n.type] ?? ICON_STYLES.waiting_decision;
                                 return (
                                     <button
                                         key={n.id}
@@ -95,10 +92,10 @@ export default function RequesterTopNav({ notifications = [], user = {}, tickets
                                     </button>
                                 );
                             })}
-                            {items.length === 0 && <p className="px-4 py-8 text-center text-sm text-gray-400">No notifications.</p>}
+                            {items.length === 0 && <p className="px-4 py-8 text-center text-sm text-gray-400">Belum ada notifikasi.</p>}
                         </div>
-                        <button onClick={() => (window.location.href = ticketsUrl)} className="w-full border-t border-gray-100 py-3 text-center text-xs font-bold text-blue-600 hover:bg-gray-50">
-                            View all notifications
+                        <button onClick={() => (window.location.href = inboxUrl)} className="w-full border-t border-gray-100 py-3 text-center text-xs font-bold text-blue-600 hover:bg-gray-50">
+                            Lihat semua notifikasi
                         </button>
                     </div>
                 )}
@@ -136,12 +133,6 @@ export default function RequesterTopNav({ notifications = [], user = {}, tickets
                         </div>
                         <a href={ticketsUrl} className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
                             My Tickets
-                        </a>
-                        <a href="#" className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                            Notification Preferences
-                        </a>
-                        <a href="#" className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                            Help &amp; Support
                         </a>
                         <div className="mt-1.5 border-t border-gray-50 pt-1.5">
                             <a href="/" className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-semibold text-red-600 hover:bg-red-50">

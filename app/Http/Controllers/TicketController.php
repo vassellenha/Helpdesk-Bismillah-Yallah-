@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ServiceCatalogSubject;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -99,6 +100,7 @@ class TicketController extends Controller
                 : "Tiket {$ticket->ticket_no} berhasil dibuat dan dikirim ke Tim Support.";
 
             NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dibuat', $message);
+            $this->notifyApproverOfNewRequest($ticket, $requester);
         }
 
         return response()->json([
@@ -188,11 +190,33 @@ class TicketController extends Controller
                 : "Tiket {$ticket->ticket_no} berhasil dikirim ke Tim Support.";
 
             NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dikirim', $message);
+            $this->notifyApproverOfNewRequest($ticket->fresh(), $requester);
         }
 
         return response()->json([
             ...$ticket->fresh()->toArray(),
             'sla_status' => $ticket->fresh()->sla_status,
         ]);
+    }
+
+    /**
+     * Lets the assigned approver's notification bell (and Approval Inbox
+     * metrics) reflect a new request the moment it lands in their queue,
+     * mirroring the "Menunggu keputusan" alert from the Approval Workspace
+     * mockup — otherwise they'd only find out by checking the inbox cold.
+     */
+    private function notifyApproverOfNewRequest(Ticket $ticket, User $requester): void
+    {
+        if ($ticket->status !== 'Waiting for Approval' || ! $ticket->approver) {
+            return;
+        }
+
+        NotificationService::notify(
+            $ticket->approver,
+            $ticket,
+            'waiting_decision',
+            'Menunggu Keputusan Anda',
+            "Tiket {$ticket->ticket_no} dari {$requester->name} menunggu persetujuan Anda."
+        );
     }
 }

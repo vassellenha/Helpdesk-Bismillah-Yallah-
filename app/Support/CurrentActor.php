@@ -21,4 +21,9 @@ class CurrentActor
     {
         return User::where('email', 'andi.pratama@adhi.co.id')->firstOrFail();
     }
+
+    public static function approver(): User
+    {
+        return User::where('email', 'karina.putri@adhi.co.id')->firstOrFail();
+    }
 }

@@ -25,9 +25,10 @@ return [
             'label' => 'Approver',
             'description' => 'Meninjau dan menyetujui atau menolak permintaan yang membutuhkan approval.',
             'links' => [
-                ['label' => 'Approval Workspace', 'route' => 'dashboard.approver'],
+                ['label' => 'Approval Inbox', 'route' => 'dashboard.approver'],
+                ['label' => 'My Tickets', 'route' => 'approver.tickets'],
             ],
-            'cta' => 'Approval Workspace →',
+            'cta' => 'Approval Inbox · My Tickets →',
         ],
         'support' => [
             'key' => 'support',
