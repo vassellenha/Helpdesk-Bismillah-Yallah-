@@ -171,6 +171,19 @@ export default function NewTicketModal({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, isEdit, catalog]);
 
+    // A priority whose SLA policy the admin has deactivated can't be picked —
+    // if the currently selected one just went inactive (or the form opened
+    // defaulting to one that isn't active), fall back to the first priority
+    // that still has a live policy.
+    useEffect(() => {
+        if (!open || !policies) return;
+        const activePriorityList = policies.map((p) => p.priority);
+        if (activePriorityList.length > 0 && !activePriorityList.includes(form.priority)) {
+            set({ priority: activePriorityList[0] });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, policies, form.priority]);
+
     useEffect(() => {
         function onClickOutside(e) {
             if (approverRef.current && !approverRef.current.contains(e.target)) setApproverOpen(false);
@@ -250,6 +263,7 @@ export default function NewTicketModal({
     }
 
     const filteredApprovers = (approvers ?? []).filter((a) => a.name.toLowerCase().includes(approverQuery.toLowerCase()));
+    const activePriorities = useMemo(() => new Set((policies ?? []).map((p) => p.priority)), [policies]);
 
     const canSubmit =
         form.serviceId !== '' &&
@@ -484,13 +498,20 @@ export default function NewTicketModal({
                                     <div className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-2.5 sm:grid-cols-4">
                                         {PRIORITIES.map((p) => {
                                             const active = form.priority === p.label;
+                                            const isActivePriority = !policies || activePriorities.has(p.label);
                                             return (
                                                 <button
                                                     key={p.label}
                                                     type="button"
+                                                    disabled={!isActivePriority}
+                                                    title={isActivePriority ? undefined : 'SLA policy untuk priority ini sedang nonaktif'}
                                                     onClick={() => set({ priority: p.label })}
                                                     className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-xs font-bold ${
-                                                        active ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                                        !isActivePriority
+                                                            ? 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300'
+                                                            : active
+                                                              ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                                                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                                     }`}
                                                 >
                                                     <span className="text-base font-extrabold leading-none">{p.glyph}</span>

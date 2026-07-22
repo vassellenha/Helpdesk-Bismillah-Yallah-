@@ -7,7 +7,6 @@
         ['label' => 'TOTAL USER', 'value' => $totalUsers, 'icon' => 'users', 'bg' => 'bg-blue-50', 'color' => 'text-blue-600'],
         ['label' => 'ROLE AKTIF', 'value' => $activeRoles, 'icon' => 'check', 'bg' => 'bg-emerald-50', 'color' => 'text-emerald-600'],
         ['label' => 'SERVICE CATALOG', 'value' => $serviceCatalogCount, 'icon' => 'catalog', 'bg' => 'bg-amber-50', 'color' => 'text-amber-600'],
-        ['label' => 'APPROVAL MATRIX', 'value' => $approvalMatrixCount, 'icon' => 'gear', 'bg' => 'bg-blue-50', 'color' => 'text-blue-600'],
         ['label' => 'SLA POLICY AKTIF', 'value' => $slaPolicyActiveCount, 'icon' => 'dot', 'bg' => 'bg-red-50', 'color' => 'text-red-600'],
         ['label' => 'AUDIT LOG HARI INI', 'value' => $auditLogToday, 'icon' => 'doc', 'bg' => 'bg-gray-100', 'color' => 'text-gray-600'],
     ];

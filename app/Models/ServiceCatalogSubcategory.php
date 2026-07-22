@@ -14,4 +14,9 @@ class ServiceCatalogSubcategory extends Model
     {
         return $this->belongsTo(ServiceCatalogService::class, 'service_id');
     }
+
+    public function subjects()
+    {
+        return $this->hasMany(ServiceCatalogSubject::class, 'subcategory_id');
+    }
 }

@@ -20,7 +20,7 @@ class TicketDetailController extends Controller
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
 
-        $ticket->load(['requester', 'approver', 'assignedAgent', 'comments']);
+        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments']);
 
         return view('requester.ticket-detail', [
             'role' => 'requester',
@@ -183,9 +183,15 @@ class TicketDetailController extends Controller
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
                 'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
-                'support' => $t->assignedAgent
-                    ? ['name' => $t->assignedAgent->name, 'role' => 'Support · '.strtoupper($t->assignedAgent->type), 'email' => $t->assignedAgent->email]
-                    : null,
+                // Computed live from the catalog Subject's current support
+                // assignment (via catalog_subject_id), not a value frozen on
+                // the ticket — a Level 2 Subject (both teams) surfaces as
+                // two entries here.
+                'support' => collect([$t->catalogSubject?->supportAgent, $t->catalogSubject?->itAgent])
+                    ->filter()
+                    ->map(fn ($a) => ['name' => $a->name, 'role' => 'Support · '.strtoupper($a->type), 'email' => $a->email])
+                    ->values()
+                    ->all(),
             ],
             'canConfirmClose' => $t->status === 'Resolved',
             // Raw (non-combined) fields, only needed to prefill the Edit
