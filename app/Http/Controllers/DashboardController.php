@@ -92,15 +92,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function approver(): View
-    {
-        return view('dashboard.approver', [
-            'role' => 'approver',
-            'queue' => DummyData::approvalQueue(),
-            'notifications' => DummyData::notifications(),
-        ]);
-    }
-
     public function support(): View
     {
         return view('dashboard.support', [

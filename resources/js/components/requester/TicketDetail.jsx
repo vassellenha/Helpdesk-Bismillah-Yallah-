@@ -233,6 +233,45 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
     );
 }
 
+const APPROVAL_NOTE_STYLES = {
+    approved: {
+        border: 'border-emerald-200', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700',
+        title: 'text-emerald-800', body: 'text-emerald-900', time: 'text-emerald-600',
+        label: (name) => `Disetujui oleh ${name}`,
+        icon: 'M20 6 9 17l-5-5',
+    },
+    revision_requested: {
+        border: 'border-amber-200', bg: 'bg-amber-50', iconBg: 'bg-amber-100', iconColor: 'text-amber-700',
+        title: 'text-amber-800', body: 'text-amber-900', time: 'text-amber-600',
+        label: (name) => `Diminta perbaikan oleh ${name}`,
+        icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z',
+    },
+    rejected: {
+        border: 'border-red-200', bg: 'bg-red-50', iconBg: 'bg-red-100', iconColor: 'text-red-700',
+        title: 'text-red-800', body: 'text-red-900', time: 'text-red-600',
+        label: (name) => `Ditolak oleh ${name}`,
+        icon: 'M6 6l12 12 M18 6 6 18',
+    },
+};
+
+function ApprovalNoteBanner({ approvalNote }) {
+    const style = APPROVAL_NOTE_STYLES[approvalNote.decision];
+    if (!style) return null;
+
+    return (
+        <div className={`flex gap-3 rounded-2xl border ${style.border} ${style.bg} p-4`}>
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${style.iconBg} ${style.iconColor}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={style.icon} /></svg>
+            </span>
+            <div className="min-w-0">
+                <p className={`text-[13px] font-bold ${style.title}`}>{style.label(approvalNote.approverName ?? 'Approver')}</p>
+                <p className={`mt-1 text-[13px] leading-relaxed ${style.body}`}>{approvalNote.note}</p>
+                <p className={`mt-1.5 text-[11px] ${style.time}`}>{approvalNote.at}</p>
+            </div>
+        </div>
+    );
+}
+
 function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     const support = ticket.people.support;
 
@@ -291,6 +330,8 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
                 My Tickets
             </a>
+
+            {ticket.approvalNote && <ApprovalNoteBanner approvalNote={ticket.approvalNote} />}
 
             <Card>
                 <div className="flex flex-wrap items-start justify-between gap-4">

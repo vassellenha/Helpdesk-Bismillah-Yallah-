@@ -69,15 +69,25 @@ class NotificationService
         'ticket_closed' => 'M20 6 9 17l-5-5',
         'sla_warning' => 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 3',
         'sla_breach' => 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 3',
+        'waiting_decision' => 'M9 12h6 M9 16h6 M9 8h6 M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z',
+        'decision_recorded' => 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9',
+        'history_updated' => 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z',
+        'ticket_approved' => 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9',
+        'ticket_rejected' => 'M18 6 6 18 M6 6l12 12',
     ];
 
     /**
      * Formats a user's notification feed for the top-bar bell — shared by
-     * every page under the requester layout so the unread count and list
-     * never drift between screens.
+     * every page under a role layout so the unread count and list never
+     * drift between screens. $ticketRoute/$readRoute let each role point
+     * the feed at its own ticket-detail and mark-read endpoints.
      */
-    public static function present(User $user, int $limit = 20): array
-    {
+    public static function present(
+        User $user,
+        int $limit = 20,
+        string $ticketRoute = 'requester.tickets.show',
+        string $readRoute = 'requester.notifications.read'
+    ): array {
         return TicketNotification::where('user_id', $user->id)
             ->with('ticket:id,ticket_no')
             ->latest('created_at')
@@ -90,8 +100,8 @@ class NotificationService
                 'time' => $n->created_at->diffForHumans(),
                 'unread' => $n->read_at === null,
                 'icon' => self::ICONS[$n->type] ?? self::ICONS['ticket_created'],
-                'href' => $n->ticket ? route('requester.tickets.show', $n->ticket) : null,
-                'markReadUrl' => route('requester.notifications.read', $n),
+                'href' => $n->ticket ? route($ticketRoute, $n->ticket) : null,
+                'markReadUrl' => route($readRoute, $n),
             ])
             ->values()
             ->all();

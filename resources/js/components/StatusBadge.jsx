@@ -1,6 +1,6 @@
 const STATUS_STYLES = {
     Draft: 'bg-gray-100 text-gray-600 ring-gray-500/20',
-    Open: 'bg-gray-100 text-gray-700 ring-gray-500/20',
+    Open: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
     Assigned: 'bg-sky-50 text-sky-700 ring-sky-600/20',
     'In Progress': 'bg-blue-50 text-blue-700 ring-blue-600/20',
     'Waiting Approval': 'bg-violet-50 text-violet-700 ring-violet-600/20',

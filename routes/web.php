@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\TicketManagementController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
@@ -18,10 +19,19 @@ Route::get('/', [PortalController::class, 'index'])->name('portal.index');
 
 Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/requester', [DashboardController::class, 'requester'])->name('requester');
-    Route::get('/approver', [DashboardController::class, 'approver'])->name('approver');
+    Route::get('/approver', [ApprovalController::class, 'inbox'])->name('approver');
     Route::get('/support', [DashboardController::class, 'support'])->name('support');
     Route::get('/team-lead', [DashboardController::class, 'teamLead'])->name('team-lead');
     Route::get('/eva', [DashboardController::class, 'eva'])->name('eva');
+});
+
+Route::prefix('approver')->name('approver.')->group(function () {
+    Route::get('/tickets', [ApprovalController::class, 'history'])->name('tickets');
+    Route::get('/tickets/{ticket}', [ApprovalController::class, 'show'])->name('tickets.show');
+    Route::post('/tickets/{ticket}/comments', [ApprovalController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/tickets/{ticket}/decide', [ApprovalController::class, 'decide'])->name('tickets.decide');
+    Route::post('/notifications/{notification}/read', [ApprovalController::class, 'markNotificationRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [ApprovalController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
 
 Route::prefix('requester')->name('requester.')->group(function () {
