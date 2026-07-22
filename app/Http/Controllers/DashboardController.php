@@ -145,6 +145,8 @@ class DashboardController extends Controller
             'id' => $t->ticket_no,
             'title' => $t->title,
             'app' => trim(($t->service_name ?? '').($t->subcategory_name ? ' · '.$t->subcategory_name : '')) ?: ($t->subject_name ?? '—'),
+            'service' => $t->service_name ?? '—',
+            'subcategory' => $t->subcategory_name ?? '—',
             'category' => $t->issue_category ?? $t->category ?? '—',
             'priority' => $t->priority,
             'status' => $t->status,
