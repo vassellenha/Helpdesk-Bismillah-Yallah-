@@ -27,6 +27,7 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
 Route::prefix('requester')->name('requester.')->group(function () {
     Route::get('/tickets', [DashboardController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [TicketDetailController::class, 'show'])->name('tickets.show');
+    Route::put('/tickets/{ticket}', [TicketController::class, 'update'])->name('tickets.update');
     Route::post('/tickets/{ticket}/comments', [TicketDetailController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/reopen', [TicketDetailController::class, 'reopen'])->name('tickets.reopen');
     Route::post('/tickets/{ticket}/close', [TicketDetailController::class, 'close'])->name('tickets.close');

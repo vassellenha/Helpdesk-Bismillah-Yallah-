@@ -18,4 +18,9 @@ class ServiceCatalogService extends Model
     {
         return $this->hasMany(ServiceCatalogSubcategory::class, 'service_id');
     }
+
+    public function subjects()
+    {
+        return $this->hasMany(ServiceCatalogSubject::class, 'service_id');
+    }
 }

@@ -93,7 +93,15 @@ const emptyForm = {
     approverName: '',
 };
 
-export default function NewTicketModal({ catalogUrl = '/api/catalog', approversUrl = '/api/approvers', submitUrl = '/api/tickets' }) {
+export default function NewTicketModal({
+    catalogUrl = '/api/catalog',
+    approversUrl = '/api/approvers',
+    submitUrl = '/api/tickets',
+    editTicket = null,
+    editUrl = null,
+    triggerLabel = 'New Ticket',
+}) {
+    const isEdit = !!editTicket;
     const [open, setOpen] = useState(false);
     const [catalog, setCatalog] = useState(null);
     const [policies, setPolicies] = useState(null);
@@ -123,6 +131,45 @@ export default function NewTicketModal({ catalogUrl = '/api/catalog', approversU
         apiFetch('/api/sla-policies/active').then(setPolicies).catch(() => setPolicies([]));
         apiFetch(approversUrl).then(setApprovers).catch(() => setApprovers([]));
     }, [open, catalogUrl, approversUrl]);
+
+    // Prefills the form from the existing draft once the catalog has
+    // loaded — resolving by name since the ticket only stores names, not
+    // catalog IDs (there's no persisted catalog_subject_id on the ticket).
+    useEffect(() => {
+        if (!open || !isEdit || !catalog) return;
+
+        const service = catalog.services.find((s) => s.name === editTicket.serviceName);
+        const isOther = editTicket.subcategoryName === 'Other' || !service;
+
+        if (isOther) {
+            const issueCategory = catalog.issueCategories.find((c) => c.name === editTicket.issueCategory);
+            set({
+                serviceId: service ? String(service.id) : '',
+                subcategoryId: OTHER,
+                subjectText: editTicket.subjectName ?? '',
+                issueCategoryId: issueCategory ? String(issueCategory.id) : '',
+                description: editTicket.description ?? '',
+                priority: editTicket.priority ?? 'Low',
+                approverId: editTicket.approverId ? String(editTicket.approverId) : '',
+                approverName: editTicket.approverName ?? '',
+            });
+            return;
+        }
+
+        const subcategory = catalog.subcategories.find((sc) => String(sc.service_id) === String(service.id) && sc.name === editTicket.subcategoryName);
+        const subject = subcategory && catalog.subjects.find((s) => String(s.subcategory_id) === String(subcategory.id) && s.name === editTicket.subjectName);
+
+        set({
+            serviceId: String(service.id),
+            subcategoryId: subcategory ? String(subcategory.id) : '',
+            subjectId: subject ? String(subject.id) : '',
+            description: editTicket.description ?? '',
+            priority: editTicket.priority ?? 'Low',
+            approverId: editTicket.approverId ? String(editTicket.approverId) : '',
+            approverName: editTicket.approverName ?? '',
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, isEdit, catalog]);
 
     useEffect(() => {
         function onClickOutside(e) {
@@ -227,23 +274,24 @@ export default function NewTicketModal({ catalogUrl = '/api/catalog', approversU
             const service = selectedService;
             const subcategory = isOtherSubcategory ? 'Other' : catalog?.subcategories.find((s) => String(s.id) === form.subcategoryId)?.name;
 
-            let ticket = await apiFetch(submitUrl, {
-                method: 'POST',
-                body: JSON.stringify({
-                    title: derivedTitle,
-                    category: issueCategoryName || null,
-                    sla_policy_id: priorityPolicy?.id ?? null,
-                    service_name: service?.name ?? null,
-                    subcategory_name: subcategory ?? null,
-                    subject_name: isOtherSubcategory ? form.subjectText : selectedSubject?.name ?? null,
-                    issue_category: issueCategoryName || null,
-                    description: form.description || null,
-                    catalog_subject_id: isOtherSubcategory || !form.subjectId ? null : Number(form.subjectId),
-                    approver_id: requiresApproval && form.approverId ? Number(form.approverId) : null,
-                    requires_approval: requiresApproval,
-                    is_draft: isDraft,
-                }),
-            });
+            const payload = {
+                title: derivedTitle,
+                category: issueCategoryName || null,
+                sla_policy_id: priorityPolicy?.id ?? null,
+                service_name: service?.name ?? null,
+                subcategory_name: subcategory ?? null,
+                subject_name: isOtherSubcategory ? form.subjectText : selectedSubject?.name ?? null,
+                issue_category: issueCategoryName || null,
+                description: form.description || null,
+                catalog_subject_id: isOtherSubcategory || !form.subjectId ? null : Number(form.subjectId),
+                approver_id: requiresApproval && form.approverId ? Number(form.approverId) : null,
+                requires_approval: requiresApproval,
+                is_draft: isDraft,
+            };
+
+            let ticket = isEdit
+                ? await apiFetch(editUrl, { method: 'PUT', body: JSON.stringify(payload) })
+                : await apiFetch(submitUrl, { method: 'POST', body: JSON.stringify(payload) });
 
             if (attachment && ticket.ticket_no) {
                 try {
@@ -272,13 +320,19 @@ export default function NewTicketModal({ catalogUrl = '/api/catalog', approversU
                 onClick={() => setOpen(true)}
                 className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-blue-700"
             >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-                New Ticket
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    {isEdit ? (
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" strokeLinejoin="round" />
+                    ) : (
+                        <><path d="M12 5v14" /><path d="M5 12h14" /></>
+                    )}
+                </svg>
+                {triggerLabel}
             </button>
 
             {open && (
                 <Modal onClose={close} maxWidth="max-w-2xl">
-                    <ModalHeader title="Ticket Information" subtitle="Fill in the details of your request." onClose={close} />
+                    <ModalHeader title="Ticket Information" subtitle={isEdit ? 'Update the details of your draft request.' : 'Fill in the details of your request.'} onClose={close} />
 
                     <div className="space-y-4 overflow-y-auto px-6 py-5">
                         {created ? (
@@ -484,7 +538,12 @@ export default function NewTicketModal({ catalogUrl = '/api/catalog', approversU
 
                     <ModalFooter>
                         {created ? (
-                            <button onClick={close} className="rounded-full bg-blue-600 px-6 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700">Close</button>
+                            <button
+                                onClick={() => (isEdit ? window.location.reload() : close())}
+                                className="rounded-full bg-blue-600 px-6 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700"
+                            >
+                                Close
+                            </button>
                         ) : (
                             <>
                                 <button onClick={close} className="rounded-full border border-gray-200 px-5 py-2.5 text-[13px] font-bold text-blue-600 hover:bg-gray-50">Cancel</button>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
+import NewTicketModal from '../NewTicketModal';
 
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
 
@@ -259,7 +260,7 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     );
 }
 
-export default function TicketDetail({ ticket, comments: initialComments = [], timeline = [], commentsUrl, reopenUrl, closeUrl, ticketsUrl }) {
+export default function TicketDetail({ ticket, comments: initialComments = [], timeline = [], commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
     const [status] = useState(ticket.status);
     const [canConfirmClose] = useState(ticket.canConfirmClose);
     const [comments, setComments] = useState(initialComments);
@@ -306,6 +307,9 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                             Confirm & Close
                         </button>
+                    )}
+                    {status === 'Draft' && (
+                        <NewTicketModal editTicket={ticket} editUrl={editUrl} catalogUrl={catalogUrl} approversUrl={approversUrl} triggerLabel="Edit Draft" />
                     )}
                 </div>
 

@@ -14,7 +14,7 @@ export default function SlaDistributionDonut({ donut = { total: 0, onTrack: 0, w
         <div className="flex h-full flex-col gap-4">
             <div>
                 <h2 className="text-[15px] font-bold text-gray-900">SLA Distribution</h2>
-                <p className="text-xs text-gray-400">Your active tickets right now</p>
+                <p className="text-xs text-gray-400">Tickets with an SLA clock running (excludes those awaiting approval)</p>
             </div>
             <div className="flex flex-1 items-center gap-5">
                 <div className="relative h-32 w-32 shrink-0">
@@ -29,7 +29,7 @@ export default function SlaDistributionDonut({ donut = { total: 0, onTrack: 0, w
                     </ResponsiveContainer>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                         <span className="text-2xl font-extrabold leading-none text-gray-900">{donut.total}</span>
-                        <span className="text-[10px] text-gray-400">active tickets</span>
+                        <span className="text-[10px] text-gray-400">SLA active</span>
                     </div>
                 </div>
                 <div className="flex flex-1 flex-col gap-3">

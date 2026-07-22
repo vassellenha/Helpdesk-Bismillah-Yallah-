@@ -34,6 +34,9 @@ class TicketDetailController extends Controller
             'closeUrl' => route('requester.tickets.close', $ticket),
             'attachmentUrl' => route('requester.tickets.attachment', $ticket),
             'ticketsUrl' => route('requester.tickets'),
+            'editUrl' => route('requester.tickets.update', $ticket),
+            'catalogUrl' => route('catalog.tree'),
+            'approversUrl' => route('approvers.index'),
         ]);
     }
 
@@ -185,6 +188,15 @@ class TicketDetailController extends Controller
                     : null,
             ],
             'canConfirmClose' => $t->status === 'Resolved',
+            // Raw (non-combined) fields, only needed to prefill the Edit
+            // Draft form — the display fields above stay as they were.
+            'serviceName' => $t->service_name,
+            'subcategoryName' => $t->subcategory_name,
+            'subjectName' => $t->subject_name,
+            'issueCategory' => $t->issue_category,
+            'requiresApproval' => (bool) $t->approver_id,
+            'approverId' => $t->approver_id,
+            'approverName' => $t->approver?->name,
         ];
     }
 
