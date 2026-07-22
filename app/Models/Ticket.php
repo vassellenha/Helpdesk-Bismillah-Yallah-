@@ -18,7 +18,8 @@ class Ticket extends Model
         'category', 'sla_policy_id', 'priority', 'approver_id', 'assigned_agent_id', 'catalog_subject_id',
         'response_time_minutes', 'resolution_time_minutes', 'warning_threshold_percent',
         'response_due_at', 'resolution_due_at', 'warning_at',
-        'status', 'is_draft', 'resolved_at', 'satisfaction_rating',
+        'status', 'is_draft', 'resolved_at', 'satisfaction_rating', 'feedback_note',
+        'escalated_at', 'escalation_note',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class Ticket extends Model
         'resolution_due_at' => 'datetime',
         'warning_at' => 'datetime',
         'resolved_at' => 'datetime',
+        'escalated_at' => 'datetime',
         'is_draft' => 'boolean',
     ];
 
@@ -112,11 +114,11 @@ class Ticket extends Model
 
         if (in_array($this->status, self::DONE_STATUSES, true)) {
             return $this->resolved_at
-                ? $this->resolved_at->diffInMinutes($this->resolution_due_at, false)
+                ? (int) $this->resolved_at->diffInMinutes($this->resolution_due_at, false)
                 : 0;
         }
 
-        return Carbon::now()->diffInMinutes($this->resolution_due_at, false);
+        return (int) Carbon::now()->diffInMinutes($this->resolution_due_at, false);
     }
 
     public function getSlaKindAttribute(): string

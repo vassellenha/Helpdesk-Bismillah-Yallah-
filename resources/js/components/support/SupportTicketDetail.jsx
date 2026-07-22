@@ -11,23 +11,17 @@ const TIMELINE_DOT = {
 };
 
 const CONFIRM_COPY = {
-    approved: {
-        title: 'Setujui permohonan ini?',
-        body: (id) => `Tiket ${id} akan disetujui dan diteruskan ke tahap berikutnya (Support).`,
-        button: 'Ya, Setujui',
+    resolve: {
+        title: 'Tutup Layanan (Service Closed)?',
+        body: (id) => `Tiket ${id} akan ditandai selesai dan ditutup. Requester akan diminta memberi penilaian atas layanan. Tindakan ini tercatat di riwayat status.`,
+        button: 'Ya, Tutup Layanan',
         color: 'bg-blue-600 hover:bg-blue-700',
     },
-    revision_requested: {
-        title: 'Minta perbaikan?',
-        body: (id) => `Tiket ${id} akan dikembalikan ke requester untuk diperbaiki sesuai catatan Anda.`,
-        button: 'Ya, Minta Perbaikan',
-        color: 'bg-amber-600 hover:bg-amber-700',
-    },
-    rejected: {
-        title: 'Tolak permohonan ini?',
-        body: (id) => `Tiket ${id} akan ditolak dan ditutup. Requester akan menerima notifikasi.`,
-        button: 'Ya, Tolak',
-        color: 'bg-red-600 hover:bg-red-700',
+    escalate: {
+        title: 'Eskalasi ke Tim IT?',
+        body: (id) => `Tiket ${id} akan dieskalasi ke Tim IT Lanjutan untuk penanganan lebih dalam. Tindakan ini tercatat di riwayat status.`,
+        button: 'Ya, Eskalasi',
+        color: 'bg-blue-600 hover:bg-blue-700',
     },
 };
 
@@ -49,15 +43,15 @@ function Field({ label, value }) {
     );
 }
 
-function ConfirmModal({ decision, ticketId, note, submitting, error, onCancel, onConfirm }) {
-    const copy = CONFIRM_COPY[decision];
+function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onConfirm }) {
+    const copy = CONFIRM_COPY[action];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onCancel}>
             <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9" /></svg>
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4 M12 17h.01 M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
                     </span>
                     <div>
                         <h2 className="text-[15px] font-bold text-gray-900">{copy.title}</h2>
@@ -87,13 +81,12 @@ function ConfirmModal({ decision, ticketId, note, submitting, error, onCancel, o
     );
 }
 
-export default function ApprovalTicketDetail({ ticket, comments: initialComments = [], timeline = [], commentsUrl, decideUrl, ticketsUrl }) {
+export default function SupportTicketDetail({ ticket, comments: initialComments = [], timeline = [], commentsUrl, resolveUrl, escalateUrl, ticketsUrl }) {
     const [comments, setComments] = useState(initialComments);
     const [reply, setReply] = useState('');
     const [sending, setSending] = useState(false);
     const [note, setNote] = useState('');
-    const [noteError, setNoteError] = useState(false);
-    const [confirmDecision, setConfirmDecision] = useState(null);
+    const [confirmAction, setConfirmAction] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -111,26 +104,26 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
         }
     }
 
-    function requestDecision(decision) {
-        if (!note.trim()) {
-            setNoteError(true);
-            return;
-        }
-        setNoteError(false);
-        setConfirmDecision(decision);
-    }
-
-    async function confirmDecisionAction() {
+    async function confirmActionSubmit() {
         setSubmitting(true);
         setError('');
+        const url = confirmAction === 'resolve' ? resolveUrl : escalateUrl;
         try {
-            await apiFetch(decideUrl, { method: 'POST', body: JSON.stringify({ decision: confirmDecision, note }) });
-            window.location.reload();
+            await apiFetch(url, { method: 'POST', body: JSON.stringify({ note }) });
+            if (confirmAction === 'escalate') {
+                // Escalating hands the ticket off to Support IT — it no longer
+                // belongs to this queue, so reloading the same URL would 403.
+                window.location.href = ticketsUrl;
+            } else {
+                window.location.reload();
+            }
         } catch (e) {
-            setError(e.message || 'Gagal mengirim keputusan.');
+            setError(e.message || 'Gagal mengirim tindakan.');
             setSubmitting(false);
         }
     }
+
+    const noteFilled = note.trim().length > 0;
 
     return (
         <div className="flex flex-col gap-6">
@@ -141,7 +134,7 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
 
             <Card>
                 <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700">Mode Approval</span>
+                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700">Mode Support</span>
                     <StatusBadge status={ticket.status} />
                     <PriorityBadge priority={ticket.priority} />
                 </div>
@@ -168,7 +161,7 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
                         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 sm:grid-cols-2">
                             <Field label="Requester" value={ticket.requester?.name} />
                             <Field label="Unit Kerja" value={ticket.requester?.unit} />
-                            <Field label="Layanan Katalog" value={ticket.layananKatalog} />
+                            <Field label="Layanan" value={ticket.service} />
                             <Field label="Kontak" value={ticket.requester?.email} />
                         </div>
                         {ticket.attachmentName && (
@@ -200,8 +193,8 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
                                 <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-[13px] text-gray-400">Belum ada diskusi.</p>
                             )}
                             {comments.map((c) => (
-                                <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${c.authorRole === 'Approver' ? 'ml-auto bg-blue-600 text-white' : 'bg-gray-50 text-gray-800'}`}>
-                                    <div className={`mb-1 flex items-center gap-2 text-[11px] font-semibold ${c.authorRole === 'Approver' ? 'text-blue-100' : 'text-gray-500'}`}>
+                                <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${c.authorRole === 'Support' ? 'ml-auto bg-blue-600 text-white' : 'bg-gray-50 text-gray-800'}`}>
+                                    <div className={`mb-1 flex items-center gap-2 text-[11px] font-semibold ${c.authorRole === 'Support' ? 'text-blue-100' : 'text-gray-500'}`}>
                                         <span>{c.authorName}</span>
                                         <span className="opacity-70">· {c.authorRole}</span>
                                         <span className="opacity-70">· {c.at}</span>
@@ -216,7 +209,7 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
                                 value={reply}
                                 onChange={(e) => setReply(e.target.value)}
                                 rows={2}
-                                placeholder="Tulis pertanyaan atau feedback untuk requester…"
+                                placeholder="Tulis tanggapan untuk requester… (mis. minta detail transaksi, konfirmasi penyelesaian)"
                                 className="flex-1 resize-none rounded-xl border border-gray-200 px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-400"
                             />
                             <button
@@ -224,67 +217,124 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
                                 disabled={sending || !reply.trim()}
                                 className="rounded-xl bg-blue-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {sending ? 'Mengirim…' : 'Kirim'}
+                                {sending ? 'Mengirim…' : 'Kirim Tanggapan'}
                             </button>
                         </div>
                     </Card>
                 </div>
 
                 <div className="flex flex-col gap-6">
-                    {ticket.canDecide ? (
-                        <Card title="Panel Keputusan">
-                            <p className="mb-3 text-[12px] leading-relaxed text-gray-400">Keputusan Anda sebagai Approver — {ticket.requester?.unit ?? ''}.</p>
-                            <label className="mb-1.5 block text-[13px] font-bold text-gray-800">Catatan / Feedback</label>
-                            <textarea
-                                value={note}
-                                onChange={(e) => {
-                                    setNote(e.target.value);
-                                    if (e.target.value.trim()) setNoteError(false);
-                                }}
-                                rows={4}
-                                placeholder="Wajib diisi sebelum menyetujui, meminta perbaikan, atau menolak"
-                                className={`w-full resize-none rounded-xl border px-3.5 py-3 text-[13px] outline-none focus:border-blue-400 ${noteError ? 'border-red-400' : 'border-gray-200'}`}
-                            />
-                            {noteError && <p className="mt-1.5 text-xs font-medium text-red-600">Catatan wajib diisi sebelum melanjutkan.</p>}
+                    <Card title="Aksi Penanganan">
+                        <div className="flex items-center justify-between text-[13px]">
+                            <span className="text-gray-400">Status saat ini</span>
+                            <StatusBadge status={ticket.status} />
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-[13px]">
+                            <span className="text-gray-400">PIC</span>
+                            <span className="text-right font-semibold text-blue-600">
+                                {ticket.people?.pic?.name}
+                                <span className="block text-[11px] font-normal text-gray-400">{ticket.people?.pic?.role}</span>
+                            </span>
+                        </div>
 
-                            <div className="mt-4 flex flex-col gap-2.5">
-                                <button
-                                    onClick={() => requestDecision('approved')}
-                                    className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700"
-                                >
+                        {ticket.escalated && escalateUrl && (
+                            <div className="mt-3 border-t border-gray-100 pt-3">
+                                <p className="text-[12px] text-gray-500">Tiket Sudah Dieskalasi ke Tim IT.</p>
+                                <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                                    Setujui
-                                </button>
-                                <button
-                                    onClick={() => requestDecision('revision_requested')}
-                                    className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] font-bold text-amber-700 hover:bg-amber-100"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                                    Minta Perbaikan
-                                </button>
-                                <button
-                                    onClick={() => requestDecision('rejected')}
-                                    className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-[13px] font-bold text-red-600 hover:bg-red-50"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
-                                    Tolak
-                                </button>
+                                    Sudah dieskalasi ke Tim IT Lanjutan
+                                </div>
                             </div>
+                        )}
 
-                            <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-                                Keputusan tercatat di riwayat approval &amp; audit trail. Requester menerima notifikasi.
-                            </p>
-                        </Card>
-                    ) : ticket.lastDecision ? (
-                        <Card title="Keputusan Anda">
-                            <p className="text-[13px] font-bold text-gray-900">{ticket.lastDecision.decisionLabel}</p>
-                            <p className="mt-1 text-[11px] text-gray-400">{ticket.lastDecision.at}</p>
-                            <p className="mt-3 rounded-lg bg-gray-50 p-3 text-[13px] text-gray-700">{ticket.lastDecision.note}</p>
-                            {ticket.lastDecision.forwardedTo && (
-                                <p className="mt-3 text-[11px] text-gray-400">Diteruskan ke: <span className="font-semibold text-gray-600">{ticket.lastDecision.forwardedTo}</span></p>
+                        {ticket.escalated && !escalateUrl && (
+                            <div className="mt-3 border-t border-gray-100 pt-3">
+                                <p className="text-[12px] text-gray-500">Tiket ini dieskalasi dari Support BPO:</p>
+                                <p className="mt-1.5 rounded-lg bg-blue-50 px-3 py-2 text-[12px] text-blue-800">{ticket.escalationNote}</p>
+                            </div>
+                        )}
+
+                        {ticket.canAct ? (
+                            <>
+                                <label className="mb-1.5 mt-4 block text-[13px] font-bold text-gray-800">Catatan (wajib)</label>
+                                <textarea
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    rows={4}
+                                    placeholder="Tulis catatan penanganan…"
+                                    className="w-full resize-none rounded-xl border border-gray-200 px-3.5 py-3 text-[13px] outline-none focus:border-blue-400"
+                                />
+                                {!noteFilled && <p className="mt-1.5 text-xs font-medium text-gray-400">Isi catatan untuk mengaktifkan tombol di bawah.</p>}
+
+                                <div className="mt-4 flex flex-col gap-2.5">
+                                    <button
+                                        onClick={() => setConfirmAction('resolve')}
+                                        disabled={!noteFilled}
+                                        className="flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-2.5 text-[13px] font-bold text-gray-500 enabled:bg-blue-600 enabled:text-white enabled:hover:bg-blue-700 disabled:cursor-not-allowed"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                                        Service Closed
+                                    </button>
+                                    {escalateUrl && (
+                                        <button
+                                            onClick={() => setConfirmAction('escalate')}
+                                            disabled={!noteFilled}
+                                            className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 px-4 py-2.5 text-[13px] font-bold text-gray-500 enabled:border-amber-200 enabled:bg-amber-50 enabled:text-amber-700 enabled:hover:bg-amber-100 disabled:cursor-not-allowed"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M5 12l7-7 7 7" /></svg>
+                                            Eskalasi IT
+                                        </button>
+                                    )}
+                                </div>
+
+                                <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
+                                    Tindakan tercatat di riwayat status &amp; audit trail. Requester menerima notifikasi.
+                                </p>
+                            </>
+                        ) : null}
+                    </Card>
+
+                    <Card title="SLA">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-semibold text-gray-700">Target Penyelesaian</span>
+                            <span className={`text-[13px] font-bold ${ticket.sla?.kind === 'breach' ? 'text-red-600' : ticket.sla?.kind === 'ontrack' ? 'text-emerald-600' : 'text-gray-700'}`}>
+                                {ticket.sla?.label}
+                            </span>
+                        </div>
+                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                            <div
+                                className={`h-full rounded-full ${ticket.sla?.kind === 'breach' ? 'bg-red-500' : ticket.sla?.kind === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                style={{ width: `${ticket.sla?.pct ?? 0}%` }}
+                            />
+                        </div>
+                    </Card>
+
+                    <Card title="People">
+                        <div className="flex flex-col gap-3">
+                            {ticket.people?.requester && (
+                                <div className="flex items-center gap-2.5">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
+                                        {ticket.people.requester.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block truncate text-[13px] font-semibold text-gray-900">{ticket.people.requester.name}</span>
+                                        <span className="block truncate text-[11px] text-gray-400">{ticket.people.requester.role}</span>
+                                    </span>
+                                </div>
                             )}
-                        </Card>
-                    ) : null}
+                            {ticket.people?.pic && (
+                                <div className="flex items-center gap-2.5">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                                        {ticket.people.pic.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block truncate text-[13px] font-semibold text-gray-900">{ticket.people.pic.name}</span>
+                                        <span className="block truncate text-[11px] text-gray-400">{ticket.people.pic.role}</span>
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
 
                     {ticket.status === 'Closed' && ticket.satisfactionRating && (
                         <Card title="Feedback">
@@ -312,15 +362,15 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
                 </div>
             </div>
 
-            {confirmDecision && (
+            {confirmAction && (
                 <ConfirmModal
-                    decision={confirmDecision}
+                    action={confirmAction}
                     ticketId={ticket.id}
                     note={note}
                     submitting={submitting}
                     error={error}
-                    onCancel={() => !submitting && setConfirmDecision(null)}
-                    onConfirm={confirmDecisionAction}
+                    onCancel={() => !submitting && setConfirmAction(null)}
+                    onConfirm={confirmActionSubmit}
                 />
             )}
         </div>

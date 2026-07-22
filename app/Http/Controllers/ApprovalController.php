@@ -44,7 +44,7 @@ class ApprovalController extends Controller
         $thisMonth = $decisions->filter(fn (TicketApproval $d) => $d->created_at->isSameMonth($now) && $d->created_at->isSameYear($now));
 
         $oldestPending = $pending->min('created_at');
-        $waitingLongest = $oldestPending ? $this->formatWaitDuration($oldestPending->diffInMinutes($now)) : '—';
+        $waitingLongest = $oldestPending ? $this->formatWaitDuration((int) $oldestPending->diffInMinutes($now)) : '—';
 
         $priorityDistribution = collect(['Critical', 'High', 'Medium', 'Low'])
             ->map(function (string $priority) use ($pending) {
@@ -337,6 +337,8 @@ class ApprovalController extends Controller
             'attachmentName' => $t->attachment_name,
             'attachmentDownloadUrl' => $t->attachment_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($t->attachment_path) : null,
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
+            'satisfactionRating' => $t->satisfaction_rating,
+            'feedbackNote' => $t->feedback_note,
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'unit' => $t->requester->unit,

@@ -7,6 +7,7 @@ use App\Models\ServiceCatalogService;
 use App\Models\ServiceCatalogSubcategory;
 use App\Models\ServiceCatalogSubject;
 use App\Models\SupportAgent;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
@@ -23,7 +24,7 @@ use Illuminate\Database\Seeder;
 class ServiceCatalogSeeder extends Seeder
 {
     private const IT_AGENTS = ['Aditya Dwi Nugraha', 'Arief Kurniawan', 'Febria Sahrina', 'Agung Wijayanto', 'Naufal Akbar', 'Sarah', 'Kevin', 'Rian'];
-    private const BPO_AGENTS = ['Genta Pratama', 'Rio Saputra', 'Lutfi Ramadhan', 'Maya Prameswari'];
+    private const BPO_AGENTS = ['Genta Pratama', 'Rio Saputra', 'Lutfi Ramadhan', 'Maya Prameswari', 'Denny Firmansyah'];
 
     /**
      * Full company application list from the "MASTER APLIKASI" sheet —
@@ -64,6 +65,20 @@ class ServiceCatalogSeeder extends Seeder
             ['name' => $name, 'type' => 'bpo'],
             ['email' => self::agentEmail($name)]
         )->id);
+
+        // Aditya Dwi Nugraha is also the seeded "Support IT" login persona
+        // (see UserRoleSeeder) — link his SupportAgent row to that real user
+        // so CurrentActor::support() can resolve "my tickets" via this row.
+        if ($user = User::where('email', 'aditya.nugraha@adhi.co.id')->first()) {
+            SupportAgent::where(['name' => 'Aditya Dwi Nugraha', 'type' => 'it'])->update(['user_id' => $user->id]);
+        }
+
+        // Denny Firmansyah is the seeded "Support BPO" login persona (see
+        // UserRoleSeeder) — same link as Aditya above, so
+        // CurrentActor::supportBpo() can resolve "my tickets" via this row.
+        if ($user = User::where('email', 'denny.firmansyah@adhi.co.id')->first()) {
+            SupportAgent::where(['name' => 'Denny Firmansyah', 'type' => 'bpo'])->update(['user_id' => $user->id]);
+        }
 
         $itCursor = 0;
         $bpoCursor = 0;

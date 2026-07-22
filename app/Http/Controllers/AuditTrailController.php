@@ -42,6 +42,7 @@ class AuditTrailController extends Controller
             'sla_configuration' => 'Konfigurasi SLA',
             'user_role_management' => 'User & Role Management',
             'ticket_approval' => 'Approval Tiket',
+            'ticket_support' => 'Penanganan Support',
             default => $module,
         };
     }
@@ -59,6 +60,8 @@ class AuditTrailController extends Controller
             'approve' => 'Setujui',
             'request_revision' => 'Minta Perbaikan',
             'reject' => 'Tolak',
+            'resolve' => 'Tutup Layanan',
+            'escalate' => 'Eskalasi',
             default => $action,
         };
     }

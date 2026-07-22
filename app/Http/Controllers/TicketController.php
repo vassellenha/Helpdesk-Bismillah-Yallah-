@@ -63,9 +63,7 @@ class TicketController extends Controller
             default => 'Open',
         };
 
-        $assignedAgentId = isset($data['catalog_subject_id'])
-            ? ServiceCatalogSubject::find($data['catalog_subject_id'])?->support_agent_id
-            : null;
+        $assignedAgentId = $this->resolveAssignedAgentId($data['catalog_subject_id'] ?? null);
 
         $ticket = Ticket::create([
             'ticket_no' => $prefix.'-'.$now->format('Y').'-'.str_pad((string) (Ticket::count() + 1), 4, '0', STR_PAD_LEFT),
@@ -157,9 +155,7 @@ class TicketController extends Controller
             default => 'Open',
         };
 
-        $assignedAgentId = isset($data['catalog_subject_id'])
-            ? ServiceCatalogSubject::find($data['catalog_subject_id'])?->support_agent_id
-            : null;
+        $assignedAgentId = $this->resolveAssignedAgentId($data['catalog_subject_id'] ?? null);
 
         $ticket->update([
             'title' => $data['title'],
@@ -197,6 +193,25 @@ class TicketController extends Controller
             ...$ticket->fresh()->toArray(),
             'sla_status' => $ticket->fresh()->sla_status,
         ]);
+    }
+
+    /**
+     * A catalog subject may only have one of its two agent slots filled —
+     * some subjects route straight to IT with no BPO slot at all (support_
+     * agent_id null, it_agent_id set). Falling back to it_agent_id here
+     * keeps that ticket from being created with no PIC whatsoever; a Level 2
+     * subject (both slots filled) still resolves to the BPO slot first,
+     * matching the existing BPO-first-line handling.
+     */
+    private function resolveAssignedAgentId(?int $catalogSubjectId): ?int
+    {
+        if (! $catalogSubjectId) {
+            return null;
+        }
+
+        $subject = ServiceCatalogSubject::find($catalogSubjectId);
+
+        return $subject?->support_agent_id ?? $subject?->it_agent_id;
     }
 
     /**

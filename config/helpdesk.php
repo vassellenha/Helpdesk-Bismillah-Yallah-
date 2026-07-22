@@ -32,13 +32,25 @@ return [
         ],
         'support' => [
             'key' => 'support',
-            'initials' => 'S',
-            'label' => 'Support',
-            'description' => 'Menangani tiket masuk sesuai aplikasi/PIC, mengelola progres penyelesaian.',
+            'initials' => 'SI',
+            'label' => 'Support IT',
+            'description' => 'Menangani tiket teknis (termasuk eskalasi dari Support BPO), mengelola progres penyelesaian.',
             'links' => [
-                ['label' => 'Support Workspace', 'route' => 'dashboard.support'],
+                ['label' => 'Dashboard', 'route' => 'dashboard.support'],
+                ['label' => 'My Tickets', 'route' => 'support.tickets'],
             ],
-            'cta' => 'Support Workspace →',
+            'cta' => 'Dashboard · My Tickets →',
+        ],
+        'support-bpo' => [
+            'key' => 'support-bpo',
+            'initials' => 'SB',
+            'label' => 'Support BPO',
+            'description' => 'Menangani tiket masuk lini pertama sesuai aplikasi/PIC, eskalasi ke Support IT bila perlu penanganan lebih dalam.',
+            'links' => [
+                ['label' => 'Dashboard', 'route' => 'dashboard.support-bpo'],
+                ['label' => 'My Tickets', 'route' => 'support-bpo.tickets'],
+            ],
+            'cta' => 'Dashboard · My Tickets →',
         ],
         'team-lead' => [
             'key' => 'team-lead',
