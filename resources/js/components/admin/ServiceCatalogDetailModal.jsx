@@ -1,5 +1,14 @@
 import Modal, { ModalFooter, ModalHeader } from './Modal';
-import { LEVEL_DESCRIPTIONS } from '../../lib/formatters';
+
+function levelLabel(subject) {
+    if (Number(subject.support_level) === 2) return 'Level 2 — Support BPO & IT';
+    return subject.it_name && !subject.support_name ? 'Level 1 — Support IT' : 'Level 1 — Support BPO';
+}
+
+function supportLabel(subject) {
+    const names = [subject.support_name, subject.it_name].filter(Boolean);
+    return names.length > 0 ? names.join(' & ') : '—';
+}
 
 export default function ServiceCatalogDetailModal({ subject, onClose }) {
     return (
@@ -13,8 +22,8 @@ export default function ServiceCatalogDetailModal({ subject, onClose }) {
                 <Detail label="Subject" value={subject.subject} />
                 <Detail label="Requires Approval" value={subject.requires_approval ? 'Yes' : 'No'} />
                 <Detail label="Status" value={subject.status === 'active' ? 'Aktif' : 'Nonaktif'} />
-                <Detail label="Level" value={`Level ${subject.support_level} — ${LEVEL_DESCRIPTIONS[subject.support_level]}`} />
-                <Detail label="Support" value={subject.support_name ?? '—'} />
+                <Detail label="Level" value={levelLabel(subject)} />
+                <Detail label="Support" value={supportLabel(subject)} />
             </div>
 
             <ModalFooter>
