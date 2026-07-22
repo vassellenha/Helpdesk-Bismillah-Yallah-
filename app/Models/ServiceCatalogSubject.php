@@ -15,7 +15,7 @@ class ServiceCatalogSubject extends Model
 
     protected $fillable = [
         'issue_category_id', 'service_id', 'subcategory_id', 'name',
-        'requires_approval', 'support_agent_id', 'support_level', 'is_active',
+        'requires_approval', 'support_agent_id', 'it_agent_id', 'support_level', 'is_active',
     ];
 
     protected $casts = [
@@ -42,5 +42,10 @@ class ServiceCatalogSubject extends Model
     public function supportAgent()
     {
         return $this->belongsTo(SupportAgent::class);
+    }
+
+    public function itAgent()
+    {
+        return $this->belongsTo(SupportAgent::class, 'it_agent_id');
     }
 }

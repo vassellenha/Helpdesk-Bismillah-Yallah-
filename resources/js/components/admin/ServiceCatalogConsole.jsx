@@ -168,9 +168,18 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                                     <td className="px-4 py-3 text-gray-600">{s.subcategory}</td>
                                     <td className="px-4 py-3 font-medium text-gray-900">{s.subject}</td>
                                     <td className="px-4 py-3 text-gray-700">
-                                        {s.support_name ?? '—'}
-                                        {s.support_type && (
-                                            <span className="ml-1.5 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-600">{s.support_type}</span>
+                                        {!s.support_name && !s.it_name && '—'}
+                                        {s.support_name && (
+                                            <div>
+                                                {s.support_name}
+                                                <span className="ml-1.5 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-600">bpo</span>
+                                            </div>
+                                        )}
+                                        {s.it_name && (
+                                            <div>
+                                                {s.it_name}
+                                                <span className="ml-1.5 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-600">it</span>
+                                            </div>
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-gray-600">{LEVEL_LABELS[s.support_level]}</td>

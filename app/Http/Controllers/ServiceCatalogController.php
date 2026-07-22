@@ -8,6 +8,7 @@ use App\Models\ServiceCatalogService;
 use App\Models\ServiceCatalogSubcategory;
 use App\Models\ServiceCatalogSubject;
 use App\Models\SupportAgent;
+use App\Models\Ticket;
 use App\Support\AuditDescriber;
 use App\Support\CurrentActor;
 use App\Support\DummyData;
@@ -70,6 +71,7 @@ class ServiceCatalogController extends Controller
                 'name' => $data['subject'],
                 'requires_approval' => $data['requires_approval'],
                 'support_agent_id' => $data['support_agent_id'] ?? null,
+                'it_agent_id' => $data['it_agent_id'] ?? null,
                 'support_level' => $data['support_level'],
                 'is_active' => $data['status'] === 'active',
             ]);
@@ -92,7 +94,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent'])), 201);
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])), 201);
     }
 
     public function update(Request $request, ServiceCatalogSubject $subject): JsonResponse
@@ -118,6 +120,21 @@ class ServiceCatalogController extends Controller
                 'is_active' => $data['status'] === 'active',
             ]);
 
+            // Tickets only ever store a denormalized copy of the catalog's
+            // Layanan/Sub Category/Subject names (for fast listing/export
+            // without joins) — a rename here must be pushed to every ticket
+            // still pointing at this Subject via catalog_subject_id, or
+            // Admin Ticket Management / Requester's own ticket detail would
+            // keep showing the stale name.
+            Ticket::where('catalog_subject_id', $subject->id)->update([
+                'service_name' => $service->name,
+                'subcategory_name' => $subcategory->name,
+                'subject_name' => $subject->name,
+                'title' => $subject->name,
+                'issue_category' => $issueCategory->name,
+                'category' => $issueCategory->name,
+            ]);
+
             $after = $this->displaySnapshot($subject->fresh());
             $changes = AuditDescriber::diff($before, $after, self::FIELD_LABELS, $this->formatters());
 
@@ -136,7 +153,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent'])));
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])));
     }
 
     /**
@@ -147,32 +164,34 @@ class ServiceCatalogController extends Controller
     public function updateSupport(Request $request, ServiceCatalogSubject $subject): JsonResponse
     {
         $data = $request->validate([
-            'support_agent_id' => 'nullable|integer|exists:support_agents,id',
+            'support_agent_id' => ['nullable', 'integer', Rule::exists('support_agents', 'id')->where('type', 'bpo')],
+            'it_agent_id' => ['nullable', 'integer', Rule::exists('support_agents', 'id')->where('type', 'it')],
             'support_level' => 'required|integer|min:1|max:2',
         ]);
         $actor = CurrentActor::admin();
 
         $subject = DB::transaction(function () use ($data, $subject, $actor) {
-            $oldAgentName = $subject->supportAgent?->name ?? 'Belum ditentukan';
+            $oldLabel = $this->supportLabel($subject);
             $oldLevel = $subject->support_level;
 
             $subject->update([
                 'support_agent_id' => $data['support_agent_id'] ?? null,
+                'it_agent_id' => $data['it_agent_id'] ?? null,
                 'support_level' => $data['support_level'],
             ]);
             $subject->refresh();
-            $newAgentName = $subject->supportAgent?->name ?? 'Belum ditentukan';
+            $newLabel = $this->supportLabel($subject);
 
-            if ($oldAgentName !== $newAgentName) {
+            if ($oldLabel !== $newLabel) {
                 AuditTrail::record($actor, [
                     'module' => 'service_catalog',
                     'action' => 'assign_support',
                     'target_type' => 'subject',
                     'target_id' => $subject->id,
                     'target_name' => $subject->name,
-                    'old_value' => ['support' => $oldAgentName],
-                    'new_value' => ['support' => $newAgentName],
-                    'description' => "{$actor->name} mengubah Support subject \"{$subject->name}\" dari {$oldAgentName} menjadi {$newAgentName}.",
+                    'old_value' => ['support' => $oldLabel],
+                    'new_value' => ['support' => $newLabel],
+                    'description' => "{$actor->name} mengubah Support subject \"{$subject->name}\" dari {$oldLabel} menjadi {$newLabel}.",
                 ]);
             }
 
@@ -192,7 +211,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent'])));
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])));
     }
 
     public function toggleStatus(ServiceCatalogSubject $subject): JsonResponse
@@ -219,7 +238,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent'])));
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])));
     }
 
     public function destroy(ServiceCatalogSubject $subject): JsonResponse
@@ -231,7 +250,7 @@ class ServiceCatalogController extends Controller
 
     private function subjectsQuery()
     {
-        return ServiceCatalogSubject::with(['issueCategory', 'service', 'subcategory', 'supportAgent'])->orderBy('id');
+        return ServiceCatalogSubject::with(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])->orderBy('id');
     }
 
     private function displaySnapshot(ServiceCatalogSubject $s): array
@@ -244,6 +263,13 @@ class ServiceCatalogController extends Controller
             'requires_approval' => $s->requires_approval,
             'status' => $s->is_active ? 'active' : 'inactive',
         ];
+    }
+
+    private function supportLabel(ServiceCatalogSubject $s): string
+    {
+        $names = collect([$s->supportAgent?->name, $s->itAgent?->name])->filter()->values();
+
+        return $names->isEmpty() ? 'Belum ditentukan' : $names->implode(' & ');
     }
 
     private function formatters(): array
@@ -265,6 +291,8 @@ class ServiceCatalogController extends Controller
             'support_agent_id' => $s->support_agent_id,
             'support_name' => $s->supportAgent?->name,
             'support_type' => $s->supportAgent?->type,
+            'it_agent_id' => $s->it_agent_id,
+            'it_name' => $s->itAgent?->name,
             'support_level' => $s->support_level,
             'requires_approval' => $s->requires_approval,
             'status' => $s->is_active ? 'active' : 'inactive',
@@ -279,7 +307,8 @@ class ServiceCatalogController extends Controller
             'subcategory' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
             'requires_approval' => 'required|boolean',
-            'support_agent_id' => 'nullable|integer|exists:support_agents,id',
+            'support_agent_id' => ['nullable', 'integer', Rule::exists('support_agents', 'id')->where('type', 'bpo')],
+            'it_agent_id' => ['nullable', 'integer', Rule::exists('support_agents', 'id')->where('type', 'it')],
             'support_level' => 'required|integer|min:1|max:2',
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);

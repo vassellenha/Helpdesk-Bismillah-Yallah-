@@ -336,7 +336,7 @@ function TicketDetailModal({ ticket: t, onClose }) {
                         <>
                             <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900">Lampiran</h3>
                             {t.attachmentUrl ? (
-                                <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm text-blue-700 hover:bg-gray-50">
+                                <a href={t.attachmentUrl} className="flex items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm text-blue-700 hover:bg-gray-50">
                                     📎 {t.attachmentName}
                                 </a>
                             ) : (

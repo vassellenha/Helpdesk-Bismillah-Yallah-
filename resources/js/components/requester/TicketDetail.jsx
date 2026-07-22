@@ -346,8 +346,6 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                             ticket.attachmentDownloadUrl ? (
                                 <a
                                     href={ticket.attachmentDownloadUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
                                     className="mt-4 flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600 hover:bg-gray-100 hover:underline"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
@@ -429,7 +427,7 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
 
                     <Card title="People">
                         <div className="flex flex-col gap-3.5">
-                            {[ticket.people.requester, ticket.people.approver, ticket.people.support].filter(Boolean).map((p, i) => (
+                            {[ticket.people.requester, ticket.people.approver, ...(ticket.people.support ?? [])].filter(Boolean).map((p, i) => (
                                 <div key={i} className="flex items-center gap-3">
                                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
                                         {p.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
@@ -441,7 +439,7 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                                     </div>
                                 </div>
                             ))}
-                            {!ticket.people.support && ['Open', 'Assigned', 'In Progress', 'Waiting for Response'].includes(status) && (
+                            {(ticket.people.support ?? []).length === 0 && ['Open', 'Assigned', 'In Progress', 'Waiting for Response'].includes(status) && (
                                 <div className="flex items-center gap-3 opacity-60">
                                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-400">
                                         ?

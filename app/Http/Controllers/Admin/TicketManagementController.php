@@ -27,7 +27,7 @@ class TicketManagementController extends Controller
 {
     public function index(): View
     {
-        $tickets = Ticket::with(['requester', 'approver', 'assignedAgent'])
+        $tickets = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
             ->whereNotNull('requester_id')
             ->latest('created_at')
             ->get();
@@ -60,7 +60,7 @@ class TicketManagementController extends Controller
                 'priorities' => ['Critical', 'High', 'Medium', 'Low'],
                 'issueCategories' => $tickets->pluck('issue_category')->filter()->unique()->sort()->values(),
                 'requesters' => $tickets->pluck('requester_name')->filter()->unique()->sort()->values(),
-                'pics' => $tickets->map(fn (Ticket $t) => $t->assignedAgent?->name)->filter()->unique()->sort()->values(),
+                'pics' => $tickets->map(fn (Ticket $t) => $this->picLabel($t))->filter()->unique()->sort()->values(),
             ],
             'exportUrl' => route('admin.ticket-management.export'),
         ]);
@@ -78,7 +78,7 @@ class TicketManagementController extends Controller
             'ids' => 'nullable|string',
         ]);
 
-        $query = Ticket::with(['requester', 'approver', 'assignedAgent'])->whereNotNull('requester_id');
+        $query = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])->whereNotNull('requester_id');
 
         if (! empty($data['ids'])) {
             $ids = array_values(array_filter(explode(',', $data['ids'])));
@@ -105,7 +105,7 @@ class TicketManagementController extends Controller
                     $t->subject_name ?? '-',
                     $t->requester_name ?? $t->requester?->name ?? '-',
                     $t->priority,
-                    $t->assignedAgent?->name ?? 'Menunggu Assignment',
+                    $this->picLabel($t) ?? 'Menunggu Assignment',
                     $t->status,
                     $sla['label'],
                     $t->created_at->format('Y-m-d H:i'),
@@ -128,7 +128,7 @@ class TicketManagementController extends Controller
             'subject' => $t->subject_name ?? '-',
             'requesterName' => $t->requester_name ?? $t->requester?->name ?? '-',
             'priority' => $t->priority,
-            'pic' => $t->assignedAgent?->name,
+            'pic' => $this->picLabel($t),
             'status' => $t->status,
             'sla' => $this->slaPresent($t),
             'createdAt' => $t->created_at->format('d M Y, H:i'),
@@ -201,6 +201,25 @@ class TicketManagementController extends Controller
         return "{$mins} menit";
     }
 
+    /**
+     * PIC is computed live from the catalog Subject's *current* support
+     * assignment (via catalog_subject_id) rather than any value frozen on
+     * the ticket — a Subject requiring both teams (Level 2) shows both
+     * names together, and either name updates immediately if Admin changes
+     * Support in the Service Catalog, with no per-ticket sync needed.
+     */
+    private function picLabel(Ticket $t): ?string
+    {
+        $subject = $t->catalogSubject;
+        if (! $subject) {
+            return null;
+        }
+
+        $names = collect([$subject->supportAgent?->name, $subject->itAgent?->name])->filter()->values();
+
+        return $names->isEmpty() ? null : $names->implode(' & ');
+    }
+
     private function approvalInfo(Ticket $t): string
     {
         if (! $t->approver_id) {
@@ -233,7 +252,7 @@ class TicketManagementController extends Controller
                 $t->status === 'Rejected' => 'Ditolak',
                 default => 'Disetujui',
             }],
-            ['label' => 'Assign PIC', 'value' => $t->assignedAgent?->name ?? 'Menunggu Assignment'],
+            ['label' => 'Assign PIC', 'value' => $this->picLabel($t) ?? 'Menunggu Assignment'],
             ['label' => 'Progress', 'value' => match (true) {
                 in_array($t->status, $inProgressStatuses, true) => $t->status,
                 in_array($t->status, Ticket::DONE_STATUSES, true) => 'Selesai',

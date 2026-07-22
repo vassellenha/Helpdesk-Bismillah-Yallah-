@@ -10,6 +10,7 @@ use App\Support\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
 {
@@ -29,7 +30,7 @@ class TicketController extends Controller
             'approver_id' => 'nullable|integer|exists:users,id',
             'requires_approval' => 'nullable|boolean',
             'is_draft' => 'nullable|boolean',
-            'catalog_subject_id' => 'nullable|integer|exists:service_catalog_subjects,id',
+            'catalog_subject_id' => ['nullable', 'integer', Rule::exists('service_catalog_subjects', 'id')->where('is_active', true)],
         ]);
 
         /** @var SlaPolicy $policy */
@@ -81,6 +82,7 @@ class TicketController extends Controller
             'priority' => $policy->priority,
             'approver_id' => $requiresApproval ? ($data['approver_id'] ?? null) : null,
             'assigned_agent_id' => $assignedAgentId,
+            'catalog_subject_id' => $data['catalog_subject_id'] ?? null,
             'response_time_minutes' => $policy->response_time_minutes,
             'resolution_time_minutes' => $policy->resolution_time_minutes,
             'warning_threshold_percent' => $policy->warning_threshold_percent,
@@ -131,7 +133,7 @@ class TicketController extends Controller
             'approver_id' => 'nullable|integer|exists:users,id',
             'requires_approval' => 'nullable|boolean',
             'is_draft' => 'nullable|boolean',
-            'catalog_subject_id' => 'nullable|integer|exists:service_catalog_subjects,id',
+            'catalog_subject_id' => ['nullable', 'integer', Rule::exists('service_catalog_subjects', 'id')->where('is_active', true)],
         ]);
 
         /** @var SlaPolicy $policy */
@@ -169,6 +171,7 @@ class TicketController extends Controller
             'priority' => $policy->priority,
             'approver_id' => $requiresApproval ? ($data['approver_id'] ?? null) : null,
             'assigned_agent_id' => $assignedAgentId,
+            'catalog_subject_id' => $data['catalog_subject_id'] ?? null,
             'response_time_minutes' => $policy->response_time_minutes,
             'resolution_time_minutes' => $policy->resolution_time_minutes,
             'warning_threshold_percent' => $policy->warning_threshold_percent,

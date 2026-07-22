@@ -50,8 +50,7 @@ class AdminController extends Controller
             'topServiceInsight' => $this->topServiceInsight($this->topServiceCatalog($tickets, truncate: false)),
             'totalUsers' => User::count(),
             'activeRoles' => Role::where('status', 'active')->count(),
-            'serviceCatalogCount' => ServiceCatalogSubject::count(),
-            'approvalMatrixCount' => ServiceCatalogSubject::where('requires_approval', true)->count(),
+            'serviceCatalogCount' => ServiceCatalogSubject::where('is_active', true)->count(),
         ]);
     }
 
