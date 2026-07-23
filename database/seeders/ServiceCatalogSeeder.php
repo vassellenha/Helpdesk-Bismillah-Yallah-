@@ -122,5 +122,68 @@ class ServiceCatalogSeeder extends Seeder
         }
 
         fclose($handle);
+
+        $this->alignAccessRequestSequenceRouting($issueCategories['Access Request']);
+    }
+
+    /**
+     * The business spec ("REV Insiden & Service List Issue for Helpdesk 2.0
+     * (1).xlsx") marks these 12 Access Request subjects as needing BOTH BPO
+     * and IT (BPO handles first, escalates to IT) — the CSV import above
+     * only carries one support_type per row, so they were seeded with just
+     * an IT agent in support_agent_id and it_agent_id left null, which made
+     * new tickets route straight to Support IT and skip BPO entirely. This
+     * moves that IT agent into it_agent_id (the escalation target, same
+     * person — no reason to reassign them) and puts a BPO agent in
+     * support_agent_id so the routing matches the spec. Safe to re-run: once
+     * it_agent_id is set, the subject is skipped.
+     */
+    private function alignAccessRequestSequenceRouting(int $accessRequestCategoryId): void
+    {
+        $bpoRotation = collect(['Genta Pratama', 'Rio Saputra', 'Lutfi Ramadhan', 'Maya Prameswari']);
+        $fixes = [
+            ['subcategory' => 'SAP', 'subject' => 'Penonaktifan akun'],
+            ['subcategory' => 'SAP', 'subject' => 'Perubahan data akun'],
+            ['subcategory' => 'SILO (OTHER APPS)', 'subject' => 'Pembuatan akun baru'],
+            ['subcategory' => 'SILO (OTHER APPS)', 'subject' => 'Penonaktifan akun'],
+            ['subcategory' => 'SILO (OTHER APPS)', 'subject' => 'Perubahan data akun'],
+            ['subcategory' => 'SILO (OTHER APPS)', 'subject' => 'Reset Password'],
+            // Demo ticket AR-2026-0045 already used this subject — route it to
+            // Denny Firmansyah specifically so the BPO->IT fix is directly
+            // demonstrable through the Support BPO workspace.
+            ['subcategory' => 'SAP', 'subject' => 'Penambahan akses aplikasi', 'bpo' => 'Denny Firmansyah'],
+            ['subcategory' => 'SAP', 'subject' => 'Penghapusan akses aplikasi'],
+            ['subcategory' => 'SAP', 'subject' => 'Perubahan akses aplikasi'],
+            ['subcategory' => 'SILO (OTHER APPS)', 'subject' => 'Penambahan akses aplikasi'],
+            ['subcategory' => 'SILO (OTHER APPS)', 'subject' => 'Penghapusan akses aplikasi'],
+            ['subcategory' => 'SILO (OTHER APPS)', 'subject' => 'Perubahan akses aplikasi'],
+        ];
+
+        $bpoCursor = 0;
+
+        foreach ($fixes as $fix) {
+            $subject = ServiceCatalogSubject::where('issue_category_id', $accessRequestCategoryId)
+                ->where('name', $fix['subject'])
+                ->whereHas('subcategory', fn ($q) => $q->where('name', $fix['subcategory']))
+                ->first();
+
+            if (! $subject || $subject->it_agent_id) {
+                continue;
+            }
+
+            if (isset($fix['bpo'])) {
+                $bpoName = $fix['bpo'];
+            } else {
+                $bpoName = $bpoRotation[$bpoCursor % $bpoRotation->count()];
+                $bpoCursor++;
+            }
+
+            $bpoAgentId = SupportAgent::where('name', $bpoName)->where('type', 'bpo')->value('id');
+
+            $subject->update([
+                'it_agent_id' => $subject->support_agent_id,
+                'support_agent_id' => $bpoAgentId,
+            ]);
+        }
     }
 }
