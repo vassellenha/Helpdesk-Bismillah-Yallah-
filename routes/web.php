@@ -12,6 +12,7 @@ use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\SlaPolicyController;
 use App\Http\Controllers\SupportBpoController;
 use App\Http\Controllers\SupportController;
+use App\Http\Controllers\TeamLeadController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketDetailController;
 use App\Http\Controllers\UserRoleController;
@@ -24,7 +25,7 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/approver', [ApprovalController::class, 'inbox'])->name('approver');
     Route::get('/support', [SupportController::class, 'dashboard'])->name('support');
     Route::get('/support-bpo', [SupportBpoController::class, 'dashboard'])->name('support-bpo');
-    Route::get('/team-lead', [DashboardController::class, 'teamLead'])->name('team-lead');
+    Route::get('/team-lead', [TeamLeadController::class, 'dashboard'])->name('team-lead');
     Route::get('/eva', [DashboardController::class, 'eva'])->name('eva');
 });
 
@@ -54,6 +55,19 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
     Route::post('/tickets/{ticket}/escalate', [SupportBpoController::class, 'escalate'])->name('tickets.escalate');
     Route::post('/notifications/{notification}/read', [SupportBpoController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportBpoController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
+});
+
+Route::prefix('team-lead')->name('team-lead.')->group(function () {
+    Route::get('/tickets/{ticket}', [TeamLeadController::class, 'showTicket'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/data', [TeamLeadController::class, 'ticketData'])->name('tickets.data');
+    Route::post('/tickets/{ticket}/note', [TeamLeadController::class, 'addNote'])->name('tickets.note');
+    Route::post('/tickets/{ticket}/remind', [TeamLeadController::class, 'remind'])->name('tickets.remind');
+    Route::post('/tickets/{ticket}/reassign', [TeamLeadController::class, 'reassign'])->name('tickets.reassign');
+    Route::post('/tickets/{ticket}/raise-priority', [TeamLeadController::class, 'raisePriority'])->name('tickets.raise-priority');
+    Route::post('/escalation/raise', [TeamLeadController::class, 'escalateGroup'])->name('escalation.raise');
+    Route::get('/reports/export', [TeamLeadController::class, 'exportReport'])->name('reports.export');
+    Route::post('/notifications/{notification}/read', [TeamLeadController::class, 'markNotificationRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [TeamLeadController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
 
 Route::prefix('requester')->name('requester.')->group(function () {

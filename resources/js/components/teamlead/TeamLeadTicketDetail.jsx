@@ -1,0 +1,141 @@
+import { useState } from 'react';
+import { StatusBadge, PriorityBadge } from '../StatusBadge';
+import RemindModal from './RemindModal';
+import ReassignModal from './ReassignModal';
+import RaisePriorityModal from './RaisePriorityModal';
+
+const STEP_STYLE = {
+    done: { dot: 'bg-emerald-500', text: 'text-gray-800' },
+    current: { dot: 'bg-blue-500 ring-4 ring-blue-100', text: 'text-blue-700' },
+    pending: { dot: 'bg-gray-300', text: 'text-gray-400' },
+    rejected: { dot: 'bg-red-500', text: 'text-red-600' },
+};
+
+function SlaPill({ kind, label }) {
+    const style = kind === 'breach' ? 'bg-red-50 text-red-600' : kind === 'warning' ? 'bg-amber-50 text-amber-600' : kind === 'none' ? 'bg-gray-100 text-gray-500' : 'bg-emerald-50 text-emerald-600';
+    return <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold ${style}`}>{label}</span>;
+}
+
+export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], comments = [], agentOptions = [], remindUrlBase, dashboardUrl }) {
+    const [ticket, setTicket] = useState(initial);
+    const [modal, setModal] = useState(null);
+    const [toast, setToast] = useState(null);
+
+    function flash(msg) { setToast(msg); setTimeout(() => setToast(null), 3000); }
+
+    const row = { id: ticket.id, subject: ticket.subject, agent: ticket.agent, agentId: ticket.agentId, priority: ticket.priority, sla: ticket.sla };
+
+    return (
+        <div className="flex min-h-screen flex-col">
+            <header className="sticky top-0 z-20 flex h-[62px] items-center gap-4 border-b border-gray-200 bg-white px-7">
+                <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-blue-600 text-sm font-extrabold text-white">A</span>
+                    <div className="leading-tight">
+                        <p className="text-sm font-bold text-gray-900">Adhi Helpdesk</p>
+                        <p className="text-[10px] text-gray-400">Enterprise ITSM</p>
+                    </div>
+                </div>
+                <a href={dashboardUrl} className="ml-2 flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+                    Kembali ke Dashboard
+                </a>
+            </header>
+
+            <main className="mx-auto flex w-full max-w-[900px] flex-1 flex-col gap-6 px-7 py-7">
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-[13px] font-bold text-blue-600">{ticket.id}</p>
+                            <h1 className="mt-1 text-xl font-extrabold tracking-tight text-gray-900">{ticket.subject}</h1>
+                        </div>
+                        <SlaPill kind={ticket.slaKind} label={ticket.sla} />
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <StatusBadge status={ticket.status} />
+                        <PriorityBadge priority={ticket.priority} />
+                        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">{ticket.type}</span>
+                        <span className="rounded-md bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-600">{ticket.service}</span>
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap gap-2 border-t border-gray-100 pt-5">
+                        <button onClick={() => setModal('remind')} className="flex items-center gap-1.5 rounded-xl bg-red-50 px-4 py-2.5 text-[13px] font-bold text-red-600 hover:bg-red-100">Kirim Teguran</button>
+                        <button onClick={() => setModal('reassign')} className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2.5 text-[13px] font-bold text-gray-700 hover:bg-gray-50">Alihkan</button>
+                        <button onClick={() => setModal('raise')} className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2.5 text-[13px] font-bold text-gray-700 hover:bg-gray-50">Naikkan Prioritas</button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <div className="flex flex-col gap-6 lg:col-span-2">
+                        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wide text-gray-400">Deskripsi Masalah</h2>
+                            <p className="text-[13.5px] leading-relaxed text-gray-700">{ticket.description || 'Tidak ada deskripsi.'}</p>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400">Riwayat Aktivitas</h2>
+                            <div className="flex flex-col gap-4">
+                                {comments.map((c) => (
+                                    <div key={c.id} className="flex gap-3">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-600">{(c.authorName || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}</span>
+                                        <div>
+                                            <p className="text-[12.5px] text-gray-800"><span className="font-bold">{c.authorName}</span> <span className="text-gray-400">· {c.authorRole} · {c.at}</span></p>
+                                            <p className="mt-0.5 text-[12.5px] text-gray-700">{c.message}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {comments.length === 0 && <p className="text-sm text-gray-400">Belum ada aktivitas.</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400">Informasi</h2>
+                            <dl className="flex flex-col gap-3 text-[13px]">
+                                {[['PIC Support', ticket.agent], ['Pelapor', ticket.requester?.name ?? '—'], ['Unit', ticket.requester?.unit ?? '—'], ['Email', ticket.requester?.email ?? '—'], ['Sub-Kategori', ticket.subcategory], ['Dibuat', ticket.createdAt], ['Batas SLA', ticket.resolutionDue ?? '—']].map(([k, v]) => (
+                                    <div key={k} className="flex flex-col gap-0.5">
+                                        <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{k}</dt>
+                                        <dd className="font-semibold text-gray-900">{v}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400">Timeline SLA</h2>
+                            <div className="flex flex-col">
+                                {timeline.map((s, i) => {
+                                    const st = STEP_STYLE[s.state] ?? STEP_STYLE.pending;
+                                    return (
+                                        <div key={i} className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${st.dot}`} />
+                                                {i < timeline.length - 1 && <span className="my-1 w-px flex-1 bg-gray-200" style={{ minHeight: 18 }} />}
+                                            </div>
+                                            <div className="pb-3">
+                                                <p className={`text-[12.5px] font-semibold ${st.text}`}>{s.label}</p>
+                                                {(s.who || s.at) && <p className="text-[11px] text-gray-400">{[s.who, s.at].filter(Boolean).join(' · ')}</p>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            {modal === 'remind' && (
+                <RemindModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSent={(res) => { setModal(null); flash(res?.message ?? 'Teguran terkirim.'); }} />
+            )}
+            {modal === 'reassign' && (
+                <ReassignModal ticket={row} agents={agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setTicket((t) => ({ ...t, agent: res.agent.name, agentId: res.agent.id })); setModal(null); flash(res?.message ?? 'Tiket dialihkan.'); }} />
+            )}
+            {modal === 'raise' && (
+                <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setTicket((t) => ({ ...t, priority: res.priority })); setModal(null); flash(res?.message ?? 'Prioritas diperbarui.'); }} />
+            )}
+
+            {toast && <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
+        </div>
+    );
+}
