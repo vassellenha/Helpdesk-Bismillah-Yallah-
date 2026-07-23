@@ -5,6 +5,53 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $ticket_no
+ * @property string $title
+ * @property string|null $requester_name
+ * @property int|null $requester_id
+ * @property string|null $service_name
+ * @property string|null $subcategory_name
+ * @property string|null $subject_name
+ * @property string|null $issue_category
+ * @property string|null $description
+ * @property string|null $attachment_name
+ * @property string|null $attachment_path
+ * @property string|null $category
+ * @property int|null $sla_policy_id
+ * @property string $priority
+ * @property int|null $approver_id
+ * @property int|null $assigned_agent_id
+ * @property int|null $catalog_subject_id
+ * @property int $response_time_minutes
+ * @property int $resolution_time_minutes
+ * @property int $warning_threshold_percent
+ * @property Carbon $response_due_at
+ * @property Carbon $resolution_due_at
+ * @property Carbon $warning_at
+ * @property string $status
+ * @property bool $is_draft
+ * @property Carbon|null $resolved_at
+ * @property int|null $satisfaction_rating
+ * @property string|null $feedback_note
+ * @property Carbon|null $escalated_at
+ * @property string|null $escalation_note
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read string $sla_status
+ * @property-read int|null $sla_minutes_remaining
+ * @property-read string $sla_kind
+ * @property-read string $sla_label
+ * @property-read SlaPolicy|null $slaPolicy
+ * @property-read User|null $requester
+ * @property-read User|null $approver
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketComment> $comments
+ * @property-read SupportAgent|null $assignedAgent
+ * @property-read ServiceCatalogSubject|null $catalogSubject
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketNotification> $notifications
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketApproval> $approvals
+ */
 class Ticket extends Model
 {
     public const ACTIVE_STATUSES = ['Waiting for Approval', 'Open', 'Assigned', 'In Progress', 'Waiting for Response'];
