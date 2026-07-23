@@ -131,16 +131,11 @@ class TicketDetailController extends Controller
             'note' => 'nullable|string|max:3000',
         ]);
 
-        $ticket->update(['status' => 'Closed', 'satisfaction_rating' => $data['rating']]);
-
-        if (! empty($data['note'])) {
-            TicketComment::create([
-                'ticket_id' => $ticket->id,
-                'author_name' => $requester->name,
-                'author_role' => 'Requester',
-                'message' => $data['note'],
-            ]);
-        }
+        $ticket->update([
+            'status' => 'Closed',
+            'satisfaction_rating' => $data['rating'],
+            'feedback_note' => $data['note'] ?? null,
+        ]);
 
         NotificationService::notify(
             $requester,
@@ -178,6 +173,7 @@ class TicketDetailController extends Controller
             'attachmentDownloadUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
+            'feedbackNote' => $t->feedback_note,
             'approvalNote' => $lastApproval ? [
                 'decision' => $lastApproval->decision,
                 'note' => $lastApproval->note,

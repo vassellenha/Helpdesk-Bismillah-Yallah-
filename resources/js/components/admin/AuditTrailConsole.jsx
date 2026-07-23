@@ -8,6 +8,7 @@ const MODULE_LABELS = {
     sla_configuration: 'Konfigurasi SLA',
     user_role_management: 'User & Role Management',
     ticket_approval: 'Approval Tiket',
+    ticket_support: 'Penanganan Support',
 };
 
 const ACTION_LABELS = {
@@ -21,6 +22,8 @@ const ACTION_LABELS = {
     approve: 'Setujui',
     request_revision: 'Minta Perbaikan',
     reject: 'Tolak',
+    resolve: 'Tutup Layanan',
+    escalate: 'Eskalasi',
 };
 
 export default function AuditTrailConsole({ logs, administrators }) {

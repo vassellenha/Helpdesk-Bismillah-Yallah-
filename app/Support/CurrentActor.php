@@ -26,4 +26,14 @@ class CurrentActor
     {
         return User::where('email', 'karina.putri@adhi.co.id')->firstOrFail();
     }
+
+    public static function support(): User
+    {
+        return User::where('email', 'aditya.nugraha@adhi.co.id')->firstOrFail();
+    }
+
+    public static function supportBpo(): User
+    {
+        return User::where('email', 'denny.firmansyah@adhi.co.id')->firstOrFail();
+    }
 }

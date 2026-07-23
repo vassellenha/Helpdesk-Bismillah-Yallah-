@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import NewTicketModal from '../NewTicketModal';
+import FeedbackDisplay from '../FeedbackDisplay';
 
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
 
@@ -53,27 +54,6 @@ function StarRating({ value, onChange }) {
                         <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" />
                     </svg>
                 </button>
-            ))}
-        </div>
-    );
-}
-
-function ReadOnlyStars({ value }) {
-    return (
-        <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-                <svg
-                    key={n}
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill={n <= value ? '#f59e0b' : 'none'}
-                    stroke={n <= value ? '#f59e0b' : '#d1d5db'}
-                    strokeWidth="1.6"
-                    strokeLinejoin="round"
-                >
-                    <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" />
-                </svg>
             ))}
         </div>
     );
@@ -273,7 +253,7 @@ function ApprovalNoteBanner({ approvalNote }) {
 }
 
 function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
-    const support = ticket.people.support;
+    const support = (ticket.people.support ?? [])[0];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onDismiss}>
@@ -458,11 +438,8 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                     </Card>
 
                     {status === 'Closed' && ticket.satisfactionRating && (
-                        <Card title="Your Feedback">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[13px] text-gray-500">Rating yang Anda berikan</span>
-                                <ReadOnlyStars value={ticket.satisfactionRating} />
-                            </div>
+                        <Card title="Feedback">
+                            <FeedbackDisplay rating={ticket.satisfactionRating} note={ticket.feedbackNote} />
                         </Card>
                     )}
 

@@ -74,6 +74,9 @@ class NotificationService
         'history_updated' => 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z',
         'ticket_approved' => 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9',
         'ticket_rejected' => 'M18 6 6 18 M6 6l12 12',
+        'ticket_resolved' => 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9',
+        'ticket_escalated' => 'M12 19V5 M5 12l7-7 7 7',
+        'ticket_incoming_escalation' => 'M12 5v14 M19 12l-7 7-7-7',
     ];
 
     /**

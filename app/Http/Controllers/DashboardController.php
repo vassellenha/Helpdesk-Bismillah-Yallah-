@@ -92,17 +92,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function support(): View
-    {
-        return view('dashboard.support', [
-            'role' => 'support',
-            'tickets' => DummyData::tickets(),
-            'agents' => DummyData::agents(),
-            'categories' => DummyData::categories(),
-            'notifications' => DummyData::notifications(),
-        ]);
-    }
-
     public function teamLead(): View
     {
         return view('dashboard.team-lead', [

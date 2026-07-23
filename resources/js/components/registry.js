@@ -25,6 +25,10 @@ import ApproverTopNav from './approver/ApproverTopNav';
 import ApprovalInbox from './approver/ApprovalInbox';
 import ApprovalTicketDetail from './approver/ApprovalTicketDetail';
 import ApprovalHistoryPage from './approver/ApprovalHistoryPage';
+import SupportDashboard from './support/SupportDashboard';
+import SupportHistoryPage from './support/SupportHistoryPage';
+import SupportTicketDetail from './support/SupportTicketDetail';
+import SlaComplianceDonut from './charts/SlaComplianceDonut';
 
 // Central map from `data-react="Name"` (set in Blade) to the component
 // that should be mounted on that node. Add new islands here only.
@@ -56,4 +60,8 @@ export const registry = {
     ApprovalInbox,
     ApprovalTicketDetail,
     ApprovalHistoryPage,
+    SupportDashboard,
+    SupportHistoryPage,
+    SupportTicketDetail,
+    SlaComplianceDonut,
 };

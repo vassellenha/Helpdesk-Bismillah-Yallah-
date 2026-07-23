@@ -10,6 +10,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\SlaPolicyController;
+use App\Http\Controllers\SupportBpoController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketDetailController;
 use App\Http\Controllers\UserRoleController;
@@ -20,7 +22,8 @@ Route::get('/', [PortalController::class, 'index'])->name('portal.index');
 Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/requester', [DashboardController::class, 'requester'])->name('requester');
     Route::get('/approver', [ApprovalController::class, 'inbox'])->name('approver');
-    Route::get('/support', [DashboardController::class, 'support'])->name('support');
+    Route::get('/support', [SupportController::class, 'dashboard'])->name('support');
+    Route::get('/support-bpo', [SupportBpoController::class, 'dashboard'])->name('support-bpo');
     Route::get('/team-lead', [DashboardController::class, 'teamLead'])->name('team-lead');
     Route::get('/eva', [DashboardController::class, 'eva'])->name('eva');
 });
@@ -32,6 +35,25 @@ Route::prefix('approver')->name('approver.')->group(function () {
     Route::post('/tickets/{ticket}/decide', [ApprovalController::class, 'decide'])->name('tickets.decide');
     Route::post('/notifications/{notification}/read', [ApprovalController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [ApprovalController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
+});
+
+Route::prefix('support')->name('support.')->group(function () {
+    Route::get('/tickets', [SupportController::class, 'myTickets'])->name('tickets');
+    Route::get('/tickets/{ticket}', [SupportController::class, 'show'])->name('tickets.show');
+    Route::post('/tickets/{ticket}/comments', [SupportController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/tickets/{ticket}/resolve', [SupportController::class, 'resolve'])->name('tickets.resolve');
+    Route::post('/notifications/{notification}/read', [SupportController::class, 'markNotificationRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [SupportController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
+});
+
+Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
+    Route::get('/tickets', [SupportBpoController::class, 'myTickets'])->name('tickets');
+    Route::get('/tickets/{ticket}', [SupportBpoController::class, 'show'])->name('tickets.show');
+    Route::post('/tickets/{ticket}/comments', [SupportBpoController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/tickets/{ticket}/resolve', [SupportBpoController::class, 'resolve'])->name('tickets.resolve');
+    Route::post('/tickets/{ticket}/escalate', [SupportBpoController::class, 'escalate'])->name('tickets.escalate');
+    Route::post('/notifications/{notification}/read', [SupportBpoController::class, 'markNotificationRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [SupportBpoController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
 
 Route::prefix('requester')->name('requester.')->group(function () {
