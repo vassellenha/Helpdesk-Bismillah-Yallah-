@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ServiceCatalogController extends Controller
@@ -36,7 +37,6 @@ class ServiceCatalogController extends Controller
         return view('admin.service-catalog', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'notifications' => DummyData::notifications(),
             'subjects' => $subjects->map($this->presentSubject(...)),
             'issueCategories' => IssueCategory::orderBy('name')->pluck('name'),
             'services' => ServiceCatalogService::orderBy('name')->get(['id', 'name']),
@@ -168,6 +168,7 @@ class ServiceCatalogController extends Controller
             'it_agent_id' => ['nullable', 'integer', Rule::exists('support_agents', 'id')->where('type', 'it')],
             'support_level' => 'required|integer|min:1|max:2',
         ]);
+        $this->assertPicAssigned((int) $data['support_level'], $data['support_agent_id'] ?? null, $data['it_agent_id'] ?? null);
         $actor = CurrentActor::admin();
 
         $subject = DB::transaction(function () use ($data, $subject, $actor) {
@@ -301,7 +302,7 @@ class ServiceCatalogController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'issue_category' => ['required', Rule::in(['Incident', 'Service Request', 'Access Request'])],
             'layanan' => 'required|string|max:255',
             'subcategory' => 'required|string|max:255',
@@ -312,5 +313,29 @@ class ServiceCatalogController extends Controller
             'support_level' => 'required|integer|min:1|max:2',
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);
+
+        $this->assertPicAssigned((int) $data['support_level'], $data['support_agent_id'] ?? null, $data['it_agent_id'] ?? null);
+
+        return $data;
+    }
+
+    /**
+     * A Subject with no PIC leaves a ticket with nowhere to route — the
+     * form UI already blocks saving without one, but this is the
+     * authoritative check: a Level 1 Subject needs whichever single agent
+     * field it's using, a Level 2 Subject (handled by BPO and IT together)
+     * needs both.
+     */
+    private function assertPicAssigned(int $level, ?int $supportAgentId, ?int $itAgentId): void
+    {
+        $missing = $level === 2
+            ? (! $supportAgentId || ! $itAgentId)
+            : (! $supportAgentId && ! $itAgentId);
+
+        if ($missing) {
+            throw ValidationException::withMessages([
+                'support_agent_id' => 'PIC Support BPO/IT wajib dipilih sebelum layanan bisa disimpan — tiket tidak boleh dibuat tanpa arah PIC yang jelas.',
+            ]);
+        }
     }
 }

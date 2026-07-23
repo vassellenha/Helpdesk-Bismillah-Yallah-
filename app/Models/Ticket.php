@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -16,8 +17,6 @@ use Illuminate\Support\Carbon;
  * @property string|null $subject_name
  * @property string|null $issue_category
  * @property string|null $description
- * @property string|null $attachment_name
- * @property string|null $attachment_path
  * @property string|null $category
  * @property int|null $sla_policy_id
  * @property string $priority
@@ -37,6 +36,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $feedback_note
  * @property Carbon|null $escalated_at
  * @property string|null $escalation_note
+ * @property string|null $reopen_note
+ * @property Carbon|null $reopen_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read string $sla_status
@@ -51,6 +52,7 @@ use Illuminate\Support\Carbon;
  * @property-read ServiceCatalogSubject|null $catalogSubject
  * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketNotification> $notifications
  * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketApproval> $approvals
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketAttachment> $attachments
  */
 class Ticket extends Model
 {
@@ -61,18 +63,19 @@ class Ticket extends Model
     protected $fillable = [
         'ticket_no', 'title', 'requester_name', 'requester_id',
         'service_name', 'subcategory_name', 'subject_name', 'issue_category', 'description',
-        'attachment_name', 'attachment_path',
         'category', 'sla_policy_id', 'priority', 'approver_id', 'assigned_agent_id', 'catalog_subject_id',
         'response_time_minutes', 'resolution_time_minutes', 'warning_threshold_percent',
         'response_due_at', 'resolution_due_at', 'warning_at',
         'status', 'is_draft', 'resolved_at', 'satisfaction_rating', 'feedback_note',
         'escalated_at', 'escalation_note',
+        'reopen_note', 'reopen_at',
     ];
 
     protected $casts = [
         'response_due_at' => 'datetime',
         'resolution_due_at' => 'datetime',
         'warning_at' => 'datetime',
+        'reopen_at' => 'datetime',
         'resolved_at' => 'datetime',
         'escalated_at' => 'datetime',
         'is_draft' => 'boolean',
@@ -116,6 +119,26 @@ class Ticket extends Model
     public function approvals()
     {
         return $this->hasMany(TicketApproval::class)->orderBy('created_at');
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(TicketAttachment::class)->orderBy('created_at');
+    }
+
+    /**
+     * Shared shape for `attachments` across every ticket-detail/list
+     * endpoint (Requester, Approver, Support, Support BPO, Admin), so a
+     * ticket's files are presented identically everywhere instead of each
+     * controller hand-rolling the Storage URL lookup.
+     */
+    public function attachmentsPayload(): array
+    {
+        return $this->attachments->map(fn (TicketAttachment $a) => [
+            'id' => $a->id,
+            'name' => $a->name,
+            'url' => Storage::disk('public')->url($a->path),
+        ])->values()->all();
     }
 
     /**

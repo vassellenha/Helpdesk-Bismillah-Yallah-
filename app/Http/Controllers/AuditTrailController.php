@@ -15,7 +15,6 @@ class AuditTrailController extends Controller
         return view('admin.audit-trail', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'notifications' => DummyData::notifications(),
             'logs' => $logs->map(fn ($log) => [
                 'id' => $log->id,
                 'waktu' => $log->created_at->format('d M Y, H:i'),

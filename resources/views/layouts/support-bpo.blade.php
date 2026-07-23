@@ -38,6 +38,23 @@
 
             <div class="flex-1"></div>
 
+            @if(($agentSwitcher['options'] ?? collect())->count() > 1)
+                <form method="POST" action="{{ $agentSwitcher['switchUrl'] }}" class="flex items-center gap-2">
+                    @csrf
+                    <label for="agent_id" class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Bertindak sebagai</label>
+                    <select
+                        id="agent_id"
+                        name="agent_id"
+                        onchange="this.form.submit()"
+                        class="rounded-[10px] border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[13px] font-semibold text-gray-700 outline-none focus:border-blue-400"
+                    >
+                        @foreach($agentSwitcher['options'] as $opt)
+                            <option value="{{ $opt->id }}" @selected($opt->id === $agentSwitcher['currentAgentId'])>{{ $opt->name }}</option>
+                        @endforeach
+                    </select>
+                </form>
+            @endif
+
             <div
                 data-react="ApproverTopNav"
                 data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'inboxUrl' => route('dashboard.support-bpo'), 'ticketsUrl' => route('support-bpo.tickets'), 'markAllReadUrl' => route('support-bpo.notifications.read-all')]) }}"

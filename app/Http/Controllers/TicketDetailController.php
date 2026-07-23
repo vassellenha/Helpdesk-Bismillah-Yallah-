@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use App\Models\TicketApproval;
+use App\Models\TicketAttachment;
 use App\Models\TicketComment;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
@@ -21,7 +22,7 @@ class TicketDetailController extends Controller
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
 
-        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments']);
+        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return view('requester.ticket-detail', [
             'role' => 'requester',
@@ -50,27 +51,48 @@ class TicketDetailController extends Controller
             'file' => 'required|file|mimes:png,jpg,jpeg,pdf|max:5120',
         ]);
 
-        if ($ticket->attachment_path) {
-            Storage::disk('public')->delete($ticket->attachment_path);
+        if ($ticket->attachments()->count() >= TicketAttachment::MAX_PER_TICKET) {
+            return response()->json([
+                'message' => 'Maksimal '.TicketAttachment::MAX_PER_TICKET.' file lampiran per tiket.',
+            ], 422);
         }
 
         $path = $request->file('file')->store('ticket-attachments', 'public');
 
-        $ticket->update([
-            'attachment_name' => $request->file('file')->getClientOriginalName(),
-            'attachment_path' => $path,
+        $attachment = $ticket->attachments()->create([
+            'name' => $request->file('file')->getClientOriginalName(),
+            'path' => $path,
         ]);
 
         return response()->json([
-            'attachmentName' => $ticket->attachment_name,
-            'attachmentDownloadUrl' => Storage::disk('public')->url($path),
-        ]);
+            'attachment' => [
+                'id' => $attachment->id,
+                'name' => $attachment->name,
+                'url' => Storage::disk('public')->url($attachment->path),
+            ],
+            'attachments' => $ticket->attachments()->get()
+                ->map(fn (TicketAttachment $a) => ['id' => $a->id, 'name' => $a->name, 'url' => Storage::disk('public')->url($a->path)])
+                ->values(),
+        ], 201);
+    }
+
+    public function destroyAttachment(Ticket $ticket, TicketAttachment $attachment): JsonResponse
+    {
+        $requester = CurrentActor::requester();
+        abort_unless($ticket->requester_id === $requester->id, 403);
+        abort_unless($attachment->ticket_id === $ticket->id, 404);
+
+        Storage::disk('public')->delete($attachment->path);
+        $attachment->delete();
+
+        return response()->json(['deleted' => true]);
     }
 
     public function addComment(Request $request, Ticket $ticket): JsonResponse
     {
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
+        abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
         $data = $request->validate(['message' => 'required|string|max:3000']);
 
@@ -81,12 +103,17 @@ class TicketDetailController extends Controller
             'message' => $data['message'],
         ]);
 
+        NotificationService::notifyDiscussionParticipants($ticket, $requester, 'Requester', $data['message']);
+
         return response()->json($this->presentComment($comment), 201);
     }
 
     /**
      * "Belum" step: the requester says the issue isn't actually fixed, so
-     * the ticket goes back into the Support queue instead of closing.
+     * the ticket goes back into the Support queue instead of closing. The
+     * note is surfaced as a banner on both the requester's and Support's
+     * ticket-detail pages (see reopen_note/reopen_at), not posted into the
+     * Discussion thread — it's a status change, not a chat message.
      */
     public function reopen(Request $request, Ticket $ticket): JsonResponse
     {
@@ -96,21 +123,18 @@ class TicketDetailController extends Controller
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
 
-        $ticket->update(['status' => 'In Progress', 'resolved_at' => null]);
-
-        TicketComment::create([
-            'ticket_id' => $ticket->id,
-            'author_name' => $requester->name,
-            'author_role' => 'Requester',
-            'message' => $data['note'],
+        $ticket->update([
+            'status' => 'In Progress',
+            'resolved_at' => null,
+            'reopen_note' => $data['note'],
+            'reopen_at' => Carbon::now(),
         ]);
 
-        NotificationService::notify(
-            $requester,
+        NotificationService::notifyAssignedAgent(
             $ticket,
             'ticket_reopened',
             'Tiket Dibuka Kembali',
-            "Tiket {$ticket->ticket_no} dibuka kembali dan dikirim ke Tim Support untuk penanganan lanjutan."
+            "Tiket {$ticket->ticket_no} dibuka kembali oleh {$requester->name}: {$data['note']}"
         );
 
         return response()->json(['status' => $ticket->status]);
@@ -169,8 +193,7 @@ class TicketDetailController extends Controller
             'service' => trim(($t->service_name ?? '').($t->subcategory_name ? ' · '.$t->subcategory_name : '')),
             'subject' => $t->subject_name,
             'description' => $t->description,
-            'attachmentName' => $t->attachment_name,
-            'attachmentDownloadUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
+            'attachments' => $t->attachmentsPayload(),
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
@@ -179,6 +202,10 @@ class TicketDetailController extends Controller
                 'note' => $lastApproval->note,
                 'approverName' => $t->approver?->name,
                 'at' => $lastApproval->created_at->format('M j, Y · H:i'),
+            ] : null,
+            'reopenNote' => $t->reopen_note ? [
+                'note' => $t->reopen_note,
+                'at' => $t->reopen_at->format('M j, Y · H:i'),
             ] : null,
             'sla' => [
                 'label' => $t->sla_label,

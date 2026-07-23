@@ -31,7 +31,6 @@
                 </nav>
             </div>
             <div class="flex items-center gap-4">
-                <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications ?? []]) }}"></div>
                 <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '']) }}"></div>
             </div>
         </div>

@@ -133,9 +133,9 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                         className="w-full max-w-sm rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                        <Select value={layananFilter} onChange={setLayananFilter} label="Semua Layanan" options={layananOptions} />
-                        <Select value={subcategoryFilter} onChange={setSubcategoryFilter} label="Semua Sub Category" options={subcategoryOptions} />
-                        <Select value={issueFilter} onChange={setIssueFilter} label="Semua Issue Category" options={issueCategories} />
+                        <SearchableSelect value={layananFilter} onChange={setLayananFilter} label="Semua Layanan" options={layananOptions} searchPlaceholder="Cari layanan…" />
+                        <SearchableSelect value={subcategoryFilter} onChange={setSubcategoryFilter} label="Semua Sub Category" options={subcategoryOptions} searchPlaceholder="Cari sub category…" />
+                        <SearchableSelect value={issueFilter} onChange={setIssueFilter} label="Semua Issue Category" options={issueCategories} searchPlaceholder="Cari issue category…" />
                         <Select value={approvalFilter} onChange={setApprovalFilter} label="Semua Approval" options={['Yes', 'No']} />
                         <Select value={statusFilter} onChange={setStatusFilter} label="Semua Status" options={[['active', 'Aktif'], ['inactive', 'Nonaktif']]} />
                         <button onClick={resetFilters} className="text-sm font-medium text-blue-700 hover:text-blue-800">Reset Filter</button>
@@ -253,6 +253,81 @@ function Select({ value, onChange, label, options }) {
                 return <option key={val} value={val}>{text}</option>;
             })}
         </select>
+    );
+}
+
+// Layanan/Sub Category/Issue Category can run into dozens of options —
+// a plain <select> makes those unscannable, so this swaps in a search box
+// over a styled, height-capped list instead (same pattern as the PIC
+// filter in Admin Ticket Management).
+function SearchableSelect({ value, onChange, label, options, searchPlaceholder = 'Cari…' }) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const ref = useRef(null);
+
+    useEffect(() => {
+        function onClickOutside(e) {
+            if (ref.current && !ref.current.contains(e.target)) {
+                setOpen(false);
+                setQuery('');
+            }
+        }
+        document.addEventListener('mousedown', onClickOutside);
+        return () => document.removeEventListener('mousedown', onClickOutside);
+    }, []);
+
+    const normalized = options.map((opt) => (Array.isArray(opt) ? opt : [opt, opt]));
+    const filtered = normalized.filter(([, text]) => text.toLowerCase().includes(query.toLowerCase()));
+    const selectedText = normalized.find(([val]) => val === value)?.[1];
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="flex min-w-[160px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-700 hover:border-gray-300 focus:border-blue-400 focus:outline-none"
+            >
+                <span className="truncate">{value === ALL ? label : selectedText ?? label}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-400"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+
+            {open && (
+                <div className="absolute left-0 top-[calc(100%+4px)] z-30 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <div className="border-b border-gray-100 p-2">
+                        <input
+                            autoFocus
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={searchPlaceholder}
+                            className="w-full rounded-md border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-400"
+                        />
+                    </div>
+                    <ul className="max-h-64 overflow-y-auto py-1">
+                        <li>
+                            <button
+                                type="button"
+                                onClick={() => { onChange(ALL); setOpen(false); setQuery(''); }}
+                                className={`block w-full px-3 py-2 text-left text-sm hover:bg-blue-50 ${value === ALL ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-700'}`}
+                            >
+                                {label}
+                            </button>
+                        </li>
+                        {filtered.map(([val, text]) => (
+                            <li key={val}>
+                                <button
+                                    type="button"
+                                    onClick={() => { onChange(val); setOpen(false); setQuery(''); }}
+                                    className={`block w-full truncate px-3 py-2 text-left text-sm hover:bg-blue-50 ${val === value ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-700'}`}
+                                >
+                                    {text}
+                                </button>
+                            </li>
+                        ))}
+                        {filtered.length === 0 && <li className="px-3 py-4 text-center text-xs text-gray-400">Tidak ada hasil.</li>}
+                    </ul>
+                </div>
+            )}
+        </div>
     );
 }
 
