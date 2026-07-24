@@ -8,6 +8,7 @@ use App\Models\TicketAttachment;
 use App\Models\TicketComment;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\TicketPeople;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class TicketDetailController extends Controller
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
 
-        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return view('requester.ticket-detail', [
             'role' => 'requester',
@@ -241,15 +242,11 @@ class TicketDetailController extends Controller
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
                 'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
-                // Computed live from the catalog Subject's current support
-                // assignment (via catalog_subject_id), not a value frozen on
-                // the ticket — a Level 2 Subject (both teams) surfaces as
-                // two entries here.
-                'support' => collect([$t->catalogSubject?->supportAgent, $t->catalogSubject?->itAgent])
-                    ->filter()
-                    ->map(fn ($a) => ['name' => $a->name, 'role' => 'Support · '.strtoupper($a->type), 'email' => $a->email])
-                    ->values()
-                    ->all(),
+                // Everyone who actually touched the ticket — catalog routing,
+                // the current PIC, and every agent from the escalation /
+                // reassignment history — so the panel detects all involved
+                // parties, not just the configured agent (see TicketPeople).
+                'support' => TicketPeople::supportAgents($t),
             ],
             'canConfirmClose' => $t->status === 'Resolved',
             // Raw (non-combined) fields, only needed to prefill the Edit

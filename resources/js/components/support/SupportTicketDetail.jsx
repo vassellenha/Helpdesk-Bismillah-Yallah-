@@ -337,28 +337,18 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
 
                     <Card title="People">
                         <div className="flex flex-col gap-3">
-                            {ticket.people?.requester && (
-                                <div className="flex items-center gap-2.5">
-                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
-                                        {ticket.people.requester.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}
+                            {[ticket.people?.requester, ticket.people?.approver, ...(ticket.people?.support ?? [])].filter(Boolean).map((p, i) => (
+                                <div key={`${p.name}-${i}`} className="flex items-center gap-2.5">
+                                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${p.role?.startsWith('Support') ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                                        {p.name.split(' ').map((x) => x[0]).slice(0, 2).join('')}
                                     </span>
                                     <span className="min-w-0">
-                                        <span className="block truncate text-[13px] font-semibold text-gray-900">{ticket.people.requester.name}</span>
-                                        <span className="block truncate text-[11px] text-gray-400">{ticket.people.requester.role}</span>
+                                        <span className="block truncate text-[13px] font-semibold text-gray-900">{p.name}</span>
+                                        <span className="block truncate text-[11px] text-gray-400">{p.role}</span>
+                                        {p.email && <span className="block truncate text-[11px] text-blue-600">{p.email}</span>}
                                     </span>
                                 </div>
-                            )}
-                            {ticket.people?.pic && (
-                                <div className="flex items-center gap-2.5">
-                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                                        {ticket.people.pic.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}
-                                    </span>
-                                    <span className="min-w-0">
-                                        <span className="block truncate text-[13px] font-semibold text-gray-900">{ticket.people.pic.name}</span>
-                                        <span className="block truncate text-[11px] text-gray-400">{ticket.people.pic.role}</span>
-                                    </span>
-                                </div>
-                            )}
+                            ))}
                         </div>
                     </Card>
 

@@ -10,6 +10,7 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\TicketPeople;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -352,7 +353,9 @@ class SupportController extends Controller
             ],
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
+                'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
                 'pic' => ['name' => $agent->name, 'role' => 'Support '.strtoupper($agent->type), 'email' => $agent->email],
+                'support' => TicketPeople::supportAgents($t),
             ],
             'canAct' => ! in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Waiting for Approval'], true),
             'escalated' => $t->escalated_at !== null,
