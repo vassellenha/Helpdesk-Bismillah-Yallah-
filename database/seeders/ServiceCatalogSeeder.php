@@ -9,6 +9,7 @@ use App\Models\ServiceCatalogSubject;
 use App\Models\SupportAgent;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Import of the master Service Catalog data supplied by the business in
@@ -84,6 +85,30 @@ class ServiceCatalogSeeder extends Seeder
         if ($user = User::where('email', 'denny.firmansyah@adhi.co.id')->first()) {
             SupportAgent::where(['name' => 'Denny Firmansyah', 'type' => 'bpo'])->update(['user_id' => $user->id]);
         }
+
+        // Give every remaining active IT/BPO agent its own login user and link
+        // it, so the Support / Support BPO "act as" agent switcher (see
+        // AppServiceProvider::buildAgentSwitcher) has more than one person to
+        // switch between — that switcher only renders with 2+ linked agents,
+        // and it's what lets you test how tickets route to different PICs.
+        SupportAgent::whereIn('type', ['it', 'bpo'])
+            ->where('is_active', true)
+            ->whereNull('user_id')
+            ->get()
+            ->each(function (SupportAgent $agent) {
+                $user = User::firstOrCreate(
+                    ['email' => $agent->email],
+                    [
+                        'name' => $agent->name,
+                        'nip' => (string) (90000000 + $agent->id),
+                        'password' => Hash::make('password'),
+                        'unit' => $agent->type === 'it' ? 'IT Support' : 'Business Process Owner',
+                        'jabatan' => $agent->type === 'it' ? 'IT Support Staff' : 'BPO Staff',
+                        'status' => 'active',
+                    ]
+                );
+                $agent->update(['user_id' => $user->id]);
+            });
 
         $itCursor = 0;
         $bpoCursor = 0;
