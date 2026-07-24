@@ -135,7 +135,7 @@ class TeamLeadController extends Controller
                 'unread' => $n->read_at === null,
             ])->values(),
             'monitorRows' => $withSla
-                ->sortBy('sla_minutes_remaining')
+                ->sortByDesc('created_at')
                 ->map(fn (Ticket $t) => $this->presentWarningRow($t))
                 ->values(),
             'opStats' => $this->opStats($tickets),

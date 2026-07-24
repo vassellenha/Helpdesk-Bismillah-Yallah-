@@ -3,6 +3,7 @@ import { StatusBadge, PriorityBadge } from '../../StatusBadge';
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 const TYPES = ['Incident', 'Service Request', 'Access Request'];
+const PAGE_SIZE = 10;
 
 const TYPE_BADGE = {
     Incident: 'bg-red-50 text-red-600',
@@ -47,6 +48,7 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
     const [filterOpen, setFilterOpen] = useState(false);
     const [f, setF] = useState({ priority: 'Semua', status: 'Semua', type: 'Semua', subcat: 'Semua', app: 'Semua', unit: 'Semua' });
     const [appQuery, setAppQuery] = useState('');
+    const [page, setPage] = useState(1);
     const mount = useRef(Date.now());
     const [, setTick] = useState(0);
     const filterRef = useRef(null);
@@ -92,6 +94,15 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
         if (sortNB) out = [...out].sort((a, b) => (a.slaMinutes ?? 1e9) - (b.slaMinutes ?? 1e9));
         return out;
     }, [rows, f, query, sortNB]);
+
+    // Kembali ke halaman 1 setiap kali hasil filter berubah, biar tidak nyangkut di halaman kosong.
+    useEffect(() => { setPage(1); }, [f, query, sortNB]);
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
+    const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    const startIdx = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+    const endIdx = Math.min(safePage * PAGE_SIZE, filtered.length);
 
     function patch(id, fields) { setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...fields } : r))); }
     const setFilter = (key, val) => setF((prev) => ({ ...prev, [key]: val }));
@@ -176,7 +187,7 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((row) => {
+                            {paged.map((row) => {
                                 const sla = liveSla(row.slaMinutes, elapsed);
                                 const slaColor = !sla ? 'text-gray-400' : sla.overdue ? 'text-red-600' : row.slaKind === 'warning' || (row.slaMinutes ?? 99) < 30 ? 'text-amber-600' : 'text-emerald-600';
                                 const dot = !sla ? 'bg-gray-300' : sla.overdue ? 'bg-red-500' : row.slaKind === 'warning' || (row.slaMinutes ?? 99) < 30 ? 'bg-amber-500' : 'bg-emerald-500';
@@ -213,7 +224,20 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                         </tbody>
                     </table>
                 </div>
-                <div className="px-5 py-3 text-xs text-gray-400">Menampilkan {filtered.length} dari {rows.length} tiket aktif</div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
+                    <p className="text-xs text-gray-500">{startIdx}–{endIdx} dari {filtered.length} tiket</p>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3.5 py-2 text-[12.5px] font-bold text-gray-700 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+                            Sebelumnya
+                        </button>
+                        <span className="px-1 text-[12.5px] font-semibold text-gray-500">Hal {safePage} / {totalPages}</span>
+                        <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40">
+                            Berikutnya
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
