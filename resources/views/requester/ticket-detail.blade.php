@@ -12,6 +12,7 @@
         'commentsUrl' => $commentsUrl,
         'reopenUrl' => $reopenUrl,
         'closeUrl' => $closeUrl,
+        'attachmentUrl' => $attachmentUrl,
         'ticketsUrl' => $ticketsUrl,
         'editUrl' => $editUrl,
         'catalogUrl' => $catalogUrl,

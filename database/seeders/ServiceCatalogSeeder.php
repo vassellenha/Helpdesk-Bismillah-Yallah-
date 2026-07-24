@@ -27,6 +27,27 @@ class ServiceCatalogSeeder extends Seeder
     private const BPO_AGENTS = ['Genta Pratama', 'Rio Saputra', 'Lutfi Ramadhan', 'Maya Prameswari', 'Denny Firmansyah'];
 
     /**
+     * Every IT/BPO agent also has a login persona (see UserRoleSeeder) so
+     * they're all switchable via the agent switcher in the Support/Support
+     * BPO layouts, not just the two original fixed personas (Aditya, Denny).
+     */
+    private const AGENT_LOGIN_EMAILS = [
+        'Aditya Dwi Nugraha' => 'aditya.nugraha@adhi.co.id',
+        'Arief Kurniawan' => 'arief.kurniawan@adhi.co.id',
+        'Febria Sahrina' => 'febria.sahrina@adhi.co.id',
+        'Agung Wijayanto' => 'agung.wijayanto@adhi.co.id',
+        'Naufal Akbar' => 'naufal.akbar@adhi.co.id',
+        'Sarah' => 'sarah@adhi.co.id',
+        'Kevin' => 'kevin@adhi.co.id',
+        'Rian' => 'rian@adhi.co.id',
+        'Genta Pratama' => 'genta.pratama@adhi.co.id',
+        'Rio Saputra' => 'rio.saputra@adhi.co.id',
+        'Lutfi Ramadhan' => 'lutfi.ramadhan@adhi.co.id',
+        'Maya Prameswari' => 'maya.prameswari@adhi.co.id',
+        'Denny Firmansyah' => 'denny.firmansyah@adhi.co.id',
+    ];
+
+    /**
      * Full company application list from the "MASTER APLIKASI" sheet —
      * broader than the subset of apps that have Incident/Service/Access
      * item definitions below. Apps with no defined subcategories still
@@ -66,18 +87,10 @@ class ServiceCatalogSeeder extends Seeder
             ['email' => self::agentEmail($name)]
         )->id);
 
-        // Aditya Dwi Nugraha is also the seeded "Support IT" login persona
-        // (see UserRoleSeeder) — link his SupportAgent row to that real user
-        // so CurrentActor::support() can resolve "my tickets" via this row.
-        if ($user = User::where('email', 'aditya.nugraha@adhi.co.id')->first()) {
-            SupportAgent::where(['name' => 'Aditya Dwi Nugraha', 'type' => 'it'])->update(['user_id' => $user->id]);
-        }
-
-        // Denny Firmansyah is the seeded "Support BPO" login persona (see
-        // UserRoleSeeder) — same link as Aditya above, so
-        // CurrentActor::supportBpo() can resolve "my tickets" via this row.
-        if ($user = User::where('email', 'denny.firmansyah@adhi.co.id')->first()) {
-            SupportAgent::where(['name' => 'Denny Firmansyah', 'type' => 'bpo'])->update(['user_id' => $user->id]);
+        foreach (self::AGENT_LOGIN_EMAILS as $agentName => $email) {
+            if ($user = User::where('email', $email)->first()) {
+                SupportAgent::where('name', $agentName)->update(['user_id' => $user->id]);
+            }
         }
 
         $itCursor = 0;

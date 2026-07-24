@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
-import { apiFetch } from '../../lib/api';
+import { apiFetch, uploadFile } from '../../lib/api';
 import NewTicketModal from '../NewTicketModal';
 import FeedbackDisplay from '../FeedbackDisplay';
 
@@ -294,7 +294,9 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     );
 }
 
-export default function TicketDetail({ ticket, comments: initialComments = [], timeline = [], commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
+const MAX_ATTACHMENTS = 5;
+
+export default function TicketDetail({ ticket, comments: initialComments = [], timeline = [], commentsUrl, reopenUrl, closeUrl, attachmentUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
     const [status] = useState(ticket.status);
     const [canConfirmClose] = useState(ticket.canConfirmClose);
     const [comments, setComments] = useState(initialComments);
@@ -303,6 +305,9 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
     const [error, setError] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [announceOpen, setAnnounceOpen] = useState(ticket.canConfirmClose);
+    const [attachments, setAttachments] = useState(ticket.attachments || []);
+    const [uploading, setUploading] = useState(false);
+    const [attachError, setAttachError] = useState('');
 
     async function sendReply() {
         if (!reply.trim()) return;
@@ -316,6 +321,30 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
             setError(e.message || 'Failed to send reply.');
         } finally {
             setSending(false);
+        }
+    }
+
+    async function handleUpload(file) {
+        if (!file) return;
+        setUploading(true);
+        setAttachError('');
+        try {
+            const res = await uploadFile(attachmentUrl, file);
+            setAttachments(res.attachments);
+        } catch (e) {
+            setAttachError(e.message || 'Failed to upload attachment.');
+        } finally {
+            setUploading(false);
+        }
+    }
+
+    async function handleDeleteAttachment(attachmentId) {
+        setAttachError('');
+        try {
+            await apiFetch(`${attachmentUrl}/${attachmentId}`, { method: 'DELETE' });
+            setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+        } catch (e) {
+            setAttachError(e.message || 'Failed to delete attachment.');
         }
     }
 
@@ -379,18 +408,54 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                             <Field label="Layanan" value={ticket.service} />
                             <Field label="Subject" value={ticket.subject} />
                         </div>
-                        {ticket.attachments?.length > 0 && (
+                        {attachments.length > 0 && (
                             <div className="mt-4 flex flex-col gap-1.5">
-                                {ticket.attachments.map((a) => (
-                                    <a
+                                {attachments.map((a) => (
+                                    <div
                                         key={a.id}
-                                        href={a.url}
-                                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600 hover:bg-gray-100 hover:underline"
+                                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600"
                                     >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
-                                        {a.name}
-                                    </a>
+                                        <a
+                                            href={a.url}
+                                            className="flex flex-1 items-center gap-2 hover:underline"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
+                                            {a.name}
+                                        </a>
+                                        {status !== 'Closed' && status !== 'Rejected' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteAttachment(a.id)}
+                                                aria-label="Remove attachment"
+                                                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600"
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
+                                            </button>
+                                        )}
+                                    </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {attachError && <p className="mt-3 text-xs text-red-600">{attachError}</p>}
+
+                        {status !== 'Closed' && status !== 'Rejected' && (
+                            <div className="mt-4 border-t border-gray-100 pt-4">
+                                <label className={`flex w-fit items-center gap-2 rounded-xl border border-dashed border-gray-300 px-3.5 py-2 text-[13px] font-semibold text-gray-600 hover:border-blue-400 hover:text-blue-600 ${(uploading || attachments.length >= MAX_ATTACHMENTS) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                                    {uploading ? 'Uploading…' : 'Add Attachment'}
+                                    <input
+                                        type="file"
+                                        accept=".png,.jpg,.jpeg,.pdf"
+                                        className="hidden"
+                                        disabled={uploading || attachments.length >= MAX_ATTACHMENTS}
+                                        onChange={(e) => {
+                                            handleUpload(e.target.files?.[0]);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                </label>
+                                <p className="mt-1.5 text-[11px] text-gray-400">PNG, JPG, or PDF up to 5MB · max {MAX_ATTACHMENTS} files ({attachments.length}/{MAX_ATTACHMENTS})</p>
                             </div>
                         )}
                     </Card>
