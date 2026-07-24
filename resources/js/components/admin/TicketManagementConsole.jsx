@@ -309,11 +309,18 @@ function TicketDetailModal({ ticket: t, onClose }) {
                             </p>
 
                             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Timeline</p>
-                            <ol className="mt-2 space-y-2">
-                                {t.timeline.map((step) => (
-                                    <li key={step.label} className="border-l-2 border-blue-200 pl-3 text-sm">
-                                        <p className="font-semibold text-gray-800">{step.label}</p>
-                                        <p className="text-gray-500">{step.value}</p>
+                            <ol className="mt-2 flex flex-col">
+                                {t.timeline.map((step, i) => (
+                                    <li key={i} className="flex gap-3">
+                                        <div className="flex flex-col items-center">
+                                            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${step.state === 'done' ? 'bg-emerald-500' : step.state === 'current' ? 'bg-blue-500' : step.state === 'rejected' ? 'bg-red-500' : 'bg-gray-300'}`} />
+                                            {i < t.timeline.length - 1 && <span className="w-px flex-1 bg-gray-200" />}
+                                        </div>
+                                        <div className={`pb-4 text-sm ${step.state === 'pending' ? 'opacity-50' : ''}`}>
+                                            <p className="font-semibold text-gray-800">{step.label}</p>
+                                            {step.who && <p className="text-[11px] text-gray-400">{step.who}</p>}
+                                            {step.at && <p className="text-[11px] text-gray-400">{step.at}</p>}
+                                        </div>
                                     </li>
                                 ))}
                             </ol>

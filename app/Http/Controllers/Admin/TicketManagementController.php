@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Support\DummyData;
+use App\Support\TicketTimeline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -137,7 +138,7 @@ class TicketManagementController extends Controller
             'attachmentName' => $t->attachment_name,
             'attachmentUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
             'approvalInfo' => $this->approvalInfo($t),
-            'timeline' => $this->timelineSteps($t),
+            'timeline' => TicketTimeline::steps($t),
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'nik' => $t->requester->nip,
@@ -233,33 +234,4 @@ class TicketManagementController extends Controller
         };
     }
 
-    /**
-     * Fixed 6-slot timeline (Ticket dibuat / Approval / Assign PIC /
-     * Progress / Resolved / Closed) derived purely from the ticket's
-     * current fields — mirrors App\Support\TicketTimeline's read-only,
-     * no-workflow-table approach, but in the admin console's fixed-slot
-     * shape rather than a variable step list.
-     */
-    private function timelineSteps(Ticket $t): array
-    {
-        $inProgressStatuses = ['Assigned', 'In Progress', 'Waiting for Response'];
-
-        return [
-            ['label' => 'Ticket dibuat', 'value' => $t->created_at->format('d M Y, H:i')],
-            ['label' => 'Approval', 'value' => match (true) {
-                ! $t->approver_id => 'Tidak diperlukan',
-                $t->status === 'Waiting for Approval' => 'Menunggu',
-                $t->status === 'Rejected' => 'Ditolak',
-                default => 'Disetujui',
-            }],
-            ['label' => 'Assign PIC', 'value' => $this->picLabel($t) ?? 'Menunggu Assignment'],
-            ['label' => 'Progress', 'value' => match (true) {
-                in_array($t->status, $inProgressStatuses, true) => $t->status,
-                in_array($t->status, Ticket::DONE_STATUSES, true) => 'Selesai',
-                default => 'Belum',
-            }],
-            ['label' => 'Resolved', 'value' => $t->resolved_at ? $t->resolved_at->format('d M Y, H:i') : 'Belum'],
-            ['label' => 'Closed', 'value' => $t->status === 'Closed' ? $t->updated_at->format('d M Y, H:i') : 'Belum'],
-        ];
-    }
 }
