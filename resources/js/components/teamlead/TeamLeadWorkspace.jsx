@@ -25,7 +25,7 @@ const TABS = [
 ];
 
 const TITLES = {
-    operational: ['Operational Dashboard', 'Distribusi, tren, dan volume tiket tim support.'],
+    operational: ['Operational Dashboard', 'Distribusi, tren, dan volume tiket tim Support IT.'],
     sla: ['SLA Dashboard', 'Kepatuhan, breach, dan performa SLA per prioritas.'],
     support: ['Support Dashboard', 'Beban kerja tim serta teguran tiket via Email & WhatsApp.'],
     management: ['Management Dashboard', 'Tren, isu teratas, aplikasi, dan performa layanan.'],

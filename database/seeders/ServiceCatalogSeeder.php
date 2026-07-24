@@ -43,6 +43,11 @@ class ServiceCatalogSeeder extends Seeder
 
     private static function agentEmail(string $name): string
     {
+
+        if ($name === 'Naufal Akbar') {
+            return 'zhafranmirza218@gmail.com';
+        }
+
         $slug = str(str($name)->ascii())->lower()->replace(' ', '.');
 
         return "{$slug}@adhikarya-helpdesk.test";

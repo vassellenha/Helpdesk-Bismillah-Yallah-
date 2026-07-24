@@ -27,12 +27,16 @@ use Illuminate\View\View;
  * reassign, raise priority) are Team-Lead-only endpoints that never touch the
  * Requester/Support/Approver controllers.
  *
- * Scope note: the schema has no service→team-lead ownership relation yet, so
- * "responsibility" is currently the full support team. When that relation is
- * added, the ticket/agent queries below are the single place to filter.
+ * Scope note: this Team Lead supervises the Support IT team (TEAM_SCOPE).
+ * A ticket belongs to the scope when its current PIC is an IT agent — BPO
+ * tickets enter the scope the moment BPO escalates them, because escalation
+ * reassigns the ticket to the catalog subject's IT agent.
  */
 class TeamLeadController extends Controller
 {
+    /** Support-agent `type` this Team Lead supervises (support_agents.type). */
+    private const TEAM_SCOPE = 'it';
+
     private const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
     private const I_TICKET = 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z M14 5v14';
@@ -44,6 +48,22 @@ class TeamLeadController extends Controller
     private const I_CLOCK = 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 3';
 
     private const I_CHECK = 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9';
+
+    /**
+     * Active agents in this Team Lead's team.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function scopedAgentQuery()
+    {
+        return SupportAgent::where('is_active', true)->where('type', self::TEAM_SCOPE);
+    }
+
+    /** Constrains a Ticket query to tickets whose current PIC is in the team. */
+    private function scopeTickets($query)
+    {
+        return $query->whereHas('assignedAgent', fn ($q) => $q->where('type', self::TEAM_SCOPE));
+    }
 
     public function dashboard(Request $request): View
     {
@@ -58,10 +78,10 @@ class TeamLeadController extends Controller
             default => Carbon::now()->subDays(30),
         };
 
-        $tickets = Ticket::with(['assignedAgent', 'requester:id,unit'])
-            ->where('created_at', '>=', $since)
+        $tickets = $this->scopeTickets(Ticket::with(['assignedAgent', 'requester:id,unit'])
+            ->where('created_at', '>=', $since))
             ->get();
-        $agents = SupportAgent::where('is_active', true)->with('user')->get();
+        $agents = $this->scopedAgentQuery()->with('user')->get();
 
         $active = $tickets->whereIn('status', Ticket::ACTIVE_STATUSES);
         $withSla = $active->filter(fn (Ticket $t) => $t->sla_minutes_remaining !== null);
@@ -147,6 +167,8 @@ class TeamLeadController extends Controller
      */
     public function showTicket(Ticket $ticket): View
     {
+        $this->assertInScope($ticket);
+
         return view('dashboard.team-lead-ticket', [
             'role' => 'team-lead',
             ...$this->ticketDetailPayload($ticket),
@@ -157,7 +179,19 @@ class TeamLeadController extends Controller
     /** JSON detail for the 1/3-screen slide-over opened from the dashboard. */
     public function ticketData(Ticket $ticket): JsonResponse
     {
+        $this->assertInScope($ticket);
+
         return response()->json($this->ticketDetailPayload($ticket));
+    }
+
+    /** 403 when a ticket is handled by another team (direct-URL access). */
+    private function assertInScope(Ticket $ticket): void
+    {
+        abort_if(
+            $ticket->assignedAgent && $ticket->assignedAgent->type !== self::TEAM_SCOPE,
+            403,
+            'Tiket ini ditangani tim lain, di luar cakupan Team Lead.',
+        );
     }
 
     /**
@@ -175,7 +209,7 @@ class TeamLeadController extends Controller
             'unit' => 'nullable|string',
         ]);
 
-        $query = Ticket::with(['assignedAgent', 'requester:id,unit']);
+        $query = $this->scopeTickets(Ticket::with(['assignedAgent', 'requester:id,unit']));
         if (! empty($data['from'])) {
             $query->whereDate('created_at', '>=', $data['from']);
         }
@@ -187,7 +221,7 @@ class TeamLeadController extends Controller
         }
 
         $tickets = $query->get();
-        $agents = SupportAgent::where('is_active', true)->get();
+        $agents = $this->scopedAgentQuery()->get();
         $report = $this->buildReport($data['type'], $tickets, $agents);
 
         $periodLabel = trim((empty($data['from']) ? '' : $data['from']).(empty($data['to']) ? '' : ' s/d '.$data['to'])) ?: 'Semua periode';
@@ -216,6 +250,8 @@ class TeamLeadController extends Controller
     /** Team-Lead internal note on a ticket (persists to the shared comments). */
     public function addNote(Request $request, Ticket $ticket): JsonResponse
     {
+        $this->assertInScope($ticket);
+
         $lead = CurrentActor::teamLead();
         $data = $request->validate(['message' => 'required|string|max:3000']);
 
@@ -238,7 +274,7 @@ class TeamLeadController extends Controller
     private function ticketDetailPayload(Ticket $ticket): array
     {
         $ticket->load(['requester', 'approver', 'assignedAgent', 'comments']);
-        $agents = SupportAgent::where('is_active', true)->get();
+        $agents = $this->scopedAgentQuery()->get();
 
         return [
             'ticket' => [
@@ -367,6 +403,7 @@ class TeamLeadController extends Controller
 
         $agent = $ticket->assignedAgent;
         abort_unless($agent !== null, 422, 'Tiket ini belum punya PIC support untuk ditegur.');
+        abort_unless($agent->type === self::TEAM_SCOPE, 403, 'Tiket ini ditangani tim lain, di luar cakupan Team Lead.');
 
         $channels = $data['channels'] ?? config('notifications.teguran_channels');
         $delivered = TeguranNotifier::send($lead, $agent, $ticket, $data['message'], $channels);
@@ -395,6 +432,8 @@ class TeamLeadController extends Controller
      */
     public function reassign(Request $request, Ticket $ticket): JsonResponse
     {
+        $this->assertInScope($ticket);
+
         $lead = CurrentActor::teamLead();
 
         $data = $request->validate([
@@ -404,6 +443,7 @@ class TeamLeadController extends Controller
         $newAgent = SupportAgent::findOrFail($data['agent_id']);
         $oldAgent = $ticket->assignedAgent;
 
+        abort_unless($newAgent->is_active && $newAgent->type === self::TEAM_SCOPE, 422, 'Agent tujuan bukan anggota aktif tim yang diawasi Team Lead.');
         abort_if($oldAgent && $oldAgent->id === $newAgent->id, 422, 'Tiket sudah ditangani agent tersebut.');
 
         $ticket->update(['assigned_agent_id' => $newAgent->id]);
@@ -441,6 +481,8 @@ class TeamLeadController extends Controller
      */
     public function raisePriority(Request $request, Ticket $ticket): JsonResponse
     {
+        $this->assertInScope($ticket);
+
         $lead = CurrentActor::teamLead();
 
         $data = $request->validate([
@@ -845,7 +887,7 @@ class TeamLeadController extends Controller
             'to' => 'required|in:Critical,High,Medium,Low',
         ]);
 
-        $matched = Ticket::whereIn('status', Ticket::ACTIVE_STATUSES)
+        $matched = $this->scopeTickets(Ticket::whereIn('status', Ticket::ACTIVE_STATUSES))
             ->where('service_name', $data['service'])
             ->where(fn ($q) => $q->where('subcategory_name', $data['subcat'])->orWhere('issue_category', $data['subcat']))
             ->get();
