@@ -130,6 +130,16 @@ class TicketDetailController extends Controller
             'reopen_at' => Carbon::now(),
         ]);
 
+        // Surface the reopen reason in the discussion thread as a chat message
+        // too (not just the reopen banner), so the conversation shows why the
+        // requester sent the ticket back to Support.
+        TicketComment::create([
+            'ticket_id' => $ticket->id,
+            'author_name' => $requester->name,
+            'author_role' => 'Requester',
+            'message' => $data['note'],
+        ]);
+
         NotificationService::notifyAssignedAgent(
             $ticket,
             'ticket_reopened',
