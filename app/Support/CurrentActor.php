@@ -42,6 +42,16 @@ class CurrentActor
             ?? User::where('email', 'aditya.nugraha@adhi.co.id')->firstOrFail();
     }
 
+    /**
+     * Dedicated Team Lead persona — kept separate from approver() (Karina,
+     * who also holds the Team Lead role) so the supervisor's own
+     * notification feed never mixes with the approver inbox.
+     */
+    public static function teamLead(): User
+    {
+        return User::where('email', 'raka.mahendra@adhi.co.id')->firstOrFail();
+    }
+
     public static function supportBpo(): User
     {
         return self::actingAgentUser('bpo', 'acting_support_bpo_agent_id')
