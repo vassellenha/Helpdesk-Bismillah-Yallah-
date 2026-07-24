@@ -56,7 +56,7 @@ export default function RiwayatTab({ auditRows = [] }) {
                                         <td className="px-4 py-4 pl-6 text-gray-500">{a.time}</td>
                                         <td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${meta.style}`}>{meta.label}</span></td>
                                         <td className="px-4 py-4 font-bold text-blue-600">{a.ticket}</td>
-                                        <td className="px-4 py-4 pr-6"><p className="max-w-[460px] truncate text-gray-600">{a.detail}</p></td>
+                                        <td className="px-4 py-4 pr-6"><p className="max-w-[520px] whitespace-normal break-words leading-relaxed text-gray-600">{a.detail}</p></td>
                                     </tr>
                                 );
                             })}
