@@ -81,7 +81,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
         <div>
             <div className="mb-6">
                 <h1 className="text-3xl font-extrabold text-gray-900">Audit Trail Viewer</h1>
-                <p className="mt-1 text-sm text-gray-500">Riwayat perubahan konfigurasi oleh Administrator — Service Catalog, Konfigurasi SLA, dan User &amp; Role Management.</p>
+                <p className="mt-1 text-sm text-gray-500">Riwayat aktivitas seluruh pengguna — Service Catalog, Konfigurasi SLA, User &amp; Role Management, Approval, dan Penanganan Tiket.</p>
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -89,7 +89,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                     <input
                         value={search}
                         onChange={(e) => updateFilter(setSearch)(e.target.value)}
-                        placeholder="Cari target, administrator, atau deskripsi"
+                        placeholder="Cari target, pengguna, atau deskripsi"
                         className="w-full max-w-sm rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex flex-wrap items-center gap-2">
@@ -102,7 +102,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                             {Object.entries(ACTION_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                         </select>
                         <select value={adminFilter} onChange={(e) => updateFilter(setAdminFilter)(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
-                            <option value={ALL}>Semua Administrator</option>
+                            <option value={ALL}>Semua Pengguna</option>
                             {administrators.map((a) => <option key={a}>{a}</option>)}
                         </select>
                         <input type="date" value={dateFrom} onChange={(e) => updateFilter(setDateFrom)(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none" />
@@ -118,7 +118,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                         <thead>
                             <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                                 <th className="px-4 py-3">Waktu</th>
-                                <th className="px-4 py-3">Administrator</th>
+                                <th className="px-4 py-3">Pengguna</th>
                                 <th className="px-4 py-3">Modul</th>
                                 <th className="px-4 py-3">Aktivitas</th>
                                 <th className="px-4 py-3">Target</th>
@@ -145,7 +145,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                             {paginated.length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="px-4 py-14 text-center text-sm text-gray-400">
-                                        {logs.length === 0 ? 'Belum ada aktivitas administrator.' : 'Tidak ada aktivitas yang cocok dengan filter.'}
+                                        {logs.length === 0 ? 'Belum ada aktivitas.' : 'Tidak ada aktivitas yang cocok dengan filter.'}
                                     </td>
                                 </tr>
                             )}

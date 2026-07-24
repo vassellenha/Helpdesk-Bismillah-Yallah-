@@ -15,7 +15,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SupportController extends Controller
@@ -108,7 +107,7 @@ class SupportController extends Controller
         $agent = $this->agentFor($supportUser);
         abort_unless($ticket->assigned_agent_id === $agent->id, 403);
 
-        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments']);
+        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return view('support.ticket-detail', [
             'role' => 'support',
@@ -128,6 +127,7 @@ class SupportController extends Controller
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
         abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
         $data = $request->validate(['message' => 'required|string|max:3000']);
 
@@ -137,6 +137,8 @@ class SupportController extends Controller
             'author_role' => 'Support',
             'message' => $data['message'],
         ]);
+
+        NotificationService::notifyDiscussionParticipants($ticket, $supportUser, 'Support IT', $data['message']);
 
         return response()->json($this->presentComment($comment), 201);
     }
@@ -156,7 +158,9 @@ class SupportController extends Controller
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
 
-        $ticket->update(['status' => 'Resolved', 'resolved_at' => Carbon::now()]);
+        // Clears any "Belum" banner from a previous round — this resolution
+        // is Support's answer to it, and a fresh reopen would set new note.
+        $ticket->update(['status' => 'Resolved', 'resolved_at' => Carbon::now(), 'reopen_note' => null, 'reopen_at' => null]);
 
         AuditTrail::record($supportUser, [
             'module' => 'ticket_support',
@@ -201,6 +205,24 @@ class SupportController extends Controller
         TicketNotification::where('user_id', $supportUser->id)->whereNull('read_at')->update(['read_at' => Carbon::now()]);
 
         return response()->json(['read' => true]);
+    }
+
+    /**
+     * A catalog Subject can route to any of several IT agents, not just one
+     * fixed persona, so which agent this "mockup login" acts as is
+     * switchable here — the choice is remembered in session and read back
+     * by CurrentActor::support() on every request.
+     */
+    public function switchAgent(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate(['agent_id' => 'required|integer|exists:support_agents,id']);
+
+        $agent = SupportAgent::findOrFail($data['agent_id']);
+        abort_unless($agent->type === 'it' && $agent->user_id, 422, 'Agent IT tidak valid untuk beralih.');
+
+        session(['acting_support_agent_id' => $agent->id]);
+
+        return redirect()->back();
     }
 
     private function agentFor(User $supportUser): SupportAgent
@@ -313,11 +335,11 @@ class SupportController extends Controller
             'category' => $t->issue_category ?? $t->category ?? '—',
             'service' => trim(($t->service_name ?? '').($t->subcategory_name ? ' · '.$t->subcategory_name : '')) ?: '—',
             'description' => $t->description,
-            'attachmentName' => $t->attachment_name,
-            'attachmentDownloadUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
+            'attachments' => $t->attachmentsPayload(),
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
+            'reopenNote' => $t->reopen_note ? ['note' => $t->reopen_note, 'at' => $t->reopen_at->format('M j, Y · H:i')] : null,
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'unit' => $t->requester->unit,

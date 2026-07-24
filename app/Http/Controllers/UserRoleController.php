@@ -35,7 +35,6 @@ class UserRoleController extends Controller
         return view('admin.users', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'notifications' => DummyData::notifications(),
             'users' => $users->map($this->presentUser(...)),
             'roles' => $roles->map($this->presentRole(...)),
             'permissionModules' => DummyData::permissionModules(),

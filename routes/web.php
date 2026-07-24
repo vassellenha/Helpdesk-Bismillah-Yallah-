@@ -45,6 +45,7 @@ Route::prefix('support')->name('support.')->group(function () {
     Route::post('/tickets/{ticket}/resolve', [SupportController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/notifications/{notification}/read', [SupportController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
+    Route::post('/switch-agent', [SupportController::class, 'switchAgent'])->name('switch-agent');
 });
 
 Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
@@ -55,6 +56,7 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
     Route::post('/tickets/{ticket}/escalate', [SupportBpoController::class, 'escalate'])->name('tickets.escalate');
     Route::post('/notifications/{notification}/read', [SupportBpoController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportBpoController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
+    Route::post('/switch-agent', [SupportBpoController::class, 'switchAgent'])->name('switch-agent');
 });
 
 Route::prefix('team-lead')->name('team-lead.')->group(function () {
@@ -78,6 +80,7 @@ Route::prefix('requester')->name('requester.')->group(function () {
     Route::post('/tickets/{ticket}/reopen', [TicketDetailController::class, 'reopen'])->name('tickets.reopen');
     Route::post('/tickets/{ticket}/close', [TicketDetailController::class, 'close'])->name('tickets.close');
     Route::post('/tickets/{ticket}/attachment', [TicketDetailController::class, 'uploadAttachment'])->name('tickets.attachment');
+    Route::delete('/tickets/{ticket}/attachment/{attachment}', [TicketDetailController::class, 'destroyAttachment'])->name('tickets.attachment.destroy');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 });
