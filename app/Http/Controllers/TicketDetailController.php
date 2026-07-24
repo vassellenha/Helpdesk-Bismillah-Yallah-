@@ -161,6 +161,20 @@ class TicketDetailController extends Controller
             'feedback_note' => $data['note'] ?? null,
         ]);
 
+        // Also surface the closing note in the discussion thread as a chat
+        // message (not just the feedback banner), so the conversation shows
+        // the requester's final note and the assigned agent gets pinged.
+        if (! empty($data['note'])) {
+            TicketComment::create([
+                'ticket_id' => $ticket->id,
+                'author_name' => $requester->name,
+                'author_role' => 'Requester',
+                'message' => $data['note'],
+            ]);
+
+            NotificationService::notifyDiscussionParticipants($ticket, $requester, 'Requester', $data['note']);
+        }
+
         NotificationService::notify(
             $requester,
             $ticket,
