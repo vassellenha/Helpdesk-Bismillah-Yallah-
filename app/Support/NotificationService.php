@@ -6,6 +6,7 @@ use App\Models\Ticket;
 use App\Models\TicketNotification;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Central place that creates ticket_notifications rows. There is no queue
@@ -25,6 +26,57 @@ class NotificationService
             'title' => $title,
             'message' => $message,
         ]);
+    }
+
+    /**
+     * Routes a notification to whichever real person is actually PIC on
+     * this ticket right now (`assigned_agent_id` → support_agents.user_id),
+     * not a fixed persona — a Subject can route to any of several IT/BPO
+     * agents (see CurrentActor::support()/supportBpo()), so "notify
+     * Support" only makes sense per-ticket, never as one hardcoded user.
+     * Silently no-ops if the ticket has no PIC yet or that agent has no
+     * linked login — just a defensive guard, not an error condition.
+     */
+    public static function notifyAssignedAgent(Ticket $ticket, string $type, string $title, string $message): ?TicketNotification
+    {
+        $agent = $ticket->assignedAgent;
+        if (! $agent || ! $agent->user_id) {
+            return null;
+        }
+
+        $user = User::find($agent->user_id);
+        if (! $user) {
+            return null;
+        }
+
+        return self::notify($user, $ticket, $type, $title, $message);
+    }
+
+    /**
+     * A Discussion reply (Requester/Approver/Support all post into the same
+     * thread — see TicketComment) is a distinct notification type from an
+     * Approval decision (ticket_approved/ticket_rejected/ticket_reopened):
+     * a decision changes the ticket's status, a reply is just a message.
+     * Keeping them separate lets each render/read differently in the bell.
+     * Notifies every other participant currently attached to the ticket
+     * (requester, approver, assigned agent) except whoever just posted.
+     */
+    public static function notifyDiscussionParticipants(Ticket $ticket, User $author, string $authorRole, string $message): void
+    {
+        $preview = Str::limit($message, 120);
+        $agentUserId = $ticket->assignedAgent?->user_id;
+
+        collect([$ticket->requester, $ticket->approver, $agentUserId ? User::find($agentUserId) : null])
+            ->filter()
+            ->reject(fn (User $u) => $u->id === $author->id)
+            ->unique('id')
+            ->each(fn (User $u) => self::notify(
+                $u,
+                $ticket,
+                'discussion_message',
+                'Pesan Baru di Diskusi Tiket',
+                "{$author->name} ({$authorRole}) di tiket {$ticket->ticket_no}: {$preview}"
+            ));
     }
 
     public static function syncSlaAlerts(Collection $tickets, User $user): void
@@ -77,6 +129,7 @@ class NotificationService
         'ticket_resolved' => 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9',
         'ticket_escalated' => 'M12 19V5 M5 12l7-7 7 7',
         'ticket_incoming_escalation' => 'M12 5v14 M19 12l-7 7-7-7',
+        'discussion_message' => 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z',
     ];
 
     /**

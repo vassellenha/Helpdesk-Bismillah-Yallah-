@@ -27,7 +27,6 @@ class TicketController extends Controller
             'subject_name' => 'nullable|string|max:255',
             'issue_category' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:5000',
-            'attachment_name' => 'nullable|string|max:255',
             'approver_id' => 'nullable|integer|exists:users,id',
             'requires_approval' => 'nullable|boolean',
             'is_draft' => 'nullable|boolean',
@@ -76,7 +75,6 @@ class TicketController extends Controller
             'subject_name' => $data['subject_name'] ?? null,
             'issue_category' => $data['issue_category'] ?? null,
             'description' => $data['description'] ?? null,
-            'attachment_name' => $data['attachment_name'] ?? null,
             'sla_policy_id' => $policy->id,
             'priority' => $policy->priority,
             'approver_id' => $requiresApproval ? ($data['approver_id'] ?? null) : null,
@@ -99,6 +97,7 @@ class TicketController extends Controller
 
             NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dibuat', $message);
             $this->notifyApproverOfNewRequest($ticket, $requester);
+            $this->notifyAgentOfNewAssignment($ticket, $requiresApproval);
         }
 
         return response()->json([
@@ -187,6 +186,7 @@ class TicketController extends Controller
 
             NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dikirim', $message);
             $this->notifyApproverOfNewRequest($ticket->fresh(), $requester);
+            $this->notifyAgentOfNewAssignment($ticket->fresh(), $requiresApproval);
         }
 
         return response()->json([
@@ -232,6 +232,27 @@ class TicketController extends Controller
             'waiting_decision',
             'Menunggu Keputusan Anda',
             "Tiket {$ticket->ticket_no} dari {$requester->name} menunggu persetujuan Anda."
+        );
+    }
+
+    /**
+     * A ticket that skips approval lands directly in Support's queue — its
+     * PIC needs the same "new work landed" alert an Approver gets for
+     * "Waiting for Approval". Approved-and-forwarded tickets are handled
+     * separately by ApprovalController::decide(), since routing only
+     * happens there once a decision is made.
+     */
+    private function notifyAgentOfNewAssignment(Ticket $ticket, bool $requiresApproval): void
+    {
+        if ($requiresApproval || $ticket->status !== 'Open') {
+            return;
+        }
+
+        NotificationService::notifyAssignedAgent(
+            $ticket,
+            'ticket_created',
+            'Tiket Baru Ditugaskan',
+            "Tiket {$ticket->ticket_no} \"{$ticket->title}\" telah ditugaskan ke Anda."
         );
     }
 }

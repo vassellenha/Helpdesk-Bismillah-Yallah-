@@ -10,7 +10,32 @@ const PRIORITIES = [
     { label: 'Critical', glyph: '⚠' },
 ];
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENTS = 5;
 const ACCEPTED_ATTACHMENT_TYPES = ['image/png', 'image/jpeg', 'application/pdf'];
+
+function AttachmentPreviewModal({ file, onClose }) {
+    const url = useMemo(() => URL.createObjectURL(file), [file]);
+    useEffect(() => () => URL.revokeObjectURL(url), [url]);
+    const isImage = file.type.startsWith('image/');
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 p-4" onClick={onClose}>
+            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
+                    <p className="truncate pr-4 text-sm font-bold text-gray-900">{file.name}</p>
+                    <button type="button" onClick={onClose} className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">✕</button>
+                </div>
+                <div className="flex-1 overflow-auto bg-gray-50 p-4">
+                    {isImage ? (
+                        <img src={url} alt={file.name} className="mx-auto max-h-[70vh] rounded-lg object-contain" />
+                    ) : (
+                        <iframe src={url} title={file.name} className="h-[70vh] w-full rounded-lg border border-gray-200 bg-white" />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function formatBytes(bytes) {
     if (bytes < 1024) return `${bytes} B`;
@@ -109,8 +134,9 @@ export default function NewTicketModal({
     const [approverQuery, setApproverQuery] = useState('');
     const [approverOpen, setApproverOpen] = useState(false);
     const [form, setForm] = useState(emptyForm);
-    const [attachment, setAttachment] = useState(null);
+    const [attachments, setAttachments] = useState([]);
     const [attachmentError, setAttachmentError] = useState('');
+    const [previewFile, setPreviewFile] = useState(null);
     const [dragOver, setDragOver] = useState(false);
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -123,7 +149,7 @@ export default function NewTicketModal({
         setPolicies(null);
         setApprovers(null);
         setForm(emptyForm);
-        setAttachment(null);
+        setAttachments([]);
         setAttachmentError('');
         setError('');
         setCreated(null);
@@ -248,18 +274,35 @@ export default function NewTicketModal({
         setApproverQuery('');
     }
 
-    function onAttachmentFile(file) {
+    function onAttachmentFiles(fileList) {
         setAttachmentError('');
-        if (!file) return;
-        if (!ACCEPTED_ATTACHMENT_TYPES.includes(file.type)) {
-            setAttachmentError('Only PNG, JPG, or PDF files are supported.');
-            return;
-        }
-        if (file.size > MAX_ATTACHMENT_BYTES) {
-            setAttachmentError('File is larger than 5MB.');
-            return;
-        }
-        setAttachment(file);
+        const files = Array.from(fileList ?? []);
+        if (files.length === 0) return;
+
+        setAttachments((current) => {
+            const next = [...current];
+            for (const file of files) {
+                if (next.length >= MAX_ATTACHMENTS) {
+                    setAttachmentError(`You can attach up to ${MAX_ATTACHMENTS} files.`);
+                    break;
+                }
+                if (!ACCEPTED_ATTACHMENT_TYPES.includes(file.type)) {
+                    setAttachmentError('Only PNG, JPG, or PDF files are supported.');
+                    continue;
+                }
+                if (file.size > MAX_ATTACHMENT_BYTES) {
+                    setAttachmentError('File is larger than 5MB.');
+                    continue;
+                }
+                next.push(file);
+            }
+            return next;
+        });
+    }
+
+    function removeAttachment(index) {
+        setAttachmentError('');
+        setAttachments((current) => current.filter((_, i) => i !== index));
     }
 
     const filteredApprovers = (approvers ?? []).filter((a) => a.name.toLowerCase().includes(approverQuery.toLowerCase()));
@@ -307,12 +350,13 @@ export default function NewTicketModal({
                 ? await apiFetch(editUrl, { method: 'PUT', body: JSON.stringify(payload) })
                 : await apiFetch(submitUrl, { method: 'POST', body: JSON.stringify(payload) });
 
-            if (attachment && ticket.ticket_no) {
-                try {
-                    const uploaded = await uploadFile(`/requester/tickets/${ticket.ticket_no}/attachment`, attachment);
-                    ticket = { ...ticket, attachment_name: uploaded.attachmentName };
-                } catch {
-                    // Ticket is already saved — a failed attachment upload shouldn't block the confirmation.
+            if (attachments.length > 0 && ticket.ticket_no) {
+                for (const file of attachments) {
+                    try {
+                        await uploadFile(`/requester/tickets/${ticket.ticket_no}/attachment`, file);
+                    } catch {
+                        // Ticket is already saved — a failed attachment upload shouldn't block the confirmation.
+                    }
                 }
             }
 
@@ -522,33 +566,50 @@ export default function NewTicketModal({
                                     </div>
                                 </Field>
 
-                                <Field label="Attachment (Optional)">
+                                <Field label={`Attachment (Optional) · ${attachments.length}/${MAX_ATTACHMENTS}`}>
                                     <label
                                         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                                         onDragLeave={() => setDragOver(false)}
                                         onDrop={(e) => {
                                             e.preventDefault();
                                             setDragOver(false);
-                                            onAttachmentFile(e.dataTransfer.files?.[0]);
+                                            onAttachmentFiles(e.dataTransfer.files);
                                         }}
-                                        className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed px-4 py-7 text-center ${
-                                            dragOver ? 'border-blue-500 bg-blue-50' : 'border-blue-300 bg-blue-50/60 hover:bg-blue-50'
+                                        className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed px-4 py-7 text-center ${
+                                            attachments.length >= MAX_ATTACHMENTS
+                                                ? 'cursor-not-allowed border-gray-200 bg-gray-50'
+                                                : `cursor-pointer ${dragOver ? 'border-blue-500 bg-blue-50' : 'border-blue-300 bg-blue-50/60 hover:bg-blue-50'}`
                                         }`}
                                     >
                                         <input
                                             type="file"
                                             accept=".png,.jpg,.jpeg,.pdf"
+                                            multiple
+                                            disabled={attachments.length >= MAX_ATTACHMENTS}
                                             className="hidden"
-                                            onChange={(e) => onAttachmentFile(e.target.files?.[0])}
+                                            onChange={(e) => { onAttachmentFiles(e.target.files); e.target.value = ''; }}
                                         />
                                         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700"><path d="M4 16.2A4.5 4.5 0 0 1 6.5 8a6 6 0 0 1 11.4 1.6A4 4 0 0 1 17.5 17H7"/><path d="M12 12v6"/><path d="m9 14.5 3-2.5 3 2.5"/></svg>
-                                        <span className="text-[13px] font-bold text-gray-800">Click to upload or drag files here</span>
-                                        <span className="text-[11px] text-gray-400">PNG, JPG, PDF (Max. 5MB)</span>
+                                        <span className="text-[13px] font-bold text-gray-800">
+                                            {attachments.length >= MAX_ATTACHMENTS ? 'Maximum files reached' : 'Click to upload or drag files here'}
+                                        </span>
+                                        <span className="text-[11px] text-gray-400">PNG, JPG, PDF (Max. 5MB) · Maksimal {MAX_ATTACHMENTS} foto</span>
                                     </label>
-                                    {attachment && (
-                                        <div className="mt-2 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
-                                            <span className="truncate">{attachment.name} · {formatBytes(attachment.size)}</span>
-                                            <button type="button" onClick={() => setAttachment(null)} className="font-semibold text-red-600 hover:text-red-800">Remove</button>
+                                    {attachments.length > 0 && (
+                                        <div className="mt-2 space-y-1.5">
+                                            {attachments.map((file, i) => (
+                                                <div key={`${file.name}-${i}`} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreviewFile(file)}
+                                                        className="min-w-0 flex-1 truncate text-left hover:text-blue-700 hover:underline"
+                                                        title="Klik untuk pratinjau"
+                                                    >
+                                                        {file.name} · {formatBytes(file.size)}
+                                                    </button>
+                                                    <button type="button" onClick={() => removeAttachment(i)} className="shrink-0 font-semibold text-red-600 hover:text-red-800">Remove</button>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                     {attachmentError && <p className="mt-1.5 text-xs text-red-600">{attachmentError}</p>}
@@ -588,6 +649,8 @@ export default function NewTicketModal({
                     </ModalFooter>
                 </Modal>
             )}
+
+            {previewFile && <AttachmentPreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
         </>
     );
 }

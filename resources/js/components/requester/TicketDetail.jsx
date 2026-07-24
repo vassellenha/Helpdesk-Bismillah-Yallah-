@@ -252,6 +252,21 @@ function ApprovalNoteBanner({ approvalNote }) {
     );
 }
 
+function ReopenNoteBanner({ reopenNote }) {
+    return (
+        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 12a9.5 9.5 0 1 1-2.8-6.7M21.5 3v6h-6" /></svg>
+            </span>
+            <div className="min-w-0">
+                <p className="text-[13px] font-bold text-amber-800">Dibuka kembali — dikirim ke Tim Support</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-amber-900">{reopenNote.note}</p>
+                <p className="mt-1.5 text-[11px] text-amber-600">{reopenNote.at}</p>
+            </div>
+        </div>
+    );
+}
+
 function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     const support = (ticket.people.support ?? [])[0];
 
@@ -312,6 +327,7 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
             </a>
 
             {ticket.approvalNote && <ApprovalNoteBanner approvalNote={ticket.approvalNote} />}
+            {ticket.reopenNote && <ReopenNoteBanner reopenNote={ticket.reopenNote} />}
 
             <Card>
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -363,21 +379,19 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                             <Field label="Layanan" value={ticket.service} />
                             <Field label="Subject" value={ticket.subject} />
                         </div>
-                        {ticket.attachmentName && (
-                            ticket.attachmentDownloadUrl ? (
-                                <a
-                                    href={ticket.attachmentDownloadUrl}
-                                    className="mt-4 flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600 hover:bg-gray-100 hover:underline"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
-                                    {ticket.attachmentName}
-                                </a>
-                            ) : (
-                                <div className="mt-4 flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] text-gray-700">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
-                                    {ticket.attachmentName}
-                                </div>
-                            )
+                        {ticket.attachments?.length > 0 && (
+                            <div className="mt-4 flex flex-col gap-1.5">
+                                {ticket.attachments.map((a) => (
+                                    <a
+                                        key={a.id}
+                                        href={a.url}
+                                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600 hover:bg-gray-100 hover:underline"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
+                                        {a.name}
+                                    </a>
+                                ))}
+                            </div>
                         )}
                     </Card>
 
@@ -400,7 +414,7 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                             ))}
                         </div>
 
-                        {status !== 'Closed' && status !== 'Draft' && (
+                        {status !== 'Closed' && status !== 'Rejected' && (
                             <div className="mt-4 flex items-end gap-2 border-t border-gray-100 pt-4">
                                 <textarea
                                     value={reply}

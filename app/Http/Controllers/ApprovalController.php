@@ -142,7 +142,7 @@ class ApprovalController extends Controller
         $approver = CurrentActor::approver();
         abort_unless($ticket->approver_id === $approver->id, 403);
 
-        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments']);
+        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
         $lastDecision = TicketApproval::where('ticket_id', $ticket->id)->where('approver_id', $approver->id)->latest('created_at')->first();
 
         return view('approver.ticket-detail', [
@@ -162,6 +162,7 @@ class ApprovalController extends Controller
     {
         $approver = CurrentActor::approver();
         abort_unless($ticket->approver_id === $approver->id, 403);
+        abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
         $data = $request->validate(['message' => 'required|string|max:3000']);
 
@@ -171,6 +172,8 @@ class ApprovalController extends Controller
             'author_role' => 'Approver',
             'message' => $data['message'],
         ]);
+
+        NotificationService::notifyDiscussionParticipants($ticket, $approver, 'Approver', $data['message']);
 
         return response()->json($this->presentComment($comment), 201);
     }
@@ -216,6 +219,15 @@ class ApprovalController extends Controller
 
         $this->recordAudit($approver, $ticket, $data['decision'], $data['note'], $forwardedTo);
         $this->notifyRequester($ticket, $data['decision'], $data['note']);
+
+        if ($data['decision'] === 'approved') {
+            NotificationService::notifyAssignedAgent(
+                $ticket->fresh(),
+                'ticket_created',
+                'Tiket Baru Ditugaskan',
+                "Tiket {$ticket->ticket_no} \"{$ticket->title}\" disetujui {$approver->name} dan diteruskan ke Anda."
+            );
+        }
 
         return response()->json(['status' => $ticket->fresh()->status]);
     }
@@ -334,8 +346,7 @@ class ApprovalController extends Controller
             'category' => $t->issue_category ?? $t->category ?? '—',
             'layananKatalog' => trim(($t->service_name ?? '—').($t->subject_name ? ' · '.$t->subject_name : '')),
             'description' => $t->description,
-            'attachmentName' => $t->attachment_name,
-            'attachmentDownloadUrl' => $t->attachment_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($t->attachment_path) : null,
+            'attachments' => $t->attachmentsPayload(),
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,

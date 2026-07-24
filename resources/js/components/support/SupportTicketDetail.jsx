@@ -25,6 +25,35 @@ const CONFIRM_COPY = {
     },
 };
 
+function ReopenNoteBanner({ reopenNote }) {
+    return (
+        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 12a9.5 9.5 0 1 1-2.8-6.7M21.5 3v6h-6" /></svg>
+            </span>
+            <div className="min-w-0">
+                <p className="text-[13px] font-bold text-amber-800">Requester membuka kembali tiket ini</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-amber-900">{reopenNote.note}</p>
+                <p className="mt-1.5 text-[11px] text-amber-600">{reopenNote.at}</p>
+            </div>
+        </div>
+    );
+}
+
+function EscalationNoteBanner({ note }) {
+    return (
+        <div className="flex gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M5 12l7-7 7 7" /></svg>
+            </span>
+            <div className="min-w-0">
+                <p className="text-[13px] font-bold text-blue-800">Dieskalasi dari Support BPO</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-blue-900">{note}</p>
+            </div>
+        </div>
+    );
+}
+
 function Card({ title, children, className = '' }) {
     return (
         <div className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-sm ${className}`}>
@@ -132,6 +161,9 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                 My Tickets
             </a>
 
+            {ticket.reopenNote && <ReopenNoteBanner reopenNote={ticket.reopenNote} />}
+            {ticket.escalated && !escalateUrl && ticket.escalationNote && <EscalationNoteBanner note={ticket.escalationNote} />}
+
             <Card>
                 <div className="flex flex-wrap items-center gap-2.5">
                     <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700">Mode Support</span>
@@ -164,24 +196,23 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                             <Field label="Layanan" value={ticket.service} />
                             <Field label="Kontak" value={ticket.requester?.email} />
                         </div>
-                        {ticket.attachmentName && (
+                        {ticket.attachments?.length > 0 && (
                             <div className="mt-4 border-t border-gray-100 pt-4">
                                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Lampiran</p>
-                                {ticket.attachmentDownloadUrl ? (
-                                    <a
-                                        href={ticket.attachmentDownloadUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600 hover:bg-gray-100 hover:underline"
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
-                                        {ticket.attachmentName}
-                                    </a>
-                                ) : (
-                                    <div className="inline-flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] text-gray-700">
-                                        {ticket.attachmentName}
-                                    </div>
-                                )}
+                                <div className="flex flex-col gap-1.5">
+                                    {ticket.attachments.map((a) => (
+                                        <a
+                                            key={a.id}
+                                            href={a.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600 hover:bg-gray-100 hover:underline"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
+                                            {a.name}
+                                        </a>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </Card>
@@ -204,22 +235,24 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                             ))}
                         </div>
 
-                        <div className="mt-4 flex items-end gap-2 border-t border-gray-100 pt-4">
-                            <textarea
-                                value={reply}
-                                onChange={(e) => setReply(e.target.value)}
-                                rows={2}
-                                placeholder="Tulis tanggapan untuk requester… (mis. minta detail transaksi, konfirmasi penyelesaian)"
-                                className="flex-1 resize-none rounded-xl border border-gray-200 px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-400"
-                            />
-                            <button
-                                onClick={sendReply}
-                                disabled={sending || !reply.trim()}
-                                className="rounded-xl bg-blue-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {sending ? 'Mengirim…' : 'Kirim Tanggapan'}
-                            </button>
-                        </div>
+                        {ticket.status !== 'Closed' && ticket.status !== 'Rejected' && (
+                            <div className="mt-4 flex items-end gap-2 border-t border-gray-100 pt-4">
+                                <textarea
+                                    value={reply}
+                                    onChange={(e) => setReply(e.target.value)}
+                                    rows={2}
+                                    placeholder="Tulis tanggapan untuk requester… (mis. minta detail transaksi, konfirmasi penyelesaian)"
+                                    className="flex-1 resize-none rounded-xl border border-gray-200 px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-400"
+                                />
+                                <button
+                                    onClick={sendReply}
+                                    disabled={sending || !reply.trim()}
+                                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {sending ? 'Mengirim…' : 'Kirim Tanggapan'}
+                                </button>
+                            </div>
+                        )}
                     </Card>
                 </div>
 
@@ -244,13 +277,6 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                                     Sudah dieskalasi ke Tim IT Lanjutan
                                 </div>
-                            </div>
-                        )}
-
-                        {ticket.escalated && !escalateUrl && (
-                            <div className="mt-3 border-t border-gray-100 pt-3">
-                                <p className="text-[12px] text-gray-500">Tiket ini dieskalasi dari Support BPO:</p>
-                                <p className="mt-1.5 rounded-lg bg-blue-50 px-3 py-2 text-[12px] text-blue-800">{ticket.escalationNote}</p>
                             </div>
                         )}
 

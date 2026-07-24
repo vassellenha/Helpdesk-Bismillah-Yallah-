@@ -23,7 +23,6 @@ class AdminController extends Controller
         return view('admin.dashboard', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'notifications' => DummyData::notifications(),
             'auditTrail' => AuditTrail::with('actor')->latest('created_at')->take(4)->get()
                 ->map(fn ($a) => [
                     'waktu' => $a->created_at->format('d M Y, H:i'),
@@ -59,7 +58,6 @@ class AdminController extends Controller
         return view('admin.placeholder', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'notifications' => DummyData::notifications(),
             'title' => $title,
         ]);
     }
