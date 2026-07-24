@@ -31,32 +31,6 @@ const SLA_TEXT_STYLES = {
 
 const PERIODS = ['Semua', 'Hari Ini', '7 Hari', '30 Hari', 'Bulan Ini'];
 
-const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
-const SLA_RANK = { breach: 4, warning: 3, ontrack: 2, 'met-late': 1, met: 1, none: 0 };
-
-function sortValue(t, key) {
-    switch (key) {
-        case 'ticketNo':
-            return t.ticketNo;
-        case 'service':
-            return [t.service, t.subcategory, t.subject].filter(Boolean).join(' ').toLowerCase();
-        case 'requesterName':
-            return (t.requesterName ?? '').toLowerCase();
-        case 'priority':
-            return PRIORITY_RANK[t.priority] ?? 0;
-        case 'pic':
-            return (t.pic ?? '').toLowerCase();
-        case 'status':
-            return t.status.toLowerCase();
-        case 'sla':
-            return SLA_RANK[t.sla.kind] ?? 0;
-        case 'createdAtIso':
-            return new Date(t.createdAtIso).getTime();
-        default:
-            return '';
-    }
-}
-
 export default function TicketManagementConsole({ tickets, stats, filterOptions, exportUrl }) {
     const [search, setSearch] = useState('');
     const [period, setPeriod] = useState('Semua');
@@ -65,21 +39,9 @@ export default function TicketManagementConsole({ tickets, stats, filterOptions,
     const [categoryFilter, setCategoryFilter] = useState('Semua Kategori');
     const [requesterFilter, setRequesterFilter] = useState('Semua Requester');
     const [picFilter, setPicFilter] = useState('Semua PIC');
-    const [layananFilter, setLayananFilter] = useState('Semua Layanan');
-    const [subcategoryFilter, setSubcategoryFilter] = useState('Semua Sub Category');
-    const [subjectFilter, setSubjectFilter] = useState('Semua Subject');
-    const [sort, setSort] = useState({ key: 'createdAtIso', dir: 'desc' });
     const [menu, setMenu] = useState(null); // { ticket, top, left }
     const [detailTicket, setDetailTicket] = useState(null);
     const menuRef = useRef(null);
-
-    const layananOptions = useMemo(() => Array.from(new Set(tickets.map((t) => t.service).filter(Boolean))).sort(), [tickets]);
-    const subcategoryOptions = useMemo(() => Array.from(new Set(tickets.map((t) => t.subcategory).filter(Boolean))).sort(), [tickets]);
-    const subjectOptions = useMemo(() => Array.from(new Set(tickets.map((t) => t.subject).filter(Boolean))).sort(), [tickets]);
-
-    function toggleSort(key) {
-        setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
-    }
 
     useEffect(() => {
         if (!menu) return;
@@ -106,29 +68,12 @@ export default function TicketManagementConsole({ tickets, stats, filterOptions,
             const matchesRequester = requesterFilter === 'Semua Requester' || t.requesterName === requesterFilter;
             const matchesPic =
                 picFilter === 'Semua PIC' || (picFilter === 'Menunggu Assignment' ? !t.pic : t.pic === picFilter);
-            const matchesLayanan = layananFilter === 'Semua Layanan' || t.service === layananFilter;
-            const matchesSubcategory = subcategoryFilter === 'Semua Sub Category' || t.subcategory === subcategoryFilter;
-            const matchesSubject = subjectFilter === 'Semua Subject' || t.subject === subjectFilter;
 
             const matchesPeriod = period === 'Semua' || withinPeriod(new Date(t.createdAtIso), now, period);
 
-            return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesRequester && matchesPic
-                && matchesLayanan && matchesSubcategory && matchesSubject && matchesPeriod;
+            return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesRequester && matchesPic && matchesPeriod;
         });
-    }, [tickets, search, statusFilter, priorityFilter, categoryFilter, requesterFilter, picFilter, layananFilter, subcategoryFilter, subjectFilter, period]);
-
-    const sorted = useMemo(() => {
-        if (!sort.key) return filtered;
-        const arr = [...filtered];
-        arr.sort((a, b) => {
-            const av = sortValue(a, sort.key);
-            const bv = sortValue(b, sort.key);
-            if (av < bv) return sort.dir === 'asc' ? -1 : 1;
-            if (av > bv) return sort.dir === 'asc' ? 1 : -1;
-            return 0;
-        });
-        return arr;
-    }, [filtered, sort]);
+    }, [tickets, search, statusFilter, priorityFilter, categoryFilter, requesterFilter, picFilter, period]);
 
     function resetFilters() {
         setSearch('');
@@ -138,9 +83,6 @@ export default function TicketManagementConsole({ tickets, stats, filterOptions,
         setCategoryFilter('Semua Kategori');
         setRequesterFilter('Semua Requester');
         setPicFilter('Semua PIC');
-        setLayananFilter('Semua Layanan');
-        setSubcategoryFilter('Semua Sub Category');
-        setSubjectFilter('Semua Subject');
     }
 
     function openMenu(e, ticket) {
@@ -210,11 +152,8 @@ export default function TicketManagementConsole({ tickets, stats, filterOptions,
                     <FilterSelect value={statusFilter} onChange={setStatusFilter} allLabel="Semua Status" options={filterOptions.statuses} />
                     <FilterSelect value={priorityFilter} onChange={setPriorityFilter} allLabel="Semua Priority" options={filterOptions.priorities} />
                     <FilterSelect value={categoryFilter} onChange={setCategoryFilter} allLabel="Semua Kategori" options={filterOptions.issueCategories} />
-                    <SearchableFilterSelect value={requesterFilter} onChange={setRequesterFilter} allLabel="Semua Requester" options={filterOptions.requesters} searchPlaceholder="Cari requester…" />
-                    <SearchableFilterSelect value={picFilter} onChange={setPicFilter} allLabel="Semua PIC" options={[...filterOptions.pics, 'Menunggu Assignment']} searchPlaceholder="Cari PIC…" />
-                    <SearchableFilterSelect value={layananFilter} onChange={setLayananFilter} allLabel="Semua Layanan" options={layananOptions} searchPlaceholder="Cari layanan…" />
-                    <SearchableFilterSelect value={subcategoryFilter} onChange={setSubcategoryFilter} allLabel="Semua Sub Category" options={subcategoryOptions} searchPlaceholder="Cari sub category…" />
-                    <SearchableFilterSelect value={subjectFilter} onChange={setSubjectFilter} allLabel="Semua Subject" options={subjectOptions} searchPlaceholder="Cari subject…" />
+                    <FilterSelect value={requesterFilter} onChange={setRequesterFilter} allLabel="Semua Requester" options={filterOptions.requesters} />
+                    <FilterSelect value={picFilter} onChange={setPicFilter} allLabel="Semua PIC" options={[...filterOptions.pics, 'Menunggu Assignment']} />
                     <button onClick={resetFilters} className="text-sm font-medium text-blue-700 hover:text-blue-800">
                         Reset Filter
                     </button>
@@ -226,19 +165,19 @@ export default function TicketManagementConsole({ tickets, stats, filterOptions,
                     <table className="min-w-full divide-y divide-gray-100 text-sm">
                         <thead>
                             <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                <SortableTh label="Ticket ID" sortKey="ticketNo" sort={sort} onSort={toggleSort} />
-                                <SortableTh label="Layanan" sortKey="service" sort={sort} onSort={toggleSort} />
-                                <SortableTh label="Requester" sortKey="requesterName" sort={sort} onSort={toggleSort} />
-                                <SortableTh label="Priority" sortKey="priority" sort={sort} onSort={toggleSort} />
-                                <SortableTh label="PIC" sortKey="pic" sort={sort} onSort={toggleSort} />
-                                <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
-                                <SortableTh label="SLA" sortKey="sla" sort={sort} onSort={toggleSort} />
-                                <SortableTh label="Tanggal" sortKey="createdAtIso" sort={sort} onSort={toggleSort} />
+                                <th className="px-5 py-3">Ticket ID</th>
+                                <th className="px-5 py-3">Layanan</th>
+                                <th className="px-5 py-3">Requester</th>
+                                <th className="px-5 py-3">Priority</th>
+                                <th className="px-5 py-3">PIC</th>
+                                <th className="px-5 py-3">Status</th>
+                                <th className="px-5 py-3">SLA</th>
+                                <th className="px-5 py-3">Tanggal</th>
                                 <th className="px-5 py-3 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {sorted.map((t) => (
+                            {filtered.map((t) => (
                                 <tr key={t.ticketNo} className="hover:bg-gray-50">
                                     <td className="px-5 py-3">
                                         <button onClick={() => setDetailTicket(t)} className="font-semibold text-blue-700 hover:underline">
@@ -316,18 +255,6 @@ function withinPeriod(date, now, period) {
     }
 }
 
-function SortableTh({ label, sortKey, sort, onSort }) {
-    const active = sort.key === sortKey;
-    return (
-        <th className="px-5 py-3">
-            <button type="button" onClick={() => onSort(sortKey)} className={`flex items-center gap-1 hover:text-gray-700 ${active ? 'text-gray-700' : ''}`}>
-                {label}
-                <span className="text-[10px] text-gray-400">{active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
-            </button>
-        </th>
-    );
-}
-
 function FilterSelect({ value, onChange, allLabel, options }) {
     return (
         <select value={value} onChange={(e) => onChange(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
@@ -336,71 +263,6 @@ function FilterSelect({ value, onChange, allLabel, options }) {
                 <option key={o} value={o}>{o}</option>
             ))}
         </select>
-    );
-}
-
-function SearchableFilterSelect({ value, onChange, allLabel, options, searchPlaceholder = 'Cari…' }) {
-    const [open, setOpen] = useState(false);
-    const [query, setQuery] = useState('');
-    const ref = useRef(null);
-
-    useEffect(() => {
-        function onClickOutside(e) {
-            if (ref.current && !ref.current.contains(e.target)) {
-                setOpen(false);
-                setQuery('');
-            }
-        }
-        document.addEventListener('mousedown', onClickOutside);
-        return () => document.removeEventListener('mousedown', onClickOutside);
-    }, []);
-
-    const allOptions = [allLabel, ...options];
-    const filtered = allOptions.filter((o) => o.toLowerCase().includes(query.toLowerCase()));
-
-    return (
-        <div ref={ref} className="relative">
-            <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="flex min-w-[170px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-700 hover:border-gray-300 focus:border-blue-400 focus:outline-none"
-            >
-                <span className="truncate">{value}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-400"><path d="m6 9 6 6 6-6" /></svg>
-            </button>
-
-            {open && (
-                <div className="absolute left-0 top-[calc(100%+4px)] z-30 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-                    <div className="border-b border-gray-100 p-2">
-                        <input
-                            autoFocus
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder={searchPlaceholder}
-                            className="w-full rounded-md border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-400"
-                        />
-                    </div>
-                    <ul className="max-h-64 overflow-y-auto py-1">
-                        {filtered.map((o) => (
-                            <li key={o}>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        onChange(o);
-                                        setOpen(false);
-                                        setQuery('');
-                                    }}
-                                    className={`block w-full truncate px-3 py-2 text-left text-sm hover:bg-blue-50 ${o === value ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-700'}`}
-                                >
-                                    {o}
-                                </button>
-                            </li>
-                        ))}
-                        {filtered.length === 0 && <li className="px-3 py-4 text-center text-xs text-gray-400">Tidak ada hasil.</li>}
-                    </ul>
-                </div>
-            )}
-        </div>
     );
 }
 
@@ -470,16 +332,16 @@ function TicketDetailModal({ ticket: t, onClose }) {
                     <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900">Deskripsi</h3>
                     <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{t.description || '—'}</p>
 
-                    {t.attachments?.length > 0 && (
+                    {t.attachmentName && (
                         <>
                             <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900">Lampiran</h3>
-                            <div className="flex flex-col gap-1.5">
-                                {t.attachments.map((a) => (
-                                    <a key={a.id} href={a.url} className="flex items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm text-blue-700 hover:bg-gray-50">
-                                        📎 {a.name}
-                                    </a>
-                                ))}
-                            </div>
+                            {t.attachmentUrl ? (
+                                <a href={t.attachmentUrl} className="flex items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm text-blue-700 hover:bg-gray-50">
+                                    📎 {t.attachmentName}
+                                </a>
+                            ) : (
+                                <p className="rounded-lg border border-gray-200 p-3 text-sm text-gray-500">📎 {t.attachmentName}</p>
+                            )}
                         </>
                     )}
 

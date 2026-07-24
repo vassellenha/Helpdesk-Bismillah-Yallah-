@@ -7,6 +7,7 @@ use App\Models\Ticket;
 use App\Support\DummyData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -26,7 +27,7 @@ class TicketManagementController extends Controller
 {
     public function index(): View
     {
-        $tickets = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'attachments'])
+        $tickets = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
             ->whereNotNull('requester_id')
             ->latest('created_at')
             ->get();
@@ -51,6 +52,7 @@ class TicketManagementController extends Controller
         return view('admin.ticket-management', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
+            'notifications' => DummyData::notifications(),
             'tickets' => $rows,
             'stats' => $stats,
             'filterOptions' => [
@@ -76,7 +78,7 @@ class TicketManagementController extends Controller
             'ids' => 'nullable|string',
         ]);
 
-        $query = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'attachments'])->whereNotNull('requester_id');
+        $query = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])->whereNotNull('requester_id');
 
         if (! empty($data['ids'])) {
             $ids = array_values(array_filter(explode(',', $data['ids'])));
@@ -132,7 +134,8 @@ class TicketManagementController extends Controller
             'createdAt' => $t->created_at->format('d M Y, H:i'),
             'createdAtIso' => $t->created_at->toIso8601String(),
             'description' => $t->description,
-            'attachments' => $t->attachmentsPayload(),
+            'attachmentName' => $t->attachment_name,
+            'attachmentUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
             'approvalInfo' => $this->approvalInfo($t),
             'timeline' => $this->timelineSteps($t),
             'requester' => $t->requester ? [

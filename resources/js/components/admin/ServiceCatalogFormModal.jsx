@@ -44,11 +44,6 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
     const selectedLevel = LEVEL_OPTIONS.find((o) => o.key === form.levelKey) ?? LEVEL_OPTIONS[0];
     const showBpoField = selectedLevel.key === 'l1-bpo' || selectedLevel.key === 'l2-both';
     const showItField = selectedLevel.key === 'l1-it' || selectedLevel.key === 'l2-both';
-    // A Subject with no PIC assigned has nowhere for its tickets to route —
-    // every agent field the current Level shows must be filled before
-    // saving is allowed, matching the server-side check in
-    // ServiceCatalogController::assertPicAssigned().
-    const picComplete = (!showBpoField || form.support_agent_id) && (!showItField || form.it_agent_id);
 
     // Switching Level changes which agent field(s) are shown — clear
     // whichever field is no longer applicable so a stale pick can't sneak
@@ -158,21 +153,19 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
 
                 <div className={selectedLevel.key === 'l2-both' ? 'grid grid-cols-2 gap-4' : ''}>
                     {showBpoField && (
-                        <Field label="Support BPO *">
-                            <select value={form.support_agent_id} onChange={(e) => set('support_agent_id', e.target.value)} className={`w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm focus:bg-white focus:outline-none ${!form.support_agent_id ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-blue-400'}`}>
+                        <Field label="Support BPO">
+                            <select value={form.support_agent_id} onChange={(e) => set('support_agent_id', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
                                 <option value="">Pilih...</option>
                                 {bpoAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
-                            {!form.support_agent_id && <p className="mt-1 text-xs text-red-600">PIC wajib dipilih agar tiket punya arah.</p>}
                         </Field>
                     )}
                     {showItField && (
-                        <Field label="Support IT *">
-                            <select value={form.it_agent_id} onChange={(e) => set('it_agent_id', e.target.value)} className={`w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm focus:bg-white focus:outline-none ${!form.it_agent_id ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-blue-400'}`}>
+                        <Field label="Support IT">
+                            <select value={form.it_agent_id} onChange={(e) => set('it_agent_id', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
                                 <option value="">Pilih...</option>
                                 {itAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
-                            {!form.it_agent_id && <p className="mt-1 text-xs text-red-600">PIC wajib dipilih agar tiket punya arah.</p>}
                         </Field>
                     )}
                 </div>
@@ -187,7 +180,7 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
 
             <ModalFooter>
                 <button onClick={onClose} className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-medium text-blue-700 hover:bg-white">Batal</button>
-                <button onClick={save} disabled={saving || !form.layanan || !form.subcategory || !form.subject || !picComplete} className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
+                <button onClick={save} disabled={saving || !form.layanan || !form.subcategory || !form.subject} className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
                     {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
             </ModalFooter>

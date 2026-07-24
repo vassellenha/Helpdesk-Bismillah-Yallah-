@@ -63,6 +63,7 @@ class Ticket extends Model
     protected $fillable = [
         'ticket_no', 'title', 'requester_name', 'requester_id',
         'service_name', 'subcategory_name', 'subject_name', 'issue_category', 'description',
+        'attachment_name', 'attachment_path',
         'category', 'sla_policy_id', 'priority', 'approver_id', 'assigned_agent_id', 'catalog_subject_id',
         'response_time_minutes', 'resolution_time_minutes', 'warning_threshold_percent',
         'response_due_at', 'resolution_due_at', 'warning_at',
