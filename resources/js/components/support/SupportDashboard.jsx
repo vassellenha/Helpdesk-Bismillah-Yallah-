@@ -2,6 +2,22 @@ import { useMemo, useState } from 'react';
 import TicketCategoryDonut from '../charts/TicketCategoryDonut';
 import SlaComplianceDonut from '../charts/SlaComplianceDonut';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
+import SelectMenu from '../SelectMenu';
+
+const CATEGORY_OPTIONS = [
+    { value: 'Semua', label: 'Semua Kategori' },
+    { value: 'Incident', label: 'Incident' },
+    { value: 'Service Request', label: 'Service Request' },
+    { value: 'Access Request', label: 'Access Request' },
+];
+
+const PRIORITY_OPTIONS = [
+    { value: 'Semua', label: 'Semua Prioritas' },
+    { value: 'Critical', label: 'Critical' },
+    { value: 'High', label: 'High' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'Low', label: 'Low' },
+];
 
 const PERIOD_TABS = [
     { key: 'week', label: 'Minggu' },
@@ -171,30 +187,11 @@ export default function SupportDashboard({ stats = {}, periods = {}, queue = [] 
                     <div className="flex flex-wrap items-end gap-3">
                         <label className="flex flex-col gap-1">
                             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Kategori</span>
-                            <select
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                                className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none"
-                            >
-                                <option value="Semua">Semua Kategori</option>
-                                <option value="Incident">Incident</option>
-                                <option value="Service Request">Service Request</option>
-                                <option value="Access Request">Access Request</option>
-                            </select>
+                            <SelectMenu value={category} onChange={setCategory} options={CATEGORY_OPTIONS} />
                         </label>
                         <label className="flex flex-col gap-1">
                             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Prioritas</span>
-                            <select
-                                value={priority}
-                                onChange={(e) => setPriority(e.target.value)}
-                                className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none"
-                            >
-                                <option value="Semua">Semua Prioritas</option>
-                                <option value="Critical">Critical</option>
-                                <option value="High">High</option>
-                                <option value="Medium">Medium</option>
-                                <option value="Low">Low</option>
-                            </select>
+                            <SelectMenu value={priority} onChange={setPriority} options={PRIORITY_OPTIONS} />
                         </label>
                     </div>
                 </div>
