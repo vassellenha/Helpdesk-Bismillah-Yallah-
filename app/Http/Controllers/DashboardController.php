@@ -105,8 +105,12 @@ class DashboardController extends Controller
 
     public function eva(): View
     {
+        $eva = CurrentActor::knowledgeAdmin();
+
         return view('dashboard.eva', [
             'role' => 'eva',
+            'currentUser' => ['name' => $eva->name, 'title' => $eva->jabatan, 'initials' => $this->initials($eva->name)],
+            'profileUrl' => route('eva.profile'),
             'articles' => DummyData::knowledgeArticles(),
             'unanswered' => DummyData::unansweredQuestions(),
             'notifications' => DummyData::notifications(),

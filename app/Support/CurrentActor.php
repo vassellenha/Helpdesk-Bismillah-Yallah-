@@ -58,6 +58,11 @@ class CurrentActor
             ?? User::where('email', 'denny.firmansyah@adhi.co.id')->firstOrFail();
     }
 
+    public static function knowledgeAdmin(): User
+    {
+        return User::where('email', 'nina.amelia@adhi.co.id')->firstOrFail();
+    }
+
     private static function actingAgentUser(string $type, string $sessionKey): ?User
     {
         $agentId = session($sessionKey);

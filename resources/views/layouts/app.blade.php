@@ -50,14 +50,21 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications ?? []]) }}"></div>
-                    <div class="flex items-center gap-2">
-                        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600">
-                            {{ strtoupper(substr(config('helpdesk.roles')[$role]['label'] ?? 'U', 0, 1)) }}
-                        </span>
-                        <span class="hidden text-sm font-medium text-gray-700 sm:block">
-                            {{ config('helpdesk.roles')[$role]['label'] ?? '' }}
-                        </span>
-                    </div>
+                    @if(isset($currentUser) && isset($profileUrl))
+                        <div
+                            data-react="UserMenu"
+                            data-props="{{ json_encode(['name' => $currentUser['name'], 'title' => $currentUser['title'], 'initials' => $currentUser['initials'], 'profileUrl' => $profileUrl]) }}"
+                        ></div>
+                    @else
+                        <div class="flex items-center gap-2">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600">
+                                {{ strtoupper(substr(config('helpdesk.roles')[$role]['label'] ?? 'U', 0, 1)) }}
+                            </span>
+                            <span class="hidden text-sm font-medium text-gray-700 sm:block">
+                                {{ config('helpdesk.roles')[$role]['label'] ?? '' }}
+                            </span>
+                        </div>
+                    @endif
                 </div>
             </header>
 

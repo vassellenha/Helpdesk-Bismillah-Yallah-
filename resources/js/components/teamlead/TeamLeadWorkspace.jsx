@@ -128,6 +128,7 @@ export default function TeamLeadWorkspace(props) {
                         dashboardUrl={props.dashboardUrl ?? '/'}
                         markAllReadUrl={props.markAllReadUrl}
                         onOpenTicket={actions.openTicket}
+                        profileUrl={props.profileUrl}
                     />
                 </div>
             </header>

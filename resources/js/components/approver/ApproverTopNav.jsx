@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import MyProfileModal from '../MyProfileModal';
 
 const ICON_STYLES = {
     sla_breach: { bg: 'bg-red-50', color: 'text-red-600' },
@@ -8,10 +9,11 @@ const ICON_STYLES = {
     history_updated: { bg: 'bg-gray-100', color: 'text-gray-500' },
 };
 
-export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl = '/', ticketsUrl = '/', markAllReadUrl }) {
+export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl = '/', ticketsUrl = '/', markAllReadUrl, profileUrl }) {
     const [items, setItems] = useState(notifications);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
     const ref = useRef(null);
 
     useEffect(() => {
@@ -131,6 +133,16 @@ export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl
                                 <span className="block truncate text-[11px] text-gray-400">{user.title ?? ''}</span>
                             </span>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setProfileModalOpen(true);
+                                setProfileOpen(false);
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-left text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        >
+                            My Profile
+                        </button>
                         <a href={ticketsUrl} className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
                             My Tickets
                         </a>
@@ -142,6 +154,8 @@ export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl
                     </div>
                 )}
             </div>
+
+            {profileModalOpen && <MyProfileModal profileUrl={profileUrl} onClose={() => setProfileModalOpen(false)} />}
         </div>
     );
 }

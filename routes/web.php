@@ -8,6 +8,7 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PortalController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\SlaPolicyController;
 use App\Http\Controllers\SupportBpoController;
@@ -29,7 +30,10 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/eva', [DashboardController::class, 'eva'])->name('eva');
 });
 
+Route::get('/eva/profile', [ProfileController::class, 'eva'])->name('eva.profile');
+
 Route::prefix('approver')->name('approver.')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'approver'])->name('profile');
     Route::get('/tickets', [ApprovalController::class, 'history'])->name('tickets');
     Route::get('/tickets/{ticket}', [ApprovalController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/comments', [ApprovalController::class, 'addComment'])->name('tickets.comments.store');
@@ -39,6 +43,7 @@ Route::prefix('approver')->name('approver.')->group(function () {
 });
 
 Route::prefix('support')->name('support.')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'support'])->name('profile');
     Route::get('/tickets', [SupportController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [SupportController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/comments', [SupportController::class, 'addComment'])->name('tickets.comments.store');
@@ -49,6 +54,7 @@ Route::prefix('support')->name('support.')->group(function () {
 });
 
 Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'supportBpo'])->name('profile');
     Route::get('/tickets', [SupportBpoController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [SupportBpoController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/comments', [SupportBpoController::class, 'addComment'])->name('tickets.comments.store');
@@ -60,6 +66,7 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
 });
 
 Route::prefix('team-lead')->name('team-lead.')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'teamLead'])->name('profile');
     Route::get('/data', [TeamLeadController::class, 'dataFeed'])->name('data-feed');
     Route::get('/tickets/{ticket}', [TeamLeadController::class, 'showTicket'])->name('tickets.show');
     Route::get('/tickets/{ticket}/data', [TeamLeadController::class, 'ticketData'])->name('tickets.data');
@@ -74,6 +81,7 @@ Route::prefix('team-lead')->name('team-lead.')->group(function () {
 });
 
 Route::prefix('requester')->name('requester.')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'requester'])->name('profile');
     Route::get('/tickets', [DashboardController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [TicketDetailController::class, 'show'])->name('tickets.show');
     Route::put('/tickets/{ticket}', [TicketController::class, 'update'])->name('tickets.update');
@@ -88,6 +96,7 @@ Route::prefix('requester')->name('requester.')->group(function () {
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/profile', [ProfileController::class, 'admin'])->name('profile');
     Route::get('/users', [UserRoleController::class, 'index'])->name('users');
     Route::get('/sla', [SlaPolicyController::class, 'index'])->name('sla');
     Route::get('/audit-trail', [AuditTrailController::class, 'index'])->name('audit-trail');

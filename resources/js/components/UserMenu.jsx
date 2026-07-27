@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import MyProfileModal from './MyProfileModal';
 
-export default function UserMenu({ name, title, initials }) {
+export default function UserMenu({ name, title, initials, profileUrl }) {
     const [open, setOpen] = useState(false);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
     const ref = useRef(null);
 
     useEffect(() => {
@@ -29,12 +31,24 @@ export default function UserMenu({ name, title, initials }) {
 
             {open && (
                 <div className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
-                    <a href="#" onClick={(e) => e.preventDefault()} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Profil Saya</a>
+                    <a
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setProfileModalOpen(true);
+                            setOpen(false);
+                        }}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                        Profil Saya
+                    </a>
                     <a href="#" onClick={(e) => e.preventDefault()} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Pengaturan</a>
                     <div className="my-1 border-t border-gray-100" />
                     <a href="#" onClick={(e) => e.preventDefault()} className="block px-4 py-2.5 text-sm text-red-600 hover:bg-red-50">Keluar</a>
                 </div>
             )}
+
+            {profileModalOpen && <MyProfileModal profileUrl={profileUrl} onClose={() => setProfileModalOpen(false)} />}
         </div>
     );
 }

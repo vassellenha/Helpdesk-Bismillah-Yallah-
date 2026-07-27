@@ -31,7 +31,7 @@
                 </nav>
             </div>
             <div class="flex items-center gap-4">
-                <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '']) }}"></div>
+                <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '', 'profileUrl' => route('admin.profile')]) }}"></div>
             </div>
         </div>
     </header>

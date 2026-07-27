@@ -11,6 +11,7 @@
         'escalateUrl' => $escalateUrl,
         'notifications' => $notifications,
         'dashboardUrl' => route('dashboard.team-lead'),
+        'profileUrl' => route('team-lead.profile'),
         'markAllReadUrl' => route('team-lead.notifications.read-all'),
         'metrics' => $metrics,
         'opStats' => $opStats,

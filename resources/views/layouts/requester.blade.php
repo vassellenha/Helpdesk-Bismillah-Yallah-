@@ -40,7 +40,7 @@
 
             <div
                 data-react="RequesterTopNav"
-                data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'ticketsUrl' => route('requester.tickets'), 'markAllReadUrl' => route('requester.notifications.read-all')]) }}"
+                data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'ticketsUrl' => route('requester.tickets'), 'markAllReadUrl' => route('requester.notifications.read-all'), 'profileUrl' => route('requester.profile')]) }}"
             ></div>
         </header>
 
