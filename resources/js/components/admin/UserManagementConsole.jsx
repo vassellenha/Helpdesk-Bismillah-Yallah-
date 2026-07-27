@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import RoleManagerModal from './RoleManagerModal';
 import AddRoleWizard from './AddRoleWizard';
 import AddUserModal from './AddUserModal';
@@ -12,9 +12,28 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
     const [statusFilter, setStatusFilter] = useState('Semua Status');
     const [roleFilter, setRoleFilter] = useState('Semua Role');
     const [unitFilter, setUnitFilter] = useState('Semua Unit Kerja');
-    const [openMenuId, setOpenMenuId] = useState(null);
+    const [menu, setMenu] = useState(null); // { user, top, left }
     const [modal, setModal] = useState(null); // 'role' | 'addRole' | 'addUser' | { type: 'manageUser', user }
     const [error, setError] = useState('');
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!menu) return;
+        function onClickOutside(e) {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(null);
+        }
+        document.addEventListener('mousedown', onClickOutside);
+        return () => document.removeEventListener('mousedown', onClickOutside);
+    }, [menu]);
+
+    function openMenu(e, user) {
+        if (menu?.user.id === user.id) {
+            setMenu(null);
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        setMenu({ user, top: rect.bottom + 4, left: rect.right - 160 });
+    }
 
     const roleNames = useMemo(() => Array.from(new Set(users.flatMap((u) => u.roles))), [users]);
 
@@ -22,7 +41,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
         return users.filter((u) => {
             const q = search.toLowerCase();
             const matchesSearch =
-                q === '' || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.unit.toLowerCase().includes(q);
+                q === '' || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.unit ?? '').toLowerCase().includes(q);
             const matchesStatus = statusFilter === 'Semua Status' || u.status === statusFilter;
             const matchesRole = roleFilter === 'Semua Role' || u.roles.includes(roleFilter);
             const matchesUnit = unitFilter === 'Semua Unit Kerja' || u.unit === unitFilter;
@@ -31,7 +50,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
     }, [users, search, statusFilter, roleFilter, unitFilter]);
 
     async function toggleUserStatus(id) {
-        setOpenMenuId(null);
+        setMenu(null);
         setError('');
         try {
             const updated = await apiFetch(`/admin/users/${id}/toggle`, { method: 'POST' });
@@ -157,23 +176,13 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-gray-500">{u.last_login}</td>
-                                    <td className="relative px-4 py-3 text-right">
+                                    <td className="px-4 py-3 text-right">
                                         <button
-                                            onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
+                                            onClick={(e) => openMenu(e, u)}
                                             className="rounded-full border border-gray-200 px-2.5 py-1 text-gray-500 hover:bg-gray-100"
                                         >
                                             •••
                                         </button>
-                                        {openMenuId === u.id && (
-                                            <div className="absolute right-4 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-gray-200 bg-white text-left shadow-lg">
-                                                <button onClick={() => { setModal({ type: 'manageUser', user: u }); setOpenMenuId(null); }} className="block w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                                    Edit
-                                                </button>
-                                                <button onClick={() => toggleUserStatus(u.id)} className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                                                    {u.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
-                                                </button>
-                                            </div>
-                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -186,6 +195,17 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                     </table>
                 </div>
             </div>
+
+            {menu && (
+                <div ref={menuRef} style={{ top: menu.top, left: menu.left }} className="fixed z-50 w-40 overflow-hidden rounded-lg border border-gray-200 bg-white text-left shadow-lg">
+                    <button onClick={() => { setModal({ type: 'manageUser', user: menu.user }); setMenu(null); }} className="block w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        Edit
+                    </button>
+                    <button onClick={() => toggleUserStatus(menu.user.id)} className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                        {menu.user.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                    </button>
+                </div>
+            )}
 
             {modal === 'role' && (
                 <RoleManagerModal roles={roles} onClose={() => setModal(null)} onAddRole={() => setModal('addRole')} onRoleSaved={upsertRole} />
