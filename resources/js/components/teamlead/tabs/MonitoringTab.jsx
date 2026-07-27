@@ -53,6 +53,10 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
     const [, setTick] = useState(0);
     const filterRef = useRef(null);
 
+    // Sync when the parent refetches (e.g. after a corrective action) so the
+    // list reflects fresh priorities/PICs without a page reload.
+    useEffect(() => { setRows(monitorRows); }, [monitorRows]);
+
     useEffect(() => {
         if (!live) return undefined;
         const id = setInterval(() => setTick((t) => t + 1), 1000);

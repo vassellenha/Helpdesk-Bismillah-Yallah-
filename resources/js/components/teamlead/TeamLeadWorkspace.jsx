@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiFetch } from '../../lib/api';
 import TeamLeadTopNav from './TeamLeadTopNav';
 import TicketSlideOver from './TicketSlideOver';
 import RemindModal from './RemindModal';
@@ -39,9 +40,12 @@ const PERIODS = [['today', 'Today'], ['7d', '7 Hari'], ['30d', '30 Hari'], ['qua
 const PERIOD_TABS = ['operational', 'sla', 'support', 'management'];
 
 export default function TeamLeadWorkspace(props) {
+    // Dashboard data lives in state (seeded from the initial page props) so a
+    // corrective action can refetch and update every panel in place.
+    const [data, setData] = useState(props);
     const initialTab = (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab')) || 'operational';
     const [active, setActiveState] = useState(TABS.some((t) => t.key === initialTab) ? initialTab : 'operational');
-    const period = props.period ?? '30d';
+    const period = data.period ?? '30d';
 
     // Keep the active tab in the URL so the period links (which reload the page
     // with a new ?period=) land back on the same tab.
@@ -67,14 +71,28 @@ export default function TeamLeadWorkspace(props) {
         openTicket: (id) => setTicketOpen(id),
     };
 
+    // Refetch the whole dashboard payload and swap it into state, so every
+    // panel (ticket lists, priorities) and the Riwayat feed update live —
+    // no full page reload needed.
+    async function refresh() {
+        try {
+            const sep = data.dashboardDataUrl.includes('?') ? '&' : '?';
+            const fresh = await apiFetch(`${data.dashboardDataUrl}${sep}period=${period}`);
+            setData((prev) => ({ ...prev, ...fresh }));
+        } catch {
+            // Keep the last-known data on a failed refresh rather than blanking the view.
+        }
+    }
+
     function handleSuccess(res) {
         modal?.onSuccess?.(res);
         flash(res?.message ?? 'Berhasil.');
         setModal(null);
+        refresh();
     }
 
     const [title, subtitle] = TITLES[active];
-    const shared = { ...props, actions };
+    const shared = { ...data, actions };
 
     return (
         <div className="flex min-h-screen flex-col">

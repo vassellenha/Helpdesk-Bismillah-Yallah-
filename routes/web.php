@@ -60,6 +60,7 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
 });
 
 Route::prefix('team-lead')->name('team-lead.')->group(function () {
+    Route::get('/data', [TeamLeadController::class, 'dataFeed'])->name('data-feed');
     Route::get('/tickets/{ticket}', [TeamLeadController::class, 'showTicket'])->name('tickets.show');
     Route::get('/tickets/{ticket}/data', [TeamLeadController::class, 'ticketData'])->name('tickets.data');
     Route::post('/tickets/{ticket}/note', [TeamLeadController::class, 'addNote'])->name('tickets.note');

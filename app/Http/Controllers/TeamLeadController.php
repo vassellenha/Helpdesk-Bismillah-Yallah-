@@ -67,6 +67,23 @@ class TeamLeadController extends Controller
 
     public function dashboard(Request $request): View
     {
+        return view('dashboard.team-lead', $this->dashboardData($request));
+    }
+
+    /**
+     * JSON feed of the exact same dashboard payload. Lets the workspace
+     * refetch after a corrective action (raise priority, reassign, teguran)
+     * and update every panel + the Riwayat feed in place, so nothing needs a
+     * full page reload to reflect the change.
+     */
+    public function dataFeed(Request $request): JsonResponse
+    {
+        return response()->json($this->dashboardData($request));
+    }
+
+    /** @return array<string,mixed> */
+    private function dashboardData(Request $request): array
+    {
         $lead = CurrentActor::teamLead();
 
         $period = in_array($request->query('period'), ['today', '7d', '30d', 'quarter'], true)
@@ -91,7 +108,7 @@ class TeamLeadController extends Controller
         $within = $withSla->filter(fn (Ticket $t) => $t->sla_kind === 'ontrack');
         $slaTotal = max($withSla->count(), 1);
 
-        return view('dashboard.team-lead', [
+        return [
             'role' => 'team-lead',
             'period' => $period,
             'escalateUrl' => route('team-lead.escalation.raise'),
@@ -157,7 +174,8 @@ class TeamLeadController extends Controller
             'reportExportUrl' => url('/team-lead/reports/export'),
             'remindUrlBase' => url('/team-lead/tickets'),
             'markAllReadUrl' => route('team-lead.notifications.read-all'),
-        ]);
+            'dashboardDataUrl' => route('team-lead.data-feed'),
+        ];
     }
 
     /**

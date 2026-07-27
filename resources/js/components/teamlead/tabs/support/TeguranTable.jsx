@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../../../lib/api';
 
 const TABS = [['all', 'Semua'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['none', 'Belum']];
@@ -13,6 +13,9 @@ export default function TeguranTable({ rows = [], remindUrlBase, onOpenTicket })
     const [tab, setTab] = useState('all');
     const [sending, setSending] = useState(null); // `${id}:${channel}`
     const [toast, setToast] = useState(null);
+
+    // Re-sync when the parent refetches after a corrective action.
+    useEffect(() => { setItems(rows); }, [rows]);
 
     function flash(msg) {
         setToast(msg);
