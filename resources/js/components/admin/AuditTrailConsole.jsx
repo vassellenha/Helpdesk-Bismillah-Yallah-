@@ -9,6 +9,7 @@ const MODULE_LABELS = {
     user_role_management: 'User & Role Management',
     ticket_approval: 'Approval Tiket',
     ticket_support: 'Penanganan Support',
+    team_lead: 'Team Lead',
 };
 
 const ACTION_LABELS = {
@@ -24,6 +25,9 @@ const ACTION_LABELS = {
     reject: 'Tolak',
     resolve: 'Tutup Layanan',
     escalate: 'Eskalasi',
+    remind: 'Kirim Teguran',
+    reassign: 'Alihkan Tiket',
+    raise_priority: 'Naikkan Prioritas',
 };
 
 export default function AuditTrailConsole({ logs, administrators }) {
