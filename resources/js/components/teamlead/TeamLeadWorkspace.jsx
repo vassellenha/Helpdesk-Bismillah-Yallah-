@@ -69,6 +69,7 @@ export default function TeamLeadWorkspace(props) {
         reassign: (row, onSuccess) => setModal({ type: 'reassign', row, onSuccess }),
         raise: (row, onSuccess) => setModal({ type: 'raise', row, onSuccess }),
         openTicket: (id) => setTicketOpen(id),
+        refresh: () => refresh(),
     };
 
     // Refetch the whole dashboard payload and swap it into state, so every

@@ -196,8 +196,8 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                                 const slaColor = !sla ? 'text-gray-400' : sla.overdue ? 'text-red-600' : row.slaKind === 'warning' || (row.slaMinutes ?? 99) < 30 ? 'text-amber-600' : 'text-emerald-600';
                                 const dot = !sla ? 'bg-gray-300' : sla.overdue ? 'bg-red-500' : row.slaKind === 'warning' || (row.slaMinutes ?? 99) < 30 ? 'bg-amber-500' : 'bg-emerald-500';
                                 return (
-                                    <tr key={row.id} className="border-b border-gray-50 last:border-0 hover:bg-blue-50/30">
-                                        <td className="px-4 py-4 pl-6"><button onClick={() => actions.openTicket?.(row.id)} className="font-bold text-blue-600 hover:underline">{row.id}</button></td>
+                                    <tr key={row.id} onClick={() => actions.openTicket?.(row.id)} className="group cursor-pointer border-b border-gray-50 last:border-0 hover:bg-blue-50/30">
+                                        <td className="px-4 py-4 pl-6"><span className="font-bold text-blue-600 group-hover:underline">{row.id}</span></td>
                                         <td className="px-4 py-4"><span className="rounded-md bg-gray-100 px-2 py-1 text-[11px] font-bold text-gray-600">{row.service}</span></td>
                                         <td className="px-4 py-4 text-[11.5px] text-gray-400">{row.subcategory}</td>
                                         <td className="px-4 py-4">
@@ -216,7 +216,7 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                                             <p className="mt-1 text-[11px] text-gray-400">{row.agent}</p>
                                         </td>
                                         <td className="px-4 py-4 pr-6 text-right">
-                                            <button onClick={() => actions.reassign?.(row, (res) => patch(row.id, { agent: res.agent.name, agentId: res.agent.id }))} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold text-blue-600 ring-1 ring-blue-300 hover:bg-blue-50">
+                                            <button onClick={(e) => { e.stopPropagation(); actions.reassign?.(row, (res) => patch(row.id, { agent: res.agent.name, agentId: res.agent.id })); }} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold text-blue-600 ring-1 ring-blue-300 hover:bg-blue-50">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 8h13 M16 5l4 3-4 3 M17 16H4 M8 13l-4 3 4 3"/></svg>
                                                 Alihkan
                                             </button>

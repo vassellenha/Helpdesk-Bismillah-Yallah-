@@ -143,7 +143,7 @@ function AppTrend({ appTrend = {} }) {
     );
 }
 
-function EscalationRecs({ rows = [], escalateUrl }) {
+function EscalationRecs({ rows = [], escalateUrl, onRaised }) {
     const [done, setDone] = useState({});
     const [busy, setBusy] = useState(null);
     const [toast, setToast] = useState(null);
@@ -158,6 +158,9 @@ function EscalationRecs({ rows = [], escalateUrl }) {
             setDone((d) => ({ ...d, [r.name]: true }));
             setToast(res?.message ?? 'Prioritas dinaikkan.');
             setTimeout(() => setToast(null), 3200);
+            // Refetch the dashboard so the new priority shows in SLA Monitoring
+            // and everywhere else — not just when opening the ticket detail.
+            onRaised?.();
         } catch (e) {
             setToast(e.message || 'Gagal menaikkan prioritas.');
             setTimeout(() => setToast(null), 3200);
@@ -311,7 +314,7 @@ function CategoryTree({ tree = [] }) {
     );
 }
 
-export default function OperationalTab({ opStats = [], appTrend = {}, escalationRecs = [], ticketTrend = [], categoryTree = [], escalateUrl }) {
+export default function OperationalTab({ opStats = [], appTrend = {}, escalationRecs = [], ticketTrend = [], categoryTree = [], escalateUrl, actions = {} }) {
     return (
         <div className="flex flex-col gap-5">
             <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-5">
@@ -320,7 +323,7 @@ export default function OperationalTab({ opStats = [], appTrend = {}, escalation
 
             <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[0.85fr_1.6fr]">
                 <AppTrend appTrend={appTrend} />
-                <EscalationRecs rows={escalationRecs} escalateUrl={escalateUrl} />
+                <EscalationRecs rows={escalationRecs} escalateUrl={escalateUrl} onRaised={actions.refresh} />
             </div>
 
             <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.5fr_1fr]">
