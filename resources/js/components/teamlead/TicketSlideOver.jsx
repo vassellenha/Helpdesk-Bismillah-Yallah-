@@ -53,7 +53,7 @@ function ApprovalFlow({ flow }) {
     );
 }
 
-export default function TicketSlideOver({ ticketId, remindUrlBase, onClose }) {
+export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onChanged }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [modal, setModal] = useState(null);
@@ -177,9 +177,9 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose }) {
                 )}
             </div>
 
-            {modal === 'remind' && row && <RemindModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSent={(res) => { setModal(null); flash(res?.message ?? 'Teguran terkirim.'); }} />}
-            {modal === 'reassign' && row && <ReassignModal ticket={row} agents={data.agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setModal(null); flash(res?.message ?? 'Tiket dialihkan.'); load(); }} />}
-            {modal === 'raise' && row && <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setModal(null); flash(res?.message ?? 'Prioritas diperbarui.'); load(); }} />}
+            {modal === 'remind' && row && <RemindModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSent={(res) => { setModal(null); flash(res?.message ?? 'Teguran terkirim.'); load(); onChanged?.(); }} />}
+            {modal === 'reassign' && row && <ReassignModal ticket={row} agents={data.agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setModal(null); flash(res?.message ?? 'Tiket dialihkan.'); load(); onChanged?.(); }} />}
+            {modal === 'raise' && row && <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setModal(null); flash(res?.message ?? 'Prioritas diperbarui.'); load(); onChanged?.(); }} />}
 
             {toast && <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
         </div>

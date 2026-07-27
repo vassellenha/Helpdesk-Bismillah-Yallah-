@@ -178,7 +178,7 @@ export default function TeamLeadWorkspace(props) {
             )}
 
             {ticketOpen && (
-                <TicketSlideOver ticketId={ticketOpen} remindUrlBase={props.remindUrlBase} onClose={() => setTicketOpen(null)} />
+                <TicketSlideOver ticketId={ticketOpen} remindUrlBase={props.remindUrlBase} onClose={() => setTicketOpen(null)} onChanged={refresh} />
             )}
 
             {toast && (
