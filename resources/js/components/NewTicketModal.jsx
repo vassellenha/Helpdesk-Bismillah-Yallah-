@@ -127,6 +127,10 @@ export default function NewTicketModal({
     triggerLabel = 'New Ticket',
 }) {
     const isEdit = !!editTicket;
+    // A draft that an approver sent back for revision can only be re-submitted,
+    // not re-saved as a fresh draft — so the "Save as Draft" action is hidden
+    // in that case, leaving just Cancel and Submit Ticket.
+    const isRevision = editTicket?.approvalNote?.decision === 'revision_requested';
     const [open, setOpen] = useState(false);
     const [catalog, setCatalog] = useState(null);
     const [policies, setPolicies] = useState(null);
@@ -629,13 +633,15 @@ export default function NewTicketModal({
                         ) : (
                             <>
                                 <button onClick={close} className="rounded-full border border-gray-200 px-5 py-2.5 text-[13px] font-bold text-blue-600 hover:bg-gray-50">Cancel</button>
-                                <button
-                                    onClick={() => submit(true)}
-                                    disabled={submitting || !form.serviceId}
-                                    className="rounded-full border border-gray-200 px-5 py-2.5 text-[13px] font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    Save as Draft
-                                </button>
+                                {!isRevision && (
+                                    <button
+                                        onClick={() => submit(true)}
+                                        disabled={submitting || !form.serviceId}
+                                        className="rounded-full border border-gray-200 px-5 py-2.5 text-[13px] font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Save as Draft
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => submit(false)}
                                     disabled={submitting || !canSubmit}
