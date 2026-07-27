@@ -15,7 +15,7 @@ export default function SupportTab({ supportStats = {}, workload = [], picRows =
 
             <PicTable rows={picRows} />
             <WorkloadTable rows={workload} onOpenTicket={actions.openTicket} />
-            <TeguranTable rows={teguranTickets} remindUrlBase={remindUrlBase} onOpenTicket={actions.openTicket} />
+            <TeguranTable rows={teguranTickets} remindUrlBase={remindUrlBase} onOpenTicket={actions.openTicket} onSent={actions.refresh} />
         </div>
     );
 }

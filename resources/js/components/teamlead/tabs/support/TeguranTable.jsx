@@ -8,7 +8,7 @@ const CHANNEL = {
     whatsapp: { label: 'WhatsApp', style: 'bg-emerald-50 text-emerald-600', icon: 'M4 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H5a1 1 0 0 1-1-1Z M8 9h8 M8 12h5' },
 };
 
-export default function TeguranTable({ rows = [], remindUrlBase, onOpenTicket }) {
+export default function TeguranTable({ rows = [], remindUrlBase, onOpenTicket, onSent }) {
     const [items, setItems] = useState(rows);
     const [tab, setTab] = useState('all');
     const [sending, setSending] = useState(null); // `${id}:${channel}`
@@ -40,6 +40,8 @@ export default function TeguranTable({ rows = [], remindUrlBase, onOpenTicket })
             });
             setItems((prev) => prev.map((t) => (t.id === row.id ? { ...t, channels: Array.from(new Set([...t.channels, channel])) } : t)));
             flash(res?.message ?? `Teguran ${CHANNEL[channel].label} terkirim.`);
+            // Refetch the dashboard so the teguran shows up live in Riwayat.
+            onSent?.();
         } catch (e) {
             flash(e.message || 'Gagal mengirim teguran.');
         } finally {
@@ -73,8 +75,8 @@ export default function TeguranTable({ rows = [], remindUrlBase, onOpenTicket })
                     </div>
                     <div className="max-h-[460px] overflow-y-auto">
                         {filtered.map((t) => (
-                            <div key={t.id} className="grid grid-cols-[100px_1fr_130px_120px_190px_96px] items-center gap-3 border-b border-gray-50 px-6 py-3.5 last:border-0 hover:bg-blue-50/30">
-                                <button onClick={() => onOpenTicket?.(t.id)} className="text-left text-[12px] font-bold text-blue-600 hover:underline">{t.id}</button>
+                            <div key={t.id} onClick={() => onOpenTicket?.(t.id)} className="group grid cursor-pointer grid-cols-[100px_1fr_130px_120px_190px_96px] items-center gap-3 border-b border-gray-50 px-6 py-3.5 last:border-0 hover:bg-blue-50/30">
+                                <span className="text-left text-[12px] font-bold text-blue-600 group-hover:underline">{t.id}</span>
                                 <span className="truncate text-[13px] font-semibold text-gray-900">{t.subject}</span>
                                 <span className="truncate text-[12.5px] text-gray-700">{t.pic}</span>
                                 <span className="text-[12px] text-gray-400">{t.created}</span>
@@ -90,10 +92,10 @@ export default function TeguranTable({ rows = [], remindUrlBase, onOpenTicket })
                                     ))}
                                 </div>
                                 <div className="flex justify-end gap-1.5">
-                                    <button onClick={() => send(t, 'email')} disabled={sending} title="Kirim teguran via Email" className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50">
+                                    <button onClick={(e) => { e.stopPropagation(); send(t, 'email'); }} disabled={sending} title="Kirim teguran via Email" className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z M4 7l8 6 8-6"/></svg>
                                     </button>
-                                    <button onClick={() => send(t, 'whatsapp')} disabled={sending} title="Kirim teguran via WhatsApp" className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+                                    <button onClick={(e) => { e.stopPropagation(); send(t, 'whatsapp'); }} disabled={sending} title="Kirim teguran via WhatsApp" className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H5a1 1 0 0 1-1-1Z M8 9h8 M8 12h5"/></svg>
                                     </button>
                                 </div>
