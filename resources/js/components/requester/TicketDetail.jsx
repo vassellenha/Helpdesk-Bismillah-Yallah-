@@ -3,6 +3,7 @@ import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import NewTicketModal from '../NewTicketModal';
 import FeedbackDisplay from '../FeedbackDisplay';
+import AttachmentViewer from '../AttachmentViewer';
 
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
 
@@ -379,22 +380,10 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                             <Field label="Layanan" value={ticket.service} />
                             <Field label="Subject" value={ticket.subject} />
                         </div>
-                        {ticket.attachments?.length > 0 && (
-                            <div className="mt-4 flex flex-col gap-1.5">
-                                {ticket.attachments.map((a) => (
-                                    <a
-                                        key={a.id}
-                                        href={a.url}
-                                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[13px] font-medium text-blue-600 hover:bg-gray-100 hover:underline"
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
-                                        {a.name}
-                                    </a>
-                                ))}
-                            </div>
-                        )}
+                        <AttachmentViewer attachments={ticket.attachments} className="mt-4" />
                     </Card>
 
+                    {status !== 'Draft' && (
                     <Card title="Discussion">
                         <div className="flex flex-col gap-3">
                             {comments.length === 0 && (
@@ -433,6 +422,7 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
                             </div>
                         )}
                     </Card>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-6">
