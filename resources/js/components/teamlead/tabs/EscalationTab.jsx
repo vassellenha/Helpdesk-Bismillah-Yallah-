@@ -35,8 +35,8 @@ function BpoTable({ rows, actions }) {
                     </thead>
                     <tbody>
                         {filtered.map((e) => (
-                            <tr key={e.id} className="border-b border-gray-50 last:border-0 hover:bg-blue-50/30">
-                                <td className="px-4 py-4 pl-6"><button onClick={() => actions.openTicket?.(e.id)} className="font-bold text-blue-600 hover:underline">{e.id}</button></td>
+                            <tr key={e.id} onClick={() => actions.openTicket?.(e.id)} className="group cursor-pointer border-b border-gray-50 last:border-0 hover:bg-blue-50/30">
+                                <td className="px-4 py-4 pl-6"><span className="font-bold text-blue-600 group-hover:underline">{e.id}</span></td>
                                 <td className="px-4 py-4">
                                     <p className="max-w-[280px] truncate text-[13px] font-semibold text-gray-900">{e.subject}</p>
                                     {e.note && <p className="mt-0.5 max-w-[280px] truncate text-[11.5px] text-gray-400">{e.note}</p>}
@@ -85,8 +85,8 @@ function BreachTable({ rows, actions }) {
                     </thead>
                     <tbody>
                         {rows.map((r) => (
-                            <tr key={r.id} className="border-b border-gray-50 last:border-0 hover:bg-blue-50/30">
-                                <td className="px-4 py-4 pl-6"><button onClick={() => actions.openTicket?.(r.id)} className="font-bold text-blue-600 hover:underline">{r.id}</button></td>
+                            <tr key={r.id} onClick={() => actions.openTicket?.(r.id)} className="group cursor-pointer border-b border-gray-50 last:border-0 hover:bg-blue-50/30">
+                                <td className="px-4 py-4 pl-6"><span className="font-bold text-blue-600 group-hover:underline">{r.id}</span></td>
                                 <td className="px-4 py-4"><p className="max-w-[240px] truncate text-gray-800">{r.subject}</p></td>
                                 <td className="px-4 py-4"><span className="rounded-md bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-600">{r.service}</span></td>
                                 <td className="px-4 py-4"><PriorityBadge priority={r.priority} /></td>
