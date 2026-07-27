@@ -34,7 +34,7 @@ export default function TeguranTable({ rows = [], remindUrlBase, onOpenTicket, o
             const res = await apiFetch(`${remindUrlBase}/${row.id}/remind`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    channels: [channel],
+                    channels: ['inapp', channel],
                     message: `Halo ${row.pic}, mohon segera tindak lanjuti tiket ${row.id} "${row.subject}" agar tidak melewati batas SLA. Terima kasih.`,
                 }),
             });
