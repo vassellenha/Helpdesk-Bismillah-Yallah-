@@ -268,6 +268,21 @@ function ReopenNoteBanner({ reopenNote }) {
     );
 }
 
+function ResolutionNoteBanner({ resolutionNote }) {
+    return (
+        <div className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            </span>
+            <div className="min-w-0">
+                <p className="text-[13px] font-bold text-emerald-800">Diselesaikan oleh {resolutionNote.agentName}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-emerald-900">{resolutionNote.note}</p>
+                <p className="mt-1.5 text-[11px] text-emerald-600">{resolutionNote.at}</p>
+            </div>
+        </div>
+    );
+}
+
 function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     const support = (ticket.people.support ?? [])[0];
 
@@ -329,6 +344,7 @@ export default function TicketDetail({ ticket, comments: initialComments = [], t
 
             {ticket.approvalNote && <ApprovalNoteBanner approvalNote={ticket.approvalNote} />}
             {ticket.reopenNote && <ReopenNoteBanner reopenNote={ticket.reopenNote} />}
+            {ticket.resolutionNote && <ResolutionNoteBanner resolutionNote={ticket.resolutionNote} />}
 
             <Card>
                 <div className="flex flex-wrap items-start justify-between gap-4">

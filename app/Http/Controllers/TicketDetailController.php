@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditTrail;
 use App\Models\Ticket;
 use App\Models\TicketApproval;
 use App\Models\TicketAttachment;
@@ -232,6 +233,7 @@ class TicketDetailController extends Controller
                 'note' => $t->reopen_note,
                 'at' => $t->reopen_at->format('M j, Y · H:i'),
             ] : null,
+            'resolutionNote' => $this->latestResolutionNote($t),
             'sla' => [
                 'label' => $t->sla_label,
                 'kind' => $t->sla_kind,
@@ -258,6 +260,36 @@ class TicketDetailController extends Controller
             'requiresApproval' => (bool) $t->approver_id,
             'approverId' => $t->approver_id,
             'approverName' => $t->approver?->name,
+        ];
+    }
+
+    /**
+     * "Diselesaikan oleh <agent>" banner data — sourced from the shared audit
+     * trail (Support/Support BPO's `resolve()` action) since resolution notes
+     * aren't stored on the ticket itself, only latest one, mirroring how
+     * reopenNote/approvalNote read the latest state for their own source.
+     */
+    private function latestResolutionNote(Ticket $t): ?array
+    {
+        if (!in_array($t->status, ['Resolved', 'Closed'], true)) {
+            return null;
+        }
+
+        $audit = AuditTrail::where('module', 'ticket_support')
+            ->where('action', 'resolve')
+            ->where('target_name', $t->ticket_no)
+            ->with('actor')
+            ->latest('created_at')
+            ->first();
+
+        if (!$audit) {
+            return null;
+        }
+
+        return [
+            'note' => $audit->new_value['catatan'] ?? '',
+            'agentName' => $audit->actor?->name ?? 'Tim Support',
+            'at' => $audit->created_at->format('M j, Y · H:i'),
         ];
     }
 
