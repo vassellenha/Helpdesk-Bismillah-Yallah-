@@ -280,6 +280,8 @@ class TeamLeadController extends Controller
             'message' => $data['message'],
         ]);
 
+        NotificationService::notifyDiscussionParticipants($ticket, $lead, 'Team Lead', $data['message']);
+
         return response()->json([
             'id' => $comment->id,
             'authorName' => $comment->author_name,
@@ -771,6 +773,7 @@ class TeamLeadController extends Controller
             ->keyBy('target_name');
 
         return Ticket::whereNotNull('escalated_at')
+            ->where('status', '!=', 'Draft')
             ->with('assignedAgent')
             ->latest('escalated_at')
             ->get()
