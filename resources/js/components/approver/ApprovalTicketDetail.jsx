@@ -291,8 +291,7 @@ export default function ApprovalTicketDetail({ ticket, comments: initialComments
                                     </div>
                                     <div className={`pb-4 ${step.state === 'pending' ? 'opacity-50' : ''}`}>
                                         <p className="text-[13px] font-semibold text-gray-900">{step.label}</p>
-                                        {step.who && <p className="text-[11px] text-gray-400">{step.who}</p>}
-                                        {step.at && <p className="text-[11px] text-gray-400">{step.at}</p>}
+                                        {(step.who || step.at) && <p className="text-[11px] text-gray-400">{[step.who, step.at].filter(Boolean).join(' · ')}</p>}
                                     </div>
                                 </div>
                             ))}
