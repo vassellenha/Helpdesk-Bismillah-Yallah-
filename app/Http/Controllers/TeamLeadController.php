@@ -37,6 +37,9 @@ class TeamLeadController extends Controller
     /** Support-agent `type` this Team Lead supervises (support_agents.type). */
     private const TEAM_SCOPE = 'it';
 
+    /** Below this average, an agent's satisfaction rating is eligible for a Team-Lead teguran. */
+    private const RATING_TEGURAN_THRESHOLD = 4.0;
+
     private const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
     private const I_TICKET = 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z M14 5v14';
@@ -173,6 +176,8 @@ class TeamLeadController extends Controller
                 ->mapWithKeys(fn (string $t) => [$t => $this->buildReport($t, $tickets, $agents)])->all(),
             'reportExportUrl' => url('/team-lead/reports/export'),
             'remindUrlBase' => url('/team-lead/tickets'),
+            'remindRatingUrlBase' => url('/team-lead/agents'),
+            'ratingTeguranThreshold' => self::RATING_TEGURAN_THRESHOLD,
             'markAllReadUrl' => route('team-lead.notifications.read-all'),
             'dashboardDataUrl' => route('team-lead.data-feed'),
         ];
@@ -388,6 +393,7 @@ class TeamLeadController extends Controller
             $mine = $tickets->where('assigned_agent_id', $a->id);
             $done = $mine->whereIn('status', Ticket::DONE_STATUSES)->filter(fn (Ticket $t) => $t->resolved_at !== null);
             $met = $done->filter(fn (Ticket $t) => $t->resolved_at->lessThanOrEqualTo($t->resolution_due_at))->count();
+            $rated = $mine->whereNotNull('satisfaction_rating')->where('rating_active', true);
             $m = $map[$a->id] ?? [];
 
             return [
@@ -399,6 +405,8 @@ class TeamLeadController extends Controller
                 'resolved' => $mine->whereIn('status', Ticket::DONE_STATUSES)->count(),
                 'slaPct' => $done->isNotEmpty() ? (int) round($met / $done->count() * 100) : null,
                 'avgResolution' => $done->isNotEmpty() ? round($done->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->resolved_at)) / 60, 1).'h' : '—',
+                'rating' => $rated->isNotEmpty() ? round($rated->avg('satisfaction_rating'), 1) : null,
+                'ratingCount' => $rated->count(),
                 'subjects' => array_values(array_unique($m['subjects'] ?? [])),
                 'subcats' => array_values(array_unique($m['subcats'] ?? [])),
                 'apps' => array_values(array_unique($m['apps'] ?? [])),
@@ -443,6 +451,50 @@ class TeamLeadController extends Controller
             'message' => empty($delivered)
                 ? 'Teguran tercatat, tapi tidak ada channel yang berhasil (cek kontak PIC / konfigurasi).'
                 : 'Teguran terkirim via '.implode(', ', $delivered).'.',
+        ]);
+    }
+
+    /**
+     * Sends a rating teguran to a support agent whose average satisfaction
+     * rating has dropped below RATING_TEGURAN_THRESHOLD — a reprimand about
+     * overall service quality, not tied to any single ticket's SLA (see
+     * remind() above for that one). Same channel fan-out + audit trail.
+     */
+    public function remindRating(Request $request, SupportAgent $agent): JsonResponse
+    {
+        $lead = CurrentActor::teamLead();
+        abort_unless($agent->type === self::TEAM_SCOPE, 403, 'Agent ini di luar cakupan Team Lead.');
+
+        $data = $request->validate([
+            'message' => 'required|string|max:2000',
+            'channels' => 'nullable|array',
+            'channels.*' => 'in:inapp,email,whatsapp',
+        ]);
+
+        $rated = Ticket::where('assigned_agent_id', $agent->id)->whereNotNull('satisfaction_rating')->where('rating_active', true)->get(['satisfaction_rating']);
+        abort_if($rated->isEmpty(), 422, 'Agent ini belum punya rating dari Requester.');
+
+        $average = round($rated->avg('satisfaction_rating'), 1);
+        abort_unless($average < self::RATING_TEGURAN_THRESHOLD, 422, 'Rating agent ini sudah di atas ambang batas teguran ('.self::RATING_TEGURAN_THRESHOLD.').');
+
+        $channels = $data['channels'] ?? config('notifications.teguran_channels');
+        $delivered = TeguranNotifier::sendRating($lead, $agent, $average, $rated->count(), $data['message'], $channels);
+
+        AuditTrail::record($lead, [
+            'module' => 'team_lead',
+            'action' => 'remind_rating',
+            'target_type' => 'support_agent',
+            'target_id' => $agent->id,
+            'target_name' => $agent->name,
+            'new_value' => ['rating' => $average, 'channels' => $delivered, 'catatan' => $data['message']],
+            'description' => "{$lead->name} mengirim teguran rating ke {$agent->name} (rating {$average}/5 dari {$rated->count()} ulasan) via ".(empty($delivered) ? 'tidak ada channel' : implode(', ', $delivered)).'.',
+        ]);
+
+        return response()->json([
+            'delivered' => $delivered,
+            'message' => empty($delivered)
+                ? 'Teguran tercatat, tapi tidak ada channel yang berhasil (cek kontak agent / konfigurasi).'
+                : 'Teguran rating terkirim via '.implode(', ', $delivered).'.',
         ]);
     }
 
@@ -587,7 +639,7 @@ class TeamLeadController extends Controller
         };
 
         return $tickets
-            ->filter(fn (Ticket $t) => $t->status !== 'Draft')
+            ->filter(fn (Ticket $t) => !in_array($t->status, ['Draft', 'Returned'], true))
             ->groupBy(fn (Ticket $t) => $t->subject_name ?: $t->title)
             ->map(function (Collection $g, string $subject) use ($breached, $mode, $typeLabel) {
                 $volume = $g->count();
@@ -622,7 +674,7 @@ class TeamLeadController extends Controller
 
     private function categoryBreakdown(Collection $tickets): Collection
     {
-        $counted = $tickets->where('status', '!=', 'Draft');
+        $counted = $tickets->whereNotIn('status', ['Draft', 'Returned']);
         $total = max($counted->count(), 1);
 
         return $counted
@@ -651,6 +703,8 @@ class TeamLeadController extends Controller
             $metSla = $resolvedWithTime->filter(fn (Ticket $t) => $t->resolved_at->lessThanOrEqualTo($t->resolution_due_at))->count();
             $productivity = $resolvedWithTime->isNotEmpty() ? (int) round($metSla / $resolvedWithTime->count() * 100) : null;
 
+            $rated = $mine->whereNotNull('satisfaction_rating')->where('rating_active', true);
+
             return [
                 'id' => $agent->id,
                 'name' => $agent->name,
@@ -661,6 +715,8 @@ class TeamLeadController extends Controller
                 'avgResponse' => '—',
                 'avgResolution' => $avgResolutionHours !== null ? $avgResolutionHours.'h' : '—',
                 'productivity' => $productivity,
+                'rating' => $rated->isNotEmpty() ? round($rated->avg('satisfaction_rating'), 1) : null,
+                'ratingCount' => $rated->count(),
                 // Availability isn't tracked in the schema — derived from live
                 // load so the badge reflects who's currently overloaded.
                 'availability' => $active->count() >= 6 ? 'Sibuk' : 'Online',
@@ -773,7 +829,7 @@ class TeamLeadController extends Controller
             ->keyBy('target_name');
 
         return Ticket::whereNotNull('escalated_at')
-            ->where('status', '!=', 'Draft')
+            ->whereNotIn('status', ['Draft', 'Returned'])
             ->with('assignedAgent')
             ->latest('escalated_at')
             ->get()
@@ -945,7 +1001,7 @@ class TeamLeadController extends Controller
     private function categoryTree(Collection $tickets): array
     {
         $colors = ['#dc2626', '#2563eb', '#059669', '#d97706', '#7c3aed'];
-        $counted = $tickets->where('status', '!=', 'Draft');
+        $counted = $tickets->whereNotIn('status', ['Draft', 'Returned']);
         $total = max($counted->count(), 1);
 
         return $counted
@@ -1030,7 +1086,7 @@ class TeamLeadController extends Controller
             : (in_array($t->status, Ticket::ACTIVE_STATUSES, true) && $t->sla_kind === 'breach');
 
         return $tickets
-            ->filter(fn (Ticket $t) => $t->status !== 'Draft')
+            ->filter(fn (Ticket $t) => !in_array($t->status, ['Draft', 'Returned'], true))
             ->groupBy(fn (Ticket $t) => $t->issue_category ?? $t->category ?? 'Lainnya')
             ->map(function (Collection $g, string $name) use ($breached) {
                 $total = $g->count();
@@ -1105,7 +1161,7 @@ class TeamLeadController extends Controller
         $breached = fn (Ticket $t) => in_array($t->status, Ticket::DONE_STATUSES, true)
             ? ($t->resolved_at && $t->resolved_at->greaterThan($t->resolution_due_at))
             : (in_array($t->status, Ticket::ACTIVE_STATUSES, true) && $t->sla_kind === 'breach');
-        $counted = $tickets->where('status', '!=', 'Draft');
+        $counted = $tickets->whereNotIn('status', ['Draft', 'Returned']);
         $col = fn (string $label, string $align = 'left') => ['label' => $label, 'align' => $align];
 
         return match ($type) {

@@ -46,7 +46,7 @@ class SupportController extends Controller
         // TicketController::store()), so they must be excluded here too, or
         // Support would see and be able to act on a ticket the Approver
         // hasn't released yet.
-        $queue = $myTickets->reject(fn (Ticket $t) => in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Draft', 'Waiting for Approval'], true));
+        $queue = $myTickets->reject(fn (Ticket $t) => in_array($t->status, ['Resolved', 'Completed', 'Closed', ...Ticket::NOT_YET_RELEASED_STATUSES], true));
 
         $periods = collect(['week' => Carbon::now()->startOfWeek(), 'month' => Carbon::now()->startOfMonth(), 'year' => Carbon::now()->startOfYear()])
             ->map(function (Carbon $cutoff) use ($myTickets) {
@@ -71,19 +71,26 @@ class SupportController extends Controller
             ],
             'periods' => $periods,
             'queue' => $queue->map(fn (Ticket $t) => $this->presentQueueRow($t))->values(),
+            'myRating' => $this->myRating($myTickets),
         ]);
     }
 
     /**
-     * "My Tickets" — every ticket ever assigned to me, bucketed by current
-     * status, with search/service/period filters handled client-side.
+     * "My Tickets" — every ticket ever actually released to me, bucketed by
+     * current status, with search/service/period filters handled
+     * client-side. Tickets still sitting with an Approver (or never
+     * submitted at all) are excluded — same reasoning as dashboard()'s
+     * $queue — so a ticket only shows up here once it has genuinely landed
+     * in Support's hands.
      */
     public function myTickets(): View
     {
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
 
-        $tickets = Ticket::where('assigned_agent_id', $agent->id)->with('requester')->latest('created_at')->get();
+        $tickets = Ticket::where('assigned_agent_id', $agent->id)
+            ->whereNotIn('status', Ticket::NOT_YET_RELEASED_STATUSES)
+            ->with('requester')->latest('created_at')->get();
 
         $counts = [
             'Total' => $tickets->count(),
@@ -107,6 +114,7 @@ class SupportController extends Controller
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
         abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
 
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
@@ -117,9 +125,31 @@ class SupportController extends Controller
             'ticket' => $this->presentTicket($ticket, $agent),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'dataUrl' => route('support.tickets.data', $ticket),
             'commentsUrl' => route('support.tickets.comments.store', $ticket),
             'resolveUrl' => route('support.tickets.resolve', $ticket),
             'ticketsUrl' => route('support.tickets'),
+        ]);
+    }
+
+    /**
+     * JSON re-fetch of this same ticket — lets the detail page pull a fresh
+     * status/timeline in place after "Service Closed" instead of a full
+     * `window.location.reload()`.
+     */
+    public function data(Ticket $ticket): JsonResponse
+    {
+        $supportUser = CurrentActor::support();
+        $agent = $this->agentFor($supportUser);
+        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
+
+        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+
+        return response()->json([
+            'ticket' => $this->presentTicket($ticket, $agent),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'timeline' => TicketTimeline::steps($ticket),
         ]);
     }
 
@@ -128,6 +158,7 @@ class SupportController extends Controller
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
         abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
         $data = $request->validate(['message' => 'required|string|max:3000']);
@@ -154,7 +185,7 @@ class SupportController extends Controller
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
         abort_unless($ticket->assigned_agent_id === $agent->id, 403);
-        abort_unless($ticket->status !== 'Waiting for Approval', 422, 'Ticket is still awaiting approval.');
+        abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
@@ -229,6 +260,24 @@ class SupportController extends Controller
     private function agentFor(User $supportUser): SupportAgent
     {
         return SupportAgent::where('user_id', $supportUser->id)->firstOrFail();
+    }
+
+    /**
+     * My own star rating — averaged from Ticket::satisfaction_rating across
+     * every ticket ever assigned to me, the same value the Requester's
+     * post-close feedback writes (see TicketDetailController::close()).
+     * Excludes any rating Admin has switched off (rating_active = false —
+     * see Admin\TicketManagementController::toggleRating()) so a disputed
+     * or mistaken rating doesn't drag this average down while it's disabled.
+     */
+    private function myRating(Collection $myTickets): array
+    {
+        $rated = $myTickets->whereNotNull('satisfaction_rating')->where('rating_active', true);
+
+        return [
+            'average' => $rated->isNotEmpty() ? round($rated->avg('satisfaction_rating'), 1) : null,
+            'count' => $rated->count(),
+        ];
     }
 
     private function priorityBreakdown(Collection $tickets): array

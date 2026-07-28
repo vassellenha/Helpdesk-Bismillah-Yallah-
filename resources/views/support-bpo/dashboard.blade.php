@@ -9,6 +9,7 @@
         'stats' => $stats,
         'periods' => $periods,
         'queue' => $queue,
+        'myRating' => $myRating,
     ]) }}"
 ></div>
 @endsection

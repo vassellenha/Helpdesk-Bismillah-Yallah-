@@ -41,7 +41,13 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Relative on purpose: an absolute URL built from APP_URL breaks
+            // attachment previews whenever the app is actually reached via a
+            // different host/port than APP_URL claims (e.g. `php artisan
+            // serve` on :8000 while APP_URL still says plain http://localhost).
+            // A relative path always resolves against whatever origin served
+            // the page, so it works regardless of how the app is being run.
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

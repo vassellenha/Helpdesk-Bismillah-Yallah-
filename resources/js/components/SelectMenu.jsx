@@ -24,22 +24,22 @@ export default function SelectMenu({ value, onChange, options }) {
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className={`flex w-full min-w-[160px] items-center justify-between gap-2 rounded-[10px] border bg-white px-3 py-2.5 text-[13px] text-gray-700 hover:border-gray-300 focus:outline-none ${open ? 'border-blue-400' : 'border-gray-200'}`}
+                className={`flex w-full min-w-[160px] items-center justify-between gap-2 rounded-[10px] border bg-white dark:bg-panel-2 px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 hover:border-gray-300 dark:hover:border-ink-3 focus:outline-none ${open ? 'border-blue-400' : 'border-gray-200 dark:border-edge-strong'}`}
             >
                 <span>{current?.label ?? value}</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 text-gray-400 dark:text-ink-3 transition-transform ${open ? 'rotate-180' : ''}`}>
                     <path d="m6 9 6 6 6-6" />
                 </svg>
             </button>
 
             {open && (
-                <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-full min-w-[180px] overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-full min-w-[180px] overflow-hidden rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-1 shadow-lg">
                     {options.map((o) => (
                         <button
                             key={o.value}
                             type="button"
                             onClick={() => { onChange(o.value); setOpen(false); }}
-                            className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50 ${o.value === value ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-700'}`}
+                            className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] ${o.value === value ? 'bg-blue-50 dark:bg-accent-soft font-semibold text-blue-700 dark:text-accent-text' : 'text-gray-700 dark:text-ink-2'}`}
                         >
                             {o.label}
                             {o.value === value && (

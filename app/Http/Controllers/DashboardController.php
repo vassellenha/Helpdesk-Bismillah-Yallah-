@@ -77,7 +77,7 @@ class DashboardController extends Controller
 
         $counts = [
             'All' => $tickets->count(),
-            'Draft' => $tickets->where('status', 'Draft')->count(),
+            'Draft' => $tickets->whereIn('status', ['Draft', 'Returned'])->count(),
             'Active' => $tickets->whereIn('status', Ticket::ACTIVE_STATUSES)->count(),
             'Completed' => $tickets->whereIn('status', Ticket::DONE_STATUSES)->count(),
             'Rejected' => $tickets->where('status', 'Rejected')->count(),

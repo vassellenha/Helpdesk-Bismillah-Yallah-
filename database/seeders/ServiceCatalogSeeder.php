@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\IssueCategory;
+use App\Models\Role;
 use App\Models\ServiceCatalogService;
 use App\Models\ServiceCatalogSubcategory;
 use App\Models\ServiceCatalogSubject;
@@ -46,7 +47,7 @@ class ServiceCatalogSeeder extends Seeder
     {
 
         if ($name === 'Naufal Akbar') {
-            return 'zhafranmirza218@gmail.com';
+            return 'vassellenhaatthayya@gmail.com';
         }
 
         $slug = str(str($name)->ascii())->lower()->replace(' ', '.');
@@ -91,11 +92,22 @@ class ServiceCatalogSeeder extends Seeder
         // AppServiceProvider::buildAgentSwitcher) has more than one person to
         // switch between — that switcher only renders with 2+ linked agents,
         // and it's what lets you test how tickets route to different PICs.
+        //
+        // Each of these also needs the matching "Support IT"/"Support BPO"
+        // role row (UserRoleSeeder runs first, so both already exist) —
+        // without it, "My Profile" for these agents shows no role chip at
+        // all, even though they're clearly acting support staff.
+        $requesterRoleId = Role::where('name', 'Requester')->value('id');
+        $supportRoleIds = [
+            'it' => Role::where('name', 'Support IT')->value('id'),
+            'bpo' => Role::where('name', 'Support BPO')->value('id'),
+        ];
+
         SupportAgent::whereIn('type', ['it', 'bpo'])
             ->where('is_active', true)
             ->whereNull('user_id')
             ->get()
-            ->each(function (SupportAgent $agent) {
+            ->each(function (SupportAgent $agent) use ($requesterRoleId, $supportRoleIds) {
                 $user = User::firstOrCreate(
                     ['email' => $agent->email],
                     [
@@ -108,6 +120,7 @@ class ServiceCatalogSeeder extends Seeder
                     ]
                 );
                 $agent->update(['user_id' => $user->id]);
+                $user->roles()->syncWithoutDetaching(array_filter([$requesterRoleId, $supportRoleIds[$agent->type]]));
             });
 
         $itCursor = 0;

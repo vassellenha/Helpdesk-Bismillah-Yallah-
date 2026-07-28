@@ -27,9 +27,9 @@ export default function FeedbackDisplay({ rating, note }) {
                     </svg>
                 ))}
             </div>
-            <span className="text-[11px] text-gray-400">{rating}/5 dari Requester</span>
+            <span className="text-[11px] text-gray-400 dark:text-ink-3">{rating}/5 dari Requester</span>
             {note && (
-                <p className="mt-1.5 w-full rounded-lg bg-gray-50 p-3 text-left text-[13px] leading-relaxed text-gray-700">
+                <p className="mt-1.5 w-full rounded-lg bg-gray-50 dark:bg-panel-3 p-3 text-left text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">
                     {note}
                 </p>
             )}

@@ -107,18 +107,19 @@ class TicketController extends Controller
     }
 
     /**
-     * Drafts are the only tickets a Requester can still change after
-     * creation — once submitted (Open/Waiting for Approval/...), the ticket
-     * is locked in, matching TicketDetailController's comment/reopen/close
-     * actions which never touch the original request fields. ticket_no is
-     * never regenerated here, even if issue_category changes, since it must
-     * stay fixed once assigned.
+     * Drafts and Returned (sent back for revision) are the only tickets a
+     * Requester can still change after creation — once submitted and past
+     * approval (Open/Waiting for Approval/...), the ticket is locked in,
+     * matching TicketDetailController's comment/reopen/close actions which
+     * never touch the original request fields. ticket_no is never
+     * regenerated here, even if issue_category changes, since it must stay
+     * fixed once assigned.
      */
     public function update(Request $request, Ticket $ticket): JsonResponse
     {
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
-        abort_unless($ticket->status === 'Draft', 422, 'Only draft tickets can be edited.');
+        abort_unless(in_array($ticket->status, ['Draft', 'Returned'], true), 422, 'Only draft or returned tickets can be edited.');
 
         $data = $request->validate([
             'title' => 'required|string|max:255',

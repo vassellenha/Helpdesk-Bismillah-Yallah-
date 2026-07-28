@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $is_draft
  * @property Carbon|null $resolved_at
  * @property int|null $satisfaction_rating
+ * @property bool $rating_active
  * @property string|null $feedback_note
  * @property Carbon|null $escalated_at
  * @property string|null $escalation_note
@@ -60,13 +61,26 @@ class Ticket extends Model
 
     public const DONE_STATUSES = ['Resolved', 'Completed', 'Closed'];
 
+    /** Statuses with no active SLA countdown — never submitted, not yet decided, or dead-ended. */
+    public const NO_SLA_STATUSES = ['Draft', 'Returned', 'Waiting for Approval', 'Rejected'];
+
+    /**
+     * Statuses where the ticket hasn't actually reached Support yet — still
+     * being drafted/edited by the Requester, sitting with an Approver, or
+     * dead-ended before ever routing to Support. `assigned_agent_id` is
+     * frozen at creation time (see TicketController::store()), so without
+     * this check Support could otherwise see/act on a ticket the Approver
+     * hasn't released to them.
+     */
+    public const NOT_YET_RELEASED_STATUSES = ['Draft', 'Returned', 'Waiting for Approval', 'Rejected'];
+
     protected $fillable = [
         'ticket_no', 'title', 'requester_name', 'requester_id',
         'service_name', 'subcategory_name', 'subject_name', 'issue_category', 'description',
         'category', 'sla_policy_id', 'priority', 'approver_id', 'assigned_agent_id', 'catalog_subject_id',
         'response_time_minutes', 'resolution_time_minutes', 'warning_threshold_percent',
         'response_due_at', 'resolution_due_at', 'warning_at',
-        'status', 'is_draft', 'resolved_at', 'satisfaction_rating', 'feedback_note',
+        'status', 'is_draft', 'resolved_at', 'satisfaction_rating', 'rating_active', 'feedback_note',
         'escalated_at', 'escalation_note',
         'reopen_note', 'reopen_at',
     ];
@@ -79,6 +93,7 @@ class Ticket extends Model
         'resolved_at' => 'datetime',
         'escalated_at' => 'datetime',
         'is_draft' => 'boolean',
+        'rating_active' => 'boolean',
     ];
 
     public function slaPolicy()
@@ -178,7 +193,7 @@ class Ticket extends Model
      */
     public function getSlaMinutesRemainingAttribute(): ?int
     {
-        if (in_array($this->status, ['Draft', 'Waiting for Approval', 'Rejected'], true)) {
+        if (in_array($this->status, self::NO_SLA_STATUSES, true)) {
             return null;
         }
 
@@ -222,7 +237,7 @@ class Ticket extends Model
             return 'Not started';
         }
 
-        if (in_array($this->status, ['Draft', 'Rejected'], true)) {
+        if (in_array($this->status, ['Draft', 'Returned', 'Rejected'], true)) {
             return '—';
         }
 

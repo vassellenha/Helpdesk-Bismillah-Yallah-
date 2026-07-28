@@ -24,7 +24,7 @@ class TicketTimeline
 {
     public static function steps(Ticket $ticket): array
     {
-        if ($ticket->is_draft || $ticket->status === 'Draft') {
+        if ($ticket->status === 'Draft') {
             return [
                 self::step('Draft saved', $ticket->requester?->name, $ticket->created_at, 'current'),
             ];
@@ -46,6 +46,17 @@ class TicketTimeline
 
             if ($ticket->status === 'Rejected') {
                 $steps[] = self::step('Approval rejected', $approverName, $ticket->updated_at, 'rejected');
+
+                return $steps;
+            }
+
+            // A Returned ticket already reached the approver once — unlike a
+            // never-submitted Draft, its history must keep showing that trip
+            // through approval, with the revision request as the current step
+            // (not collapsed away), so the requester sees why it bounced back.
+            if ($ticket->status === 'Returned') {
+                $steps[] = self::step('Waiting for manager approval', $approverName, null, 'done');
+                $steps[] = self::step('Revision requested', $approverName, $ticket->updated_at, 'current');
 
                 return $steps;
             }

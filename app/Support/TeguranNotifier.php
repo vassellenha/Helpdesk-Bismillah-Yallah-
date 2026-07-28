@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Mail\TeguranRatingMail;
 use App\Mail\TeguranSlaMail;
 use App\Models\SupportAgent;
 use App\Models\Ticket;
@@ -58,6 +59,50 @@ class TeguranNotifier
 
         if (in_array('whatsapp', $channels, true) && $phone) {
             if (self::gateway()->send($phone, "*Teguran SLA · {$ticket->ticket_no}*\n\n{$message}")) {
+                $delivered[] = 'whatsapp';
+            }
+        }
+
+        return $delivered;
+    }
+
+    /**
+     * Same multi-channel fan-out as send(), but for a Team Lead's rating
+     * teguran — a reprimand about an agent's overall satisfaction rating,
+     * not tied to any single ticket, so it carries no Ticket at all.
+     *
+     * @param  array<int,string>  $channels  subset of inapp|email|whatsapp
+     * @return array<int,string>  channels that were delivered successfully
+     */
+    public static function sendRating(User $teamLead, SupportAgent $agent, float $rating, int $ratingCount, string $message, array $channels): array
+    {
+        $recipientUser = $agent->user;
+        $email = $recipientUser?->email ?? $agent->email;
+        $phone = $recipientUser?->whatsapp;
+        $delivered = [];
+
+        if (in_array('inapp', $channels, true) && $recipientUser) {
+            NotificationService::notify(
+                $recipientUser,
+                null,
+                'rating_teguran',
+                'Teguran Rating',
+                $message,
+            );
+            $delivered[] = 'inapp';
+        }
+
+        if (in_array('email', $channels, true) && $email) {
+            try {
+                Mail::to($email)->send(new TeguranRatingMail($agent->name, $teamLead->name, $rating, $ratingCount, $message));
+                $delivered[] = 'email';
+            } catch (\Throwable $e) {
+                Log::error('[Teguran Rating] Email gagal terkirim.', ['to' => $email, 'error' => $e->getMessage()]);
+            }
+        }
+
+        if (in_array('whatsapp', $channels, true) && $phone) {
+            if (self::gateway()->send($phone, "*Teguran Rating · {$agent->name}*\n\n{$message}")) {
                 $delivered[] = 'whatsapp';
             }
         }

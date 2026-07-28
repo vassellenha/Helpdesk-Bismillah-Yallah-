@@ -1,29 +1,30 @@
 const STATUS_STYLES = {
-    Draft: 'bg-gray-100 text-gray-600 ring-gray-500/20',
-    Open: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
-    Assigned: 'bg-sky-50 text-sky-700 ring-sky-600/20',
-    'In Progress': 'bg-blue-50 text-blue-700 ring-blue-600/20',
-    'Waiting Approval': 'bg-violet-50 text-violet-700 ring-violet-600/20',
-    'Waiting for Approval': 'bg-violet-50 text-violet-700 ring-violet-600/20',
-    'Waiting for Response': 'bg-purple-50 text-purple-700 ring-purple-600/20',
-    Resolved: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-    Completed: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-    Closed: 'bg-gray-100 text-gray-600 ring-gray-500/20',
-    Pending: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-    Approved: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-    Rejected: 'bg-red-50 text-red-700 ring-red-600/20',
+    Draft: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20',
+    Returned: 'bg-amber-50 dark:bg-warn-soft text-amber-700 dark:text-warn-text ring-amber-600/20',
+    Open: 'bg-indigo-50 dark:bg-accent-soft text-indigo-700 dark:text-accent-text ring-indigo-600/20',
+    Assigned: 'bg-sky-50 dark:bg-accent-soft text-sky-700 dark:text-accent-text ring-sky-600/20',
+    'In Progress': 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text ring-blue-600/20',
+    'Waiting Approval': 'bg-violet-50 dark:bg-violet-soft text-violet-700 dark:text-violet-text ring-violet-600/20',
+    'Waiting for Approval': 'bg-violet-50 dark:bg-violet-soft text-violet-700 dark:text-violet-text ring-violet-600/20',
+    'Waiting for Response': 'bg-purple-50 dark:bg-violet-soft text-purple-700 dark:text-violet-text ring-purple-600/20',
+    Resolved: 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text ring-emerald-600/20',
+    Completed: 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text ring-emerald-600/20',
+    Closed: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20',
+    Pending: 'bg-amber-50 dark:bg-warn-soft text-amber-700 dark:text-warn-text ring-amber-600/20',
+    Approved: 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text ring-emerald-600/20',
+    Rejected: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text ring-red-600/20',
 };
 
 const PRIORITY_STYLES = {
-    Low: 'bg-gray-100 text-gray-600',
-    Medium: 'bg-blue-50 text-blue-700',
-    High: 'bg-orange-50 text-orange-700',
-    Urgent: 'bg-red-50 text-red-700',
-    Critical: 'bg-red-50 text-red-700',
+    Low: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2',
+    Medium: 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text',
+    High: 'bg-orange-50 dark:bg-warn-soft text-orange-700 dark:text-warn-text',
+    Urgent: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text',
+    Critical: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text',
 };
 
 export function StatusBadge({ status }) {
-    const style = STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-600 ring-gray-500/20';
+    const style = STATUS_STYLES[status] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20';
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${style}`}>
             {status}
@@ -32,7 +33,7 @@ export function StatusBadge({ status }) {
 }
 
 export function PriorityBadge({ priority }) {
-    const style = PRIORITY_STYLES[priority] ?? 'bg-gray-100 text-gray-600';
+    const style = PRIORITY_STYLES[priority] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2';
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${style}`}>
             {priority}

@@ -36,6 +36,7 @@ Route::prefix('approver')->name('approver.')->group(function () {
     Route::get('/profile', [ProfileController::class, 'approver'])->name('profile');
     Route::get('/tickets', [ApprovalController::class, 'history'])->name('tickets');
     Route::get('/tickets/{ticket}', [ApprovalController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/data', [ApprovalController::class, 'data'])->name('tickets.data');
     Route::post('/tickets/{ticket}/comments', [ApprovalController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/decide', [ApprovalController::class, 'decide'])->name('tickets.decide');
     Route::post('/notifications/{notification}/read', [ApprovalController::class, 'markNotificationRead'])->name('notifications.read');
@@ -46,6 +47,7 @@ Route::prefix('support')->name('support.')->group(function () {
     Route::get('/profile', [ProfileController::class, 'support'])->name('profile');
     Route::get('/tickets', [SupportController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [SupportController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/data', [SupportController::class, 'data'])->name('tickets.data');
     Route::post('/tickets/{ticket}/comments', [SupportController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/resolve', [SupportController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/notifications/{notification}/read', [SupportController::class, 'markNotificationRead'])->name('notifications.read');
@@ -57,6 +59,7 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
     Route::get('/profile', [ProfileController::class, 'supportBpo'])->name('profile');
     Route::get('/tickets', [SupportBpoController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [SupportBpoController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/data', [SupportBpoController::class, 'data'])->name('tickets.data');
     Route::post('/tickets/{ticket}/comments', [SupportBpoController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/resolve', [SupportBpoController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/tickets/{ticket}/escalate', [SupportBpoController::class, 'escalate'])->name('tickets.escalate');
@@ -74,6 +77,7 @@ Route::prefix('team-lead')->name('team-lead.')->group(function () {
     Route::post('/tickets/{ticket}/remind', [TeamLeadController::class, 'remind'])->name('tickets.remind');
     Route::post('/tickets/{ticket}/reassign', [TeamLeadController::class, 'reassign'])->name('tickets.reassign');
     Route::post('/tickets/{ticket}/raise-priority', [TeamLeadController::class, 'raisePriority'])->name('tickets.raise-priority');
+    Route::post('/agents/{agent}/remind-rating', [TeamLeadController::class, 'remindRating'])->name('agents.remind-rating');
     Route::post('/escalation/raise', [TeamLeadController::class, 'escalateGroup'])->name('escalation.raise');
     Route::get('/reports/export', [TeamLeadController::class, 'exportReport'])->name('reports.export');
     Route::post('/notifications/{notification}/read', [TeamLeadController::class, 'markNotificationRead'])->name('notifications.read');
@@ -84,6 +88,7 @@ Route::prefix('requester')->name('requester.')->group(function () {
     Route::get('/profile', [ProfileController::class, 'requester'])->name('profile');
     Route::get('/tickets', [DashboardController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [TicketDetailController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/data', [TicketDetailController::class, 'data'])->name('tickets.data');
     Route::put('/tickets/{ticket}', [TicketController::class, 'update'])->name('tickets.update');
     Route::post('/tickets/{ticket}/comments', [TicketDetailController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/reopen', [TicketDetailController::class, 'reopen'])->name('tickets.reopen');
@@ -103,6 +108,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/service-catalog', [ServiceCatalogController::class, 'index'])->name('service-catalog');
     Route::get('/ticket-management', [TicketManagementController::class, 'index'])->name('ticket-management');
     Route::get('/ticket-management/export', [TicketManagementController::class, 'export'])->name('ticket-management.export');
+    Route::patch('/ticket-management/{ticket}/rating-toggle', [TicketManagementController::class, 'toggleRating'])->name('ticket-management.rating-toggle');
 
     Route::prefix('sla-policies')->name('sla-policies.')->group(function () {
         Route::get('/', [SlaPolicyController::class, 'list'])->name('list');

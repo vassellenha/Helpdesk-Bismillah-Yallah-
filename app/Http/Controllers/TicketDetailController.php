@@ -33,6 +33,7 @@ class TicketDetailController extends Controller
             'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'dataUrl' => route('requester.tickets.data', $ticket),
             'commentsUrl' => route('requester.tickets.comments.store', $ticket),
             'reopenUrl' => route('requester.tickets.reopen', $ticket),
             'closeUrl' => route('requester.tickets.close', $ticket),
@@ -44,13 +45,32 @@ class TicketDetailController extends Controller
         ]);
     }
 
+    /**
+     * JSON re-fetch of this same ticket — lets the detail page pull fresh
+     * status/timeline/comments in place after reopen/close instead of a full
+     * `window.location.reload()`.
+     */
+    public function data(Ticket $ticket): JsonResponse
+    {
+        $requester = CurrentActor::requester();
+        abort_unless($ticket->requester_id === $requester->id, 403);
+
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+
+        return response()->json([
+            'ticket' => $this->presentTicket($ticket),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'timeline' => TicketTimeline::steps($ticket),
+        ]);
+    }
+
     public function uploadAttachment(Request $request, Ticket $ticket): JsonResponse
     {
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
 
         $request->validate([
-            'file' => 'required|file|mimes:png,jpg,jpeg,pdf|max:5120',
+            'file' => 'required|file|mimes:png,jpg,jpeg,pdf,mp4,mov,webm|max:30720',
         ]);
 
         if ($ticket->attachments()->count() >= TicketAttachment::MAX_PER_TICKET) {
@@ -200,7 +220,7 @@ class TicketDetailController extends Controller
 
     private function presentTicket(Ticket $t): array
     {
-        $lastApproval = in_array($t->status, ['Draft', 'Open', 'Rejected'], true)
+        $lastApproval = in_array($t->status, ['Draft', 'Returned', 'Open', 'Rejected'], true)
             ? TicketApproval::where('ticket_id', $t->id)->latest('created_at')->first()
             : null;
 

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
+import SelectMenu from '../SelectMenu';
 
 const CARDS = [
-    { key: 'Total', label: 'Total Tiket', icon: 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z', bg: 'bg-gray-100', color: 'text-gray-500' },
-    { key: 'Open', label: 'Open', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 3', bg: 'bg-gray-100', color: 'text-gray-600' },
-    { key: 'In Progress', label: 'In Progress', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 3', bg: 'bg-blue-50', color: 'text-blue-600' },
-    { key: 'Resolved', label: 'Resolved', icon: 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9', bg: 'bg-emerald-50', color: 'text-emerald-600' },
-    { key: 'Closed', label: 'Closed', icon: 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z', bg: 'bg-gray-100', color: 'text-gray-500' },
+    { key: 'Total', label: 'Total Tiket', icon: 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z', bg: 'bg-gray-100 dark:bg-panel-3', color: 'text-gray-500 dark:text-ink-2' },
+    { key: 'Open', label: 'Open', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 3', bg: 'bg-gray-100 dark:bg-panel-3', color: 'text-gray-600 dark:text-ink-2' },
+    { key: 'In Progress', label: 'In Progress', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 3', bg: 'bg-blue-50 dark:bg-accent-soft', color: 'text-blue-600 dark:text-accent-text' },
+    { key: 'Resolved', label: 'Resolved', icon: 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9', bg: 'bg-emerald-50 dark:bg-ok-soft', color: 'text-emerald-600 dark:text-ok-text' },
+    { key: 'Closed', label: 'Closed', icon: 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z', bg: 'bg-gray-100 dark:bg-panel-3', color: 'text-gray-500 dark:text-ink-2' },
 ];
 
 const STATUS_PILLS = ['Semua', 'Open', 'In Progress', 'Resolved', 'Closed'];
@@ -83,8 +84,8 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
     return (
         <div className="flex flex-col gap-7">
             <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">My Tickets</h1>
-                <p className="mt-1 text-[13px] text-gray-400">{rows.length} tiket pernah ditugaskan ke Anda.</p>
+                <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">My Tickets</h1>
+                <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">{rows.length} tiket pernah ditugaskan ke Anda.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
@@ -92,32 +93,32 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
                     <button
                         key={c.key}
                         onClick={() => setActiveStatus(c.key)}
-                        className={`flex flex-col gap-2.5 rounded-2xl border bg-white p-4 text-left shadow-sm transition ${activeStatus === c.key ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-300'}`}
+                        className={`flex flex-col gap-2.5 rounded-2xl border bg-white dark:bg-panel-2 p-4 text-left shadow-sm transition ${activeStatus === c.key ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 dark:border-edge-strong hover:border-gray-300'}`}
                     >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-400">{c.label}</span>
+                            <span className="text-xs font-semibold text-gray-400 dark:text-ink-3">{c.label}</span>
                             <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${c.bg} ${c.color}`}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={c.icon} /></svg>
                             </span>
                         </div>
-                        <div className="text-[28px] font-extrabold leading-none text-gray-900">{counts[c.key] ?? 0}</div>
+                        <div className="text-[28px] font-extrabold leading-none text-gray-900 dark:text-ink-1">{counts[c.key] ?? 0}</div>
                     </button>
                 ))}
             </div>
 
-            <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-4 py-3 shadow-sm">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-3 shadow-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400 dark:text-ink-3"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
                 <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     type="text"
                     placeholder="Cari tiket, judul, atau layanan…"
-                    className="flex-1 border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-400"
+                    className="flex-1 border-none bg-transparent text-[13px] text-gray-900 dark:text-ink-1 outline-none placeholder:text-gray-400"
                 />
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-nowrap gap-1.5 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-sm">
+                <div className="flex flex-nowrap gap-1.5 overflow-x-auto rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-sm">
                     {STATUS_PILLS.map((p) => {
                         const key = p === 'Semua' ? 'Total' : p;
                         const active = activeStatus === key;
@@ -125,7 +126,7 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
                             <button
                                 key={p}
                                 onClick={() => setActiveStatus(key)}
-                                className={`whitespace-nowrap rounded-lg px-3.5 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`whitespace-nowrap rounded-lg px-3.5 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 dark:bg-blue-500 text-white' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
                             >
                                 {p}
                             </button>
@@ -133,37 +134,33 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
                     })}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                    <select
+                    <SelectMenu
                         value={layanan}
-                        onChange={(e) => setLayanan(e.target.value)}
-                        className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none"
-                    >
-                        {layananOptions.map((o) => <option key={o}>{o}</option>)}
-                    </select>
-                    <select
+                        onChange={setLayanan}
+                        options={layananOptions.map((o) => ({ value: o, label: o }))}
+                    />
+                    <SelectMenu
                         value={periodLabel}
-                        onChange={(e) => setPeriodLabel(e.target.value)}
-                        className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none"
-                    >
-                        {Object.keys(RELATIVE_PERIODS).map((p) => <option key={p}>{p}</option>)}
-                    </select>
+                        onChange={setPeriodLabel}
+                        options={Object.keys(RELATIVE_PERIODS).map((p) => ({ value: p, label: p }))}
+                    />
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="min-w-[900px] w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-[11px] font-bold uppercase tracking-wide text-gray-400">
+                            <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                                 {COLUMNS.map((col) => (
                                     <th key={col.key} className="px-4 py-3.5 text-left first:pl-6 last:pr-6">
                                         <button
                                             type="button"
                                             onClick={() => toggleSort(col.key)}
-                                            className="flex items-center gap-1 uppercase tracking-wide text-gray-400 hover:text-gray-700"
+                                            className="flex items-center gap-1 uppercase tracking-wide text-gray-400 dark:text-ink-3 hover:text-gray-700 dark:hover:text-ink-1"
                                         >
                                             {col.label}
-                                            <span aria-hidden="true" className={sortKey === col.key ? 'text-gray-600' : 'text-gray-300'}>
+                                            <span aria-hidden="true" className={sortKey === col.key ? 'text-gray-600 dark:text-ink-2' : 'text-gray-300'}>
                                                 {sortKey === col.key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                                             </span>
                                         </button>
@@ -176,29 +173,29 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
                                 <tr
                                     key={row.id}
                                     onClick={() => (window.location.href = row.href)}
-                                    className="cursor-pointer border-b border-gray-50 last:border-0 hover:bg-blue-50/40"
+                                    className="cursor-pointer border-b border-gray-50 last:border-0 dark:border-transparent dark:even:bg-white/[0.03] hover:bg-blue-50/40 dark:hover:bg-panel-hover"
                                 >
                                     <td className="px-4 py-4 pl-6">
-                                        <p className="font-bold text-blue-600">{row.id}</p>
-                                        <p className="max-w-[200px] truncate text-xs text-gray-400">{row.title}</p>
+                                        <p className="font-bold text-blue-600 dark:text-accent-text">{row.id}</p>
+                                        <p className="max-w-[200px] truncate text-xs text-gray-400 dark:text-ink-3">{row.title}</p>
                                     </td>
-                                    <td className="px-4 py-4 text-gray-700">{row.service}</td>
+                                    <td className="px-4 py-4 text-gray-700 dark:text-ink-2">{row.service}</td>
                                     <td className="px-4 py-4"><PriorityBadge priority={row.priority} /></td>
                                     <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
-                                    <td className="px-4 py-4 text-gray-700">{row.requester}</td>
-                                    <td className="px-4 py-4 pr-6 text-gray-400">{row.at}</td>
+                                    <td className="px-4 py-4 text-gray-700 dark:text-ink-2">{row.requester}</td>
+                                    <td className="px-4 py-4 pr-6 text-gray-400 dark:text-ink-3">{row.at}</td>
                                 </tr>
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">Tidak ada tiket yang cocok dengan filter ini.</td>
+                                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada tiket yang cocok dengan filter ini.</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
                 <div className="flex items-center justify-between px-5 py-3">
-                    <span className="text-xs text-gray-400">Menampilkan {filtered.length} dari {rows.length} tiket</span>
+                    <span className="text-xs text-gray-400 dark:text-ink-3">Menampilkan {filtered.length} dari {rows.length} tiket</span>
                 </div>
             </div>
         </div>

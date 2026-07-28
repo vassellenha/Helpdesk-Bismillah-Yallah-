@@ -8,7 +8,7 @@
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
 </head>
-<body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased">
+<body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     {{-- The Team Lead workspace renders its own full-width header (brand + 8-tab
          nav + notifications/profile) so the tabs sit inline with the logo, matching
          the mockup. The layout only provides the page shell and role switcher. --}}

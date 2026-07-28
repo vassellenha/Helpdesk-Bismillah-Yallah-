@@ -114,7 +114,7 @@ class AdminController extends Controller
             return $t->resolved_at && $t->resolved_at->greaterThan($t->resolution_due_at);
         }
 
-        if (in_array($t->status, ['Draft', 'Waiting for Approval', 'Rejected'], true)) {
+        if (in_array($t->status, Ticket::NO_SLA_STATUSES, true)) {
             return false;
         }
 

@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import RoleManagerModal from './RoleManagerModal';
 import AddRoleWizard from './AddRoleWizard';
 import AddUserModal from './AddUserModal';
 import ManageUserModal from './ManageUserModal';
+import RowActionMenu, { menuPositionFor } from '../RowActionMenu';
+import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+
+const ICON_EDIT = 'M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z';
+const ICON_DEACTIVATE = 'M12 2v10 M18.4 5.6a8 8 0 1 1-12.8 0';
+const ICON_ACTIVATE = 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9';
 
 export default function UserManagementConsole({ users: initialUsers, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi }) {
     const [users, setUsers] = useState(initialUsers);
@@ -15,16 +21,6 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
     const [menu, setMenu] = useState(null); // { user, top, left }
     const [modal, setModal] = useState(null); // 'role' | 'addRole' | 'addUser' | { type: 'manageUser', user }
     const [error, setError] = useState('');
-    const menuRef = useRef(null);
-
-    useEffect(() => {
-        if (!menu) return;
-        function onClickOutside(e) {
-            if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(null);
-        }
-        document.addEventListener('mousedown', onClickOutside);
-        return () => document.removeEventListener('mousedown', onClickOutside);
-    }, [menu]);
 
     function openMenu(e, user) {
         if (menu?.user.id === user.id) {
@@ -32,10 +28,14 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
             return;
         }
         const rect = e.currentTarget.getBoundingClientRect();
-        setMenu({ user, top: rect.bottom + 4, left: rect.right - 160 });
+        setMenu({ user, ...menuPositionFor(rect) });
     }
 
     const roleNames = useMemo(() => Array.from(new Set(users.flatMap((u) => u.roles))), [users]);
+
+    const statusOptions = useMemo(() => ['Semua Status', 'Aktif', 'Nonaktif'].map((v) => ({ value: v, label: v })), []);
+    const roleOptions = useMemo(() => [{ value: 'Semua Role', label: 'Semua Role' }, ...roleNames.map((r) => ({ value: r, label: r }))], [roleNames]);
+    const unitOptions = useMemo(() => [{ value: 'Semua Unit Kerja', label: 'Semua Unit Kerja' }, ...unitOrganisasi.map((u) => ({ value: u, label: u }))], [unitOrganisasi]);
 
     const filtered = useMemo(() => {
         return users.filter((u) => {
@@ -78,68 +78,54 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
         <div>
             <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900">User &amp; Role Management</h1>
-                    <p className="mt-1 text-sm text-gray-500">Kelola pengguna aplikasi, multi-role, akses autentikasi, dan penugasan support.</p>
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">User &amp; Role Management</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Kelola pengguna aplikasi, multi-role, akses autentikasi, dan penugasan support.</p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                    <button onClick={() => setModal('role')} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <button onClick={() => setModal('role')} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         ⚙ Kelola Role
                     </button>
-                    <button onClick={() => setModal('addUser')} className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
+                    <button onClick={() => setModal('addUser')} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
                         + Tambah User
                     </button>
                 </div>
             </div>
 
-            {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+            {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
             <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <Stat label="TOTAL USER" value={users.length} color="text-blue-600" bg="bg-blue-50" />
-                <Stat label="USER AKTIF" value={users.filter((u) => u.status === 'Aktif').length} color="text-emerald-600" bg="bg-emerald-50" />
-                <Stat label="USER NONAKTIF" value={users.filter((u) => u.status === 'Nonaktif').length} color="text-gray-500" bg="bg-gray-100" />
-                <Stat label="TOTAL ROLE" value={roles.length} color="text-amber-600" bg="bg-amber-50" />
+                <Stat label="TOTAL USER" value={users.length} color="text-blue-600 dark:text-accent-text" bg="bg-blue-50 dark:bg-accent-soft" />
+                <Stat label="USER AKTIF" value={users.filter((u) => u.status === 'Aktif').length} color="text-emerald-600 dark:text-ok-text" bg="bg-emerald-50 dark:bg-ok-soft" />
+                <Stat label="USER NONAKTIF" value={users.filter((u) => u.status === 'Nonaktif').length} color="text-gray-500 dark:text-ink-2" bg="bg-gray-100 dark:bg-panel-3" />
+                <Stat label="TOTAL ROLE" value={roles.length} color="text-amber-600 dark:text-warn-text" bg="bg-amber-50 dark:bg-warn-soft" />
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div className="flex flex-col gap-3 border-b border-gray-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-gray-100 dark:border-edge p-4 lg:flex-row lg:items-center lg:justify-between">
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Cari nama, email, atau unit kerja"
-                        className="w-full max-w-sm rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                        className="w-full max-w-sm rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
-                            <option>Semua Status</option>
-                            <option>Aktif</option>
-                            <option>Nonaktif</option>
-                        </select>
-                        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
-                            <option>Semua Role</option>
-                            {roleNames.map((r) => (
-                                <option key={r}>{r}</option>
-                            ))}
-                        </select>
-                        <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
-                            <option>Semua Unit Kerja</option>
-                            {unitOrganisasi.map((u) => (
-                                <option key={u}>{u}</option>
-                            ))}
-                        </select>
+                        <SelectMenu value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
+                        <SelectMenu value={roleFilter} onChange={setRoleFilter} options={roleOptions} />
+                        <SelectMenu value={unitFilter} onChange={setUnitFilter} options={unitOptions} />
                         <button
                             onClick={() => { setSearch(''); setStatusFilter('Semua Status'); setRoleFilter('Semua Role'); setUnitFilter('Semua Unit Kerja'); }}
-                            className="text-sm font-medium text-blue-700 hover:text-blue-800"
+                            className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300"
                         >
                             Reset Filter
                         </button>
                     </div>
                 </div>
-                <p className="px-4 pt-3 text-sm text-gray-400">Menampilkan {filtered.length} dari {users.length} pengguna</p>
+                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">Menampilkan {filtered.length} dari {users.length} pengguna</p>
 
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-100 text-sm">
+                    <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                         <thead>
-                            <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                                 <th className="px-4 py-3">Nama</th>
                                 <th className="px-4 py-3">NIP</th>
                                 <th className="px-4 py-3">Email / WhatsApp</th>
@@ -151,35 +137,35 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                                 <th className="px-4 py-3 text-right">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-50 dark:divide-transparent">
                             {filtered.map((u) => (
-                                <tr key={u.id} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 font-semibold text-gray-900">{u.name}</td>
-                                    <td className="px-4 py-3 text-gray-600">{u.nip}</td>
+                                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                                    <td className="px-4 py-3 font-semibold text-gray-900 dark:text-ink-1">{u.name}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{u.nip}</td>
                                     <td className="px-4 py-3">
-                                        <p className="text-gray-700">{u.email}</p>
-                                        <p className="text-xs text-gray-400">{u.whatsapp}</p>
+                                        <p className="text-gray-700 dark:text-ink-2">{u.email}</p>
+                                        <p className="text-xs text-gray-400 dark:text-ink-3">{u.whatsapp}</p>
                                     </td>
-                                    <td className="px-4 py-3 text-gray-600">{u.unit}</td>
-                                    <td className="px-4 py-3 text-gray-600">{u.jabatan}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{u.unit}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{u.jabatan}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap gap-1">
                                             {u.roles.map((r) => (
-                                                <span key={r} className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{r}</span>
+                                                <span key={r} className="rounded-full bg-blue-50 dark:bg-accent-soft px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-accent-text">{r}</span>
                                             ))}
                                         </div>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${u.status === 'Aktif' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${u.status === 'Aktif' ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text' : 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2'}`}>
                                             <span className={`h-1.5 w-1.5 rounded-full ${u.status === 'Aktif' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                                             {u.status}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-gray-500">{u.last_login}</td>
+                                    <td className="px-4 py-3 text-gray-500 dark:text-ink-2">{u.last_login}</td>
                                     <td className="px-4 py-3 text-right">
                                         <button
                                             onClick={(e) => openMenu(e, u)}
-                                            className="rounded-full border border-gray-200 px-2.5 py-1 text-gray-500 hover:bg-gray-100"
+                                            className="rounded-full border border-gray-200 dark:border-edge-strong px-2.5 py-1 text-gray-500 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-panel-hover"
                                         >
                                             •••
                                         </button>
@@ -188,7 +174,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">Tidak ada pengguna yang cocok dengan filter.</td>
+                                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada pengguna yang cocok dengan filter.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -197,14 +183,20 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
             </div>
 
             {menu && (
-                <div ref={menuRef} style={{ top: menu.top, left: menu.left }} className="fixed z-50 w-40 overflow-hidden rounded-lg border border-gray-200 bg-white text-left shadow-lg">
-                    <button onClick={() => { setModal({ type: 'manageUser', user: menu.user }); setMenu(null); }} className="block w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                        Edit
-                    </button>
-                    <button onClick={() => toggleUserStatus(menu.user.id)} className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                        {menu.user.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
-                    </button>
-                </div>
+                <RowActionMenu
+                    anchor={menu}
+                    onClose={() => setMenu(null)}
+                    items={[
+                        { label: 'Edit', icon: ICON_EDIT, onClick: () => setModal({ type: 'manageUser', user: menu.user }) },
+                        {
+                            label: menu.user.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan',
+                            icon: menu.user.status === 'Aktif' ? ICON_DEACTIVATE : ICON_ACTIVATE,
+                            tone: menu.user.status === 'Aktif' ? 'danger' : 'success',
+                            divider: true,
+                            onClick: () => toggleUserStatus(menu.user.id),
+                        },
+                    ]}
+                />
             )}
 
             {modal === 'role' && (
@@ -229,12 +221,12 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
 
 function Stat({ label, value, color, bg }) {
     return (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
             <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${bg} ${color}`}>
                 <span className="h-2 w-2 rounded-full bg-current" />
             </span>
-            <p className="mt-2 text-xl font-bold text-gray-900">{value}</p>
-            <p className="text-xs font-medium text-gray-400">{label}</p>
+            <p className="mt-2 text-xl font-bold text-gray-900 dark:text-ink-1">{value}</p>
+            <p className="text-xs font-medium text-gray-400 dark:text-ink-3">{label}</p>
         </div>
     );
 }

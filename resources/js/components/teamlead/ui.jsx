@@ -4,27 +4,27 @@
 
 export function MetricCard({ label, value, icon, iconBg, iconColor, sub }) {
     return (
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
             <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-400">{label}</span>
+                <span className="text-xs font-semibold text-gray-400 dark:text-ink-3">{label}</span>
                 <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg>
                 </span>
             </div>
-            <div className="text-[28px] font-extrabold leading-none text-gray-900">{value}</div>
-            {sub && <span className="text-[11px] text-gray-400">{sub}</span>}
+            <div className="text-[28px] font-extrabold leading-none text-gray-900 dark:text-ink-1">{value}</div>
+            {sub && <span className="text-[11px] text-gray-400 dark:text-ink-3">{sub}</span>}
         </div>
     );
 }
 
 export function Card({ title, subtitle, right, children, className = '' }) {
     return (
-        <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm ${className}`}>
+        <div className={`rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm ${className}`}>
             {(title || right) && (
                 <div className="flex flex-wrap items-start justify-between gap-3 p-5 pb-0">
                     <div>
-                        {title && <h2 className="text-[15px] font-bold text-gray-900">{title}</h2>}
-                        {subtitle && <p className="mt-0.5 text-xs text-gray-400">{subtitle}</p>}
+                        {title && <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{title}</h2>}
+                        {subtitle && <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{subtitle}</p>}
                     </div>
                     {right}
                 </div>
@@ -37,14 +37,14 @@ export function Card({ title, subtitle, right, children, className = '' }) {
 export function BarRow({ label, sub, value, pct, color = 'bg-blue-500' }) {
     return (
         <div className="flex items-center gap-3">
-            <span className="w-32 shrink-0 truncate text-[13px] text-gray-700">
+            <span className="w-32 shrink-0 truncate text-[13px] text-gray-700 dark:text-ink-2">
                 {label}
-                {sub && <span className="text-gray-400"> · {sub}</span>}
+                {sub && <span className="text-gray-400 dark:text-ink-3"> · {sub}</span>}
             </span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
                 <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
             </div>
-            <span className="w-10 shrink-0 text-right text-[13px] font-bold text-gray-900">{value}</span>
+            <span className="w-10 shrink-0 text-right text-[13px] font-bold text-gray-900 dark:text-ink-1">{value}</span>
         </div>
     );
 }

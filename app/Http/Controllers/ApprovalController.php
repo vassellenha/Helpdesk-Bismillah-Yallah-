@@ -81,9 +81,14 @@ class ApprovalController extends Controller
     }
 
     /**
-     * "My Tickets" — every ticket this approver has ever decided on, each
-     * shown with its most recent decision from them, plus current status
-     * so the stat cards can filter by where the ticket stands right now.
+     * "My Tickets" — every ticket ever routed to this approver, decided or
+     * not. Tickets they've already acted on are shown with that decision;
+     * a ticket that just landed and is still "Waiting for Approval" (never
+     * decided yet) would otherwise vanish from this page entirely — it only
+     * has TicketApproval rows once a decision exists — so those are merged
+     * in separately as "Menunggu Keputusan" rows. Without this, a brand new
+     * pending ticket only ever showed up in the Approval Inbox notification,
+     * never here, which reads as the ticket having gone missing.
      */
     public function history(): View
     {
@@ -95,10 +100,10 @@ class ApprovalController extends Controller
             ->groupBy('ticket_id')
             ->map(fn (Collection $g) => $g->last());
 
-        $tickets = Ticket::whereIn('id', $decisionsByTicket->keys())->get()->keyBy('id');
+        $decidedTickets = Ticket::whereIn('id', $decisionsByTicket->keys())->get()->keyBy('id');
 
-        $rows = $decisionsByTicket->map(function (TicketApproval $d) use ($tickets) {
-            $t = $tickets[$d->ticket_id];
+        $decidedRows = $decisionsByTicket->map(function (TicketApproval $d) use ($decidedTickets) {
+            $t = $decidedTickets[$d->ticket_id];
 
             return [
                 'id' => $t->ticket_no,
@@ -117,7 +122,34 @@ class ApprovalController extends Controller
                 'createdAt' => $d->created_at->toIso8601String(),
                 'href' => route('approver.tickets.show', $t),
             ];
-        })->sortByDesc('createdAt')->values();
+        });
+
+        $pendingTickets = Ticket::where('approver_id', $approver->id)
+            ->where('status', 'Waiting for Approval')
+            ->whereNotIn('id', $decisionsByTicket->keys())
+            ->get();
+
+        $pendingRows = $pendingTickets->map(fn (Ticket $t) => [
+            'id' => $t->ticket_no,
+            'title' => $t->title,
+            'service' => trim(($t->service_name ?? '').($t->subcategory_name ? ' · '.$t->subcategory_name : '')) ?: '—',
+            'layanan' => $t->service_name ?? '—',
+            'subCategory' => $t->subcategory_name ?? '—',
+            'issueCategory' => $t->issue_category ?? $t->category ?? '—',
+            'priority' => $t->priority,
+            'status' => $t->status,
+            'decision' => 'pending',
+            'decisionLabel' => 'Menunggu Keputusan',
+            'note' => '—',
+            'forwardedTo' => '—',
+            'at' => $t->created_at->format('M j, Y · H:i'),
+            'createdAt' => $t->created_at->toIso8601String(),
+            'href' => route('approver.tickets.show', $t),
+        ]);
+
+        $rows = $decidedRows->concat($pendingRows)->sortByDesc('createdAt')->values();
+
+        $tickets = $decidedTickets->union($pendingTickets->keyBy('id'));
 
         $counts = [
             'Total' => $tickets->count(),
@@ -126,6 +158,7 @@ class ApprovalController extends Controller
             'Resolved' => $tickets->where('status', 'Resolved')->count(),
             'Closed' => $tickets->whereIn('status', ['Closed', 'Completed'])->count(),
             'Rejected' => $tickets->where('status', 'Rejected')->count(),
+            'Waiting for Approval' => $tickets->where('status', 'Waiting for Approval')->count(),
         ];
 
         return view('approver.history', [
@@ -152,9 +185,30 @@ class ApprovalController extends Controller
             'ticket' => $this->presentTicket($ticket, $lastDecision),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'dataUrl' => route('approver.tickets.data', $ticket),
             'commentsUrl' => route('approver.tickets.comments.store', $ticket),
             'decideUrl' => route('approver.tickets.decide', $ticket),
             'ticketsUrl' => route('approver.tickets'),
+        ]);
+    }
+
+    /**
+     * JSON re-fetch of this same ticket — lets the detail page pull a fresh
+     * decision/status/timeline in place after approve/reject instead of a
+     * full `window.location.reload()`.
+     */
+    public function data(Ticket $ticket): JsonResponse
+    {
+        $approver = CurrentActor::approver();
+        abort_unless($ticket->approver_id === $approver->id, 403);
+
+        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $lastDecision = TicketApproval::where('ticket_id', $ticket->id)->where('approver_id', $approver->id)->latest('created_at')->first();
+
+        return response()->json([
+            'ticket' => $this->presentTicket($ticket, $lastDecision),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'timeline' => TicketTimeline::steps($ticket),
         ]);
     }
 
@@ -203,10 +257,14 @@ class ApprovalController extends Controller
         $ticket->update([
             'status' => match ($data['decision']) {
                 'approved' => 'Open',
-                'revision_requested' => 'Draft',
+                'revision_requested' => 'Returned',
                 'rejected' => 'Rejected',
             },
-            'is_draft' => $data['decision'] === 'revision_requested',
+            // Returned tickets are editable like a Draft (see TicketController::update()),
+            // but is_draft stays false — they were already submitted once, so
+            // TicketTimeline must keep their submission/approval history instead
+            // of collapsing to a bare "Draft saved" step.
+            'is_draft' => false,
         ]);
 
         TicketApproval::create([
