@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { registry } from './components/registry';
+import { initSidebarToggle } from './lib/eva-sidebar';
 
 function mountIslands() {
     document.querySelectorAll('[data-react]').forEach((el) => {
@@ -19,8 +20,15 @@ function mountIslands() {
     });
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountIslands);
-} else {
+function boot() {
     mountIslands();
+    // Aman dipanggil di halaman tim yang tidak punya sidebar EVA — keluar
+    // sendiri kalau tombolnya tidak ada.
+    initSidebarToggle();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+} else {
+    boot();
 }

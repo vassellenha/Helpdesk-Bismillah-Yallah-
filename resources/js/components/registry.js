@@ -22,6 +22,21 @@ import RequesterTopNav from './requester/RequesterTopNav';
 import RequesterDashboard from './requester/RequesterDashboard';
 import MyTicketsPage from './requester/MyTicketsPage';
 import TicketDetail from './requester/TicketDetail';
+import EvaCoverageDashboard from './eva/EvaCoverageDashboard';
+import EvaArticleLibrary from './eva/EvaArticleLibrary';
+import EvaFaqManager from './eva/EvaFaqManager';
+import EvaDocuments from './eva/EvaDocuments';
+import EvaPreview from './eva/EvaPreview';
+import EvaUnansweredQuestions from './eva/EvaUnansweredQuestions';
+import EvaConversationLog from './eva/EvaConversationLog';
+import EvaRatingFeedback from './eva/EvaRatingFeedback';
+import EvaAnalytics from './eva/EvaAnalytics';
+import EvaAppsSystems from './eva/EvaAppsSystems';
+import EvaSearchSettings from './eva/EvaSearchSettings';
+import EvaTaxonomy from './eva/EvaTaxonomy';
+import EvaTicketRecommendation from './eva/EvaTicketRecommendation';
+import EvaTrainingOverview from './eva/EvaTrainingOverview';
+import EvaAssistantWidget from './eva/EvaAssistantWidget';
 
 // Central map from `data-react="Name"` (set in Blade) to the component
 // that should be mounted on that node. Add new islands here only.
@@ -50,4 +65,23 @@ export const registry = {
     RequesterDashboard,
     MyTicketsPage,
     TicketDetail,
+    // EVA Knowledge Admin Console — komponen yang lupa didaftarkan di sini
+    // gagal mount tanpa error, hanya console.warn.
+    EvaCoverageDashboard,
+    EvaArticleLibrary,
+    EvaFaqManager,
+    EvaDocuments,
+    EvaPreview,
+    EvaUnansweredQuestions,
+    EvaConversationLog,
+    EvaRatingFeedback,
+    EvaAnalytics,
+    EvaAppsSystems,
+    EvaSearchSettings,
+    EvaTaxonomy,
+    EvaTicketRecommendation,
+    EvaTrainingOverview,
+    // Widget asisten di portal — satu-satunya komponen EVA yang hidup di luar
+    // konsol admin.
+    EvaAssistantWidget,
 };

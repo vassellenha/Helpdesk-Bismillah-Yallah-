@@ -1,0 +1,760 @@
+/*
+ | EVA Knowledge Admin Console — design tokens
+ |
+ | Nilai warna, tipografi, dan spasi di bawah ini disalin dari design system
+ | mockup (_ds/.../tokens/*.css), yang aslinya diekstrak dari Helpdesk.fig.
+ | Yang disalin hanya TOKEN-nya, bukan markup — komponen dibangun ulang.
+ |
+ | Semua token di-scope ke `.eva-app`, bukan `:root`, supaya halaman lain
+ | (Requester/Approver/Support/Admin milik tim) tidak ikut berubah.
+ */
+
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('/fonts/sf-pro-rounded/SF-Pro-Rounded-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('/fonts/sf-pro-rounded/SF-Pro-Rounded-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('/fonts/sf-pro-rounded/SF-Pro-Rounded-Semibold.otf') format('opentype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('/fonts/sf-pro-rounded/SF-Pro-Rounded-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'SF Pro Rounded';
+    src: url('/fonts/sf-pro-rounded/SF-Pro-Rounded-Heavy.otf') format('opentype');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+.eva-app {
+    /* Base neutrals */
+    --white: rgb(255, 255, 255);
+    --ink-900: rgb(26, 27, 31);
+    --ink-800: rgb(11, 28, 48);
+    --ink-700: rgb(65, 71, 85);
+    --slate-500: rgb(113, 119, 134);
+    --gray-500: rgb(107, 114, 128);
+    --border: rgb(227, 226, 231);
+    --border-soft: rgb(237, 237, 237);
+    --surface-tint: rgb(238, 237, 243);
+    --canvas: rgb(248, 249, 255);
+
+    /* Brand — iOS azure */
+    --blue-600: rgb(0, 102, 255);
+    --blue-500: rgb(0, 122, 255);
+    --blue-400: rgb(65, 154, 255);
+    --blue-ink: rgb(0, 81, 213);
+    --blue-050: rgb(239, 246, 255);
+    --blue-050-alt: rgb(229, 238, 255);
+
+    /* Warm accent */
+    --clay-600: rgb(92, 64, 61);
+
+    /* Semantic */
+    --green-500: rgb(52, 199, 89);
+    --amber-500: rgb(245, 158, 11);
+    --red-600: rgb(186, 26, 26);
+
+    /* Shadows */
+    --shadow-05: rgba(104, 102, 102, 0.05);
+    --shadow-09: rgba(104, 102, 102, 0.09);
+    --shadow-25: rgba(104, 102, 102, 0.25);
+
+    --font-rounded: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Radii (iOS rounded) */
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 18px;
+
+    font-family: var(--font-rounded);
+    background: var(--canvas);
+    color: var(--ink-900);
+    -webkit-font-smoothing: antialiased;
+}
+
+.eva-app *,
+.eva-app *::before,
+.eva-app *::after {
+    box-sizing: border-box;
+}
+
+.eva-app input,
+.eva-app textarea,
+.eva-app select,
+.eva-app button {
+    font-family: inherit;
+}
+
+.eva-app ::placeholder {
+    color: var(--slate-500);
+}
+
+.eva-app a {
+    color: var(--blue-500);
+    text-decoration: none;
+}
+
+.eva-app a:hover {
+    color: var(--blue-ink);
+}
+
+/* Scrollbar — hairline, sesuai mockup */
+.eva-app ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.eva-app ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+    border: 3px solid var(--canvas);
+}
+
+/* ============================================================
+ | Animasi — dipakai gelembung chat & indikator mengetik EVA
+ | ============================================================ */
+
+@keyframes eva-blink {
+    0%,
+    60%,
+    100% {
+        opacity: 0.25;
+        transform: translateY(0);
+    }
+    30% {
+        opacity: 1;
+        transform: translateY(-2px);
+    }
+}
+
+@keyframes eva-pop {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes eva-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.eva-pop {
+    animation: eva-pop 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.eva-fade {
+    animation: eva-fade 0.3s ease both;
+}
+
+.eva-typing-dot {
+    animation: eva-blink 1.2s infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   Sidebar yang bisa ditutup
+   ---------------------------------------------------------------------------
+
+   Ditutup = menyempit jadi RAIL BERIKON, bukan hilang sama sekali. Sidebar yang
+   lenyap total memaksa admin membukanya lagi tiap kali pindah menu; rail 68px
+   menyisakan navigasi sambil mengembalikan 212px ke isi layar.
+
+   Kelas keadaannya menempel di <html>, bukan <body>. Alasannya di layouts/
+   eva.blade.php: EVA bukan SPA, jadi tiap menu adalah pemuatan halaman penuh,
+   dan kelasnya harus sudah terpasang SEBELUM <body> dirender supaya sidebar
+   tidak berkedip lebar-lalu-menyempit di setiap perpindahan.
+
+   Semua ukuran hidup sebagai custom property di satu tempat, jadi lebar
+   sidebar dan batas lebar isi tidak pernah perlu disamakan manual di dua
+   berkas.
+*/
+.eva-app {
+    --eva-sidebar-width: 280px;
+    --eva-page-max: 1240px;
+}
+
+html.eva-sidebar-collapsed .eva-app {
+    --eva-sidebar-width: 68px;
+    /*
+       Batas lebar isi ikut melebar saat sidebar ditutup. Tanpa ini, menutup
+       sidebar hanya memindahkan 212px jadi ruang kosong di kanan — isinya sama
+       sekali tidak bertambah lega, dan tombolnya terasa tidak melakukan apa-apa.
+    */
+    --eva-page-max: 1560px;
+}
+
+.eva-sidebar {
+    width: var(--eva-sidebar-width);
+    flex: none;
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.18s ease;
+}
+
+.eva-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 6px 14px;
+}
+
+.eva-brand-mark {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 11px;
+    background: linear-gradient(145deg, var(--blue-500), var(--blue-ink));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.32);
+}
+
+.eva-brand-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.eva-sidebar-toggle {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--slate-500);
+    cursor: pointer;
+}
+
+.eva-sidebar-toggle:hover {
+    background: var(--surface-tint);
+    color: var(--ink-900);
+}
+
+.eva-sidebar-toggle svg {
+    transition: transform 0.18s ease;
+}
+
+.eva-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.eva-nav-item--active {
+    background: var(--blue-050);
+    font-weight: 600;
+}
+
+/*
+   Warna menu WAJIB ditulis dengan `.eva-app` di depannya.
+   ------------------------------------------------------
+   `.eva-app a { color: var(--blue-500) }` di atas berlaku untuk SEMUA tautan,
+   dan spesifisitasnya (0,1,1) mengalahkan `.eva-nav-item` biasa (0,1,0). Versi
+   lama lolos karena warnanya ditulis sebagai style inline — begitu dipindah ke
+   kelas, seluruh menu berubah biru.
+
+   Hover juga disebut eksplisit: `.eva-app a:hover` akan membirukan menu saat
+   disentuh kursor, padahal versi inline dulu tidak pernah berubah warna.
+*/
+.eva-app .eva-nav-item,
+.eva-app .eva-nav-item:hover {
+    color: var(--ink-700);
+}
+
+.eva-app .eva-nav-item--active,
+.eva-app .eva-nav-item--active:hover {
+    color: var(--blue-ink);
+}
+
+.eva-app .eva-nav-item--muted,
+.eva-app .eva-nav-item--muted:hover {
+    color: var(--slate-500);
+}
+
+.eva-nav-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.eva-nav-group {
+    padding: 14px 10px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--slate-500);
+    white-space: nowrap;
+}
+
+.eva-nav-soon {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--slate-500);
+    background: var(--surface-tint);
+    border-radius: 999px;
+    padding: 2px 7px;
+}
+
+.eva-sidebar-footer {
+    margin-top: auto;
+    padding-top: 14px;
+}
+
+/* --- keadaan tertutup --- */
+
+html.eva-sidebar-collapsed .eva-brand-text,
+html.eva-sidebar-collapsed .eva-nav-label,
+html.eva-sidebar-collapsed .eva-nav-group,
+html.eva-sidebar-collapsed .eva-nav-soon {
+    display: none;
+}
+
+html.eva-sidebar-collapsed .eva-brand {
+    flex-direction: column;
+    gap: 9px;
+    padding: 4px 0 12px;
+}
+
+html.eva-sidebar-collapsed .eva-nav-item {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/*
+   Pengganti judul kelompok yang disembunyikan. Tanpa penanda apa pun, 13 ikon
+   berderet tanpa jeda dan kehilangan pengelompokan yang jadi satu-satunya
+   alasan menu ini bisa dipindai.
+*/
+html.eva-sidebar-collapsed .eva-nav-group-divider {
+    display: block;
+    height: 1px;
+    margin: 9px 12px 7px;
+    background: var(--border-soft);
+}
+
+.eva-nav-group-divider {
+    display: none;
+}
+
+html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
+    transform: rotate(180deg);
+}
+
+/* ============================================================
+ | Widget EVA — asisten mengambang di portal.
+ |
+ | Di-scope ke `.eva-widget` DI DALAM `.eva-app` supaya token warna, radius,
+ | dan font konsol ikut terpakai tanpa menduplikasinya. Yang perlu ditimpa
+ | hanya dua hal bawaan `.eva-app`: `background: var(--canvas)` — pada elemen
+ | fixed itu akan mengecat kotak abu-abu di pojok layar — dan `color`, yang
+ | tidak boleh menular ke halaman di belakangnya.
+ |
+ | Widget hidup di halaman TIM yang memakai Tailwind. Semua gaya di sini
+ | karena itu ditulis eksplisit, tidak mewarisi apa pun dari kelas Tailwind.
+ | ============================================================ */
+
+.eva-app.eva-widget {
+    position: fixed;
+    right: 24px;
+    bottom: var(--eva-w-offset, 24px);
+    z-index: 60;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+/* Tombol pemicu — satu-satunya yang terlihat sebelum widget dibuka. */
+.eva-widget .eva-w-launcher {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(145deg, var(--blue-500), var(--blue-ink));
+    color: var(--white);
+    font-size: 20px;
+    font-weight: 700;
+    box-shadow: 0 8px 24px var(--shadow-25);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.eva-widget .eva-w-launcher:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px var(--shadow-25);
+}
+
+.eva-widget .eva-w-panel {
+    width: 380px;
+    max-width: calc(100vw - 32px);
+    height: 560px;
+    max-height: calc(100vh - 140px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    box-shadow: 0 18px 48px var(--shadow-25);
+    animation: eva-pop 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.eva-widget .eva-w-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--white);
+}
+
+.eva-widget .eva-w-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-md);
+    background: linear-gradient(145deg, var(--blue-500), var(--blue-ink));
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.eva-widget .eva-w-head-text { flex: 1; }
+.eva-widget .eva-w-head-title { font-size: 13.5px; font-weight: 700; color: var(--ink-900); }
+.eva-widget .eva-w-head-sub { font-size: 11px; color: var(--slate-500); }
+
+.eva-widget .eva-w-close,
+.eva-widget .eva-w-error-banner button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--slate-500);
+    font-size: 13px;
+    padding: 4px;
+    line-height: 1;
+}
+
+.eva-widget .eva-w-close:hover { color: var(--ink-900); }
+
+.eva-widget .eva-w-error-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--red-600);
+    background: rgb(254, 242, 242);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.eva-widget .eva-w-error-banner span { flex: 1; }
+
+.eva-widget .eva-w-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    background: var(--canvas);
+}
+
+.eva-widget .eva-w-empty {
+    font-size: 12.5px;
+    color: var(--slate-500);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.eva-widget .eva-w-empty p { margin: 0 0 4px; }
+
+.eva-widget .eva-w-quick-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--slate-500);
+    margin-top: 2px;
+}
+
+.eva-widget .eva-w-quick {
+    text-align: left;
+    font-size: 12.5px;
+    padding: 9px 12px;
+    cursor: pointer;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink-700);
+}
+
+.eva-widget .eva-w-quick:hover { border-color: var(--blue-400); color: var(--blue-ink); }
+
+/* --- Gelembung percakapan --- */
+
+.eva-widget .eva-w-bubble {
+    max-width: 88%;
+    padding: 10px 13px;
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.eva-widget .eva-w-bubble-user {
+    align-self: flex-end;
+    background: var(--blue-500);
+    color: var(--white);
+    border-radius: 14px 14px 4px 14px;
+}
+
+.eva-widget .eva-w-bubble-eva {
+    align-self: flex-start;
+    background: var(--white);
+    color: var(--ink-900);
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 14px 4px;
+}
+
+.eva-widget .eva-w-hedge {
+    font-size: 11.5px;
+    color: var(--slate-500);
+    margin-bottom: 5px;
+}
+
+.eva-widget .eva-w-source {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-top: 9px;
+}
+
+.eva-widget .eva-w-source-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--blue-050);
+    color: var(--blue-ink);
+}
+
+.eva-widget .eva-w-muted { font-size: 11px; color: var(--slate-500); }
+.eva-widget .eva-w-error { font-size: 11px; color: var(--red-600); margin-top: 5px; }
+
+.eva-widget .eva-w-draft {
+    background: var(--blue-050);
+    border: 1px solid var(--blue-050-alt);
+    border-radius: var(--r-md);
+    padding: 9px 11px;
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.eva-widget .eva-w-draft-title { font-weight: 700; margin-bottom: 3px; }
+.eva-widget .eva-w-draft-subject { margin-top: 6px; font-size: 11.5px; color: var(--blue-ink); font-weight: 600; }
+
+.eva-widget .eva-w-link {
+    display: inline-block;
+    margin-top: 9px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--blue-500);
+    text-decoration: none;
+}
+
+.eva-widget .eva-w-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 9px;
+}
+
+.eva-widget .eva-w-chip {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 11px;
+    cursor: pointer;
+    border-radius: 999px;
+    border: 1px solid var(--blue-050-alt);
+    background: var(--blue-050);
+    color: var(--blue-ink);
+}
+
+.eva-widget .eva-w-chip[data-on='yes'] {
+    background: var(--blue-500);
+    border-color: var(--blue-500);
+    color: var(--white);
+}
+
+/* --- Penilaian & catatan --- */
+
+.eva-widget .eva-w-rating {
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.eva-widget .eva-w-stars { display: flex; align-items: center; gap: 6px; }
+
+.eva-widget .eva-w-star {
+    border: none;
+    background: none;
+    padding: 0;
+    line-height: 1;
+    font-size: 15px;
+    cursor: pointer;
+    color: var(--border);
+}
+
+.eva-widget .eva-w-star[data-on='yes'] { color: var(--amber-500); }
+.eva-widget .eva-w-star:disabled { cursor: default; }
+
+.eva-widget .eva-w-note { display: flex; flex-direction: column; gap: 7px; }
+
+.eva-widget .eva-w-textarea {
+    width: 100%;
+    resize: vertical;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px 10px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink-900);
+}
+
+.eva-widget .eva-w-textarea:focus { outline: none; border-color: var(--blue-400); }
+
+.eva-widget .eva-w-note-actions { display: flex; gap: 7px; align-items: center; }
+
+.eva-widget .eva-w-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 13px;
+    margin-top: 9px;
+    cursor: pointer;
+    border-radius: var(--r-md);
+    border: none;
+    background: var(--blue-500);
+    color: var(--white);
+}
+
+.eva-widget .eva-w-note .eva-w-btn { margin-top: 0; }
+.eva-widget .eva-w-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.eva-widget .eva-w-btn-ghost {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 11px;
+    cursor: pointer;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink-700);
+}
+
+/* --- Kotak tulis --- */
+
+.eva-widget .eva-w-typing { font-size: 12px; color: var(--slate-500); }
+
+.eva-widget .eva-w-compose {
+    display: flex;
+    gap: 8px;
+    padding: 11px 13px;
+    border-top: 1px solid var(--border-soft);
+    background: var(--white);
+}
+
+.eva-widget .eva-w-input {
+    flex: 1;
+    font-size: 12.5px;
+    padding: 9px 12px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink-900);
+}
+
+.eva-widget .eva-w-input:focus { outline: none; border-color: var(--blue-400); }
+
+.eva-widget .eva-w-send {
+    width: 38px;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--r-md);
+    background: var(--blue-500);
+    color: var(--white);
+    font-size: 13px;
+}
+
+.eva-widget .eva-w-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Layar sempit: panel mengisi lebar, tetap menyisakan tombol pemicu. */
+@media (max-width: 480px) {
+    .eva-app.eva-widget { right: 16px; left: 16px; align-items: stretch; }
+    .eva-widget .eva-w-panel { width: auto; height: calc(100vh - 160px); }
+    .eva-widget .eva-w-launcher { align-self: flex-end; }
+}

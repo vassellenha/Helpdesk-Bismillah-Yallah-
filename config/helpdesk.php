@@ -64,8 +64,12 @@ return [
             'initials' => 'EV',
             'label' => 'EVA Knowledge',
             'description' => 'Mengelola pengetahuan yang dipakai asisten virtual EVA — artikel, FAQ, dokumen, pertanyaan tak terjawab, dan rekomendasi tipe tiket.',
+            // Menunjuk ke konsol EVA yang sesungguhnya, BUKAN `dashboard.eva`.
+            // Route itu masih ada dan masih merender mockup lama (KnowledgeConsole
+            // + DummyData) — memilih peran EVA dari portal dulu mendarat di sana,
+            // dan layar mockup itu tampak seperti konsol yang gagal memuat data.
             'links' => [
-                ['label' => 'Knowledge Admin Console', 'route' => 'dashboard.eva'],
+                ['label' => 'Knowledge Admin Console', 'route' => 'eva.coverage'],
             ],
             'cta' => 'Knowledge Admin Console →',
         ],

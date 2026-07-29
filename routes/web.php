@@ -5,6 +5,22 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Eva\AnalyticsController as EvaAnalyticsController;
+use App\Http\Controllers\Eva\AppsController as EvaAppsController;
+use App\Http\Controllers\Eva\AssistantController as EvaAssistantController;
+use App\Http\Controllers\Eva\ArticleController as EvaArticleController;
+use App\Http\Controllers\Eva\ConversationController as EvaConversationController;
+use App\Http\Controllers\Eva\CoverageController as EvaCoverageController;
+use App\Http\Controllers\Eva\DocumentController as EvaDocumentController;
+use App\Http\Controllers\Eva\FaqController as EvaFaqController;
+use App\Http\Controllers\Eva\PlaceholderController as EvaPlaceholderController;
+use App\Http\Controllers\Eva\PreviewController as EvaPreviewController;
+use App\Http\Controllers\Eva\RatingController as EvaRatingController;
+use App\Http\Controllers\Eva\RecommendationController as EvaRecommendationController;
+use App\Http\Controllers\Eva\SearchSettingsController as EvaSearchSettingsController;
+use App\Http\Controllers\Eva\TaxonomyController as EvaTaxonomyController;
+use App\Http\Controllers\Eva\TrainingController as EvaTrainingController;
+use App\Http\Controllers\Eva\UnansweredController as EvaUnansweredController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ServiceCatalogController;
@@ -72,6 +88,122 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/{role}', [UserRoleController::class, 'updateRole'])->name('update');
         Route::post('/{role}/toggle', [UserRoleController::class, 'toggleRoleStatus'])->name('toggle');
     });
+});
+
+/*
+| EVA Knowledge Admin Console.
+|
+| Satu route nyata per layar, mengikuti pola console tim (ServiceCatalogConsole,
+| AuditTrailConsole, dst) — bukan satu SPA dengan pergantian view di klien
+| seperti mockup.
+*/
+Route::prefix('eva')->name('eva.')->middleware('eva.access')->group(function () {
+    Route::get('/', fn () => redirect()->route('eva.coverage'));
+    Route::get('/coverage', [EvaCoverageController::class, 'index'])->name('coverage');
+    Route::get('/articles', [EvaArticleController::class, 'index'])->name('articles');
+    Route::get('/faq', [EvaFaqController::class, 'index'])->name('faq');
+    Route::get('/documents', [EvaDocumentController::class, 'index'])->name('documents');
+    Route::get('/preview', [EvaPreviewController::class, 'index'])->name('preview');
+    Route::get('/unanswered', [EvaUnansweredController::class, 'index'])->name('unanswered');
+    Route::get('/conversations', [EvaConversationController::class, 'index'])->name('conversations');
+    Route::get('/ratings', [EvaRatingController::class, 'index'])->name('ratings');
+    Route::get('/analytics', [EvaAnalyticsController::class, 'index'])->name('analytics');
+    Route::get('/apps', [EvaAppsController::class, 'index'])->name('apps');
+    Route::get('/search-settings', [EvaSearchSettingsController::class, 'index'])->name('search-settings');
+    Route::get('/taxonomy', [EvaTaxonomyController::class, 'index'])->name('taxonomy');
+    Route::get('/recommendation', [EvaRecommendationController::class, 'index'])->name('recommendation');
+    Route::get('/training', [EvaTrainingController::class, 'index'])->name('training');
+
+    Route::post('/api/recommendation/test', [EvaRecommendationController::class, 'test'])->name('recommendation.test');
+
+    // Menyingkirkan pertanyaan dari DAFTAR KERJA — bukan menghapusnya dari
+    // kb_answer_logs. Riwayat dan angka Analytics tidak tersentuh.
+    Route::post('/api/unanswered/dismiss', [EvaUnansweredController::class, 'dismiss'])->name('unanswered.dismiss');
+    Route::post('/api/unanswered/restore', [EvaUnansweredController::class, 'restore'])->name('unanswered.restore');
+    Route::post('/api/training/toggle', [EvaTrainingController::class, 'toggle'])->name('training.toggle');
+
+    Route::prefix('api/tags')->name('tags.')->group(function () {
+        Route::post('/materials', [EvaTaxonomyController::class, 'tagMaterials'])->name('materials');
+        Route::post('/rename', [EvaTaxonomyController::class, 'renameTag'])->name('rename');
+        Route::post('/delete', [EvaTaxonomyController::class, 'deleteTag'])->name('delete');
+    });
+
+    Route::prefix('api/synonyms')->name('synonyms.')->group(function () {
+        Route::post('/', [EvaSearchSettingsController::class, 'store'])->name('store');
+        Route::put('/{synonym}', [EvaSearchSettingsController::class, 'update'])->name('update');
+        Route::delete('/{synonym}', [EvaSearchSettingsController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::post('/api/search/test', [EvaSearchSettingsController::class, 'test'])->name('search.test');
+
+    Route::prefix('api/articles')->name('articles.')->group(function () {
+        Route::put('/{article}', [EvaArticleController::class, 'update'])->name('update');
+        Route::post('/{article}/toggle', [EvaArticleController::class, 'toggleVisibility'])->name('toggle');
+        Route::post('/{article}/publish', [EvaArticleController::class, 'publish'])->name('publish');
+        Route::delete('/{article}', [EvaArticleController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('api/faqs')->name('faqs.')->group(function () {
+        Route::post('/', [EvaFaqController::class, 'store'])->name('store');
+        Route::put('/{faq}', [EvaFaqController::class, 'update'])->name('update');
+        Route::post('/{faq}/toggle', [EvaFaqController::class, 'toggleVisibility'])->name('toggle');
+        Route::delete('/{faq}', [EvaFaqController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('api/documents')->name('documents.')->group(function () {
+        Route::post('/', [EvaDocumentController::class, 'store'])->name('store');
+        // Dipanggil berulang oleh layar Documents selama masih ada dokumen
+        // berstatus `processing` — indexing berjalan di antrean, jadi hasilnya
+        // tidak ikut di balasan unggah.
+        Route::get('/{document}', [EvaDocumentController::class, 'show'])->name('show');
+        Route::put('/{document}', [EvaDocumentController::class, 'update'])->name('update');
+        Route::post('/{document}/reindex', [EvaDocumentController::class, 'reindex'])->name('reindex');
+        Route::delete('/{document}', [EvaDocumentController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('api/preview')->name('preview.')->group(function () {
+        // Endpoint terberat di konsol: satu request = satu putaran Pencarian A
+        // (FULLTEXT + fallback LIKE) atas seluruh materi. Diberi throttle
+        // tersendiri supaya banjir pertanyaan tidak menyeret database.
+        Route::post('/ask', [EvaPreviewController::class, 'ask'])
+            ->middleware('throttle:20,1')
+            ->name('ask');
+        Route::post('/rate', [EvaPreviewController::class, 'rate'])->name('rate');
+        Route::post('/ticket-draft', [EvaPreviewController::class, 'ticketDraft'])->name('ticket-draft');
+    });
+
+    // Harus terakhir: pola {key} akan menelan segmen apa pun di atasnya.
+    Route::get('/{key}', [EvaPlaceholderController::class, 'show'])->name('placeholder');
+});
+
+/*
+| Widget EVA di portal — permukaan untuk KARYAWAN.
+|
+| SENGAJA di luar grup `eva/` yang dijaga `eva.access`: grup itu adalah konsol
+| admin, sedangkan widget harus bisa dipakai siapa pun yang membuka portal.
+| Menaruhnya di dalam grup akan menolak setiap karyawan dengan 401 begitu SSO
+| memberi identitas non-admin.
+|
+| Segmen `/api/` di tengah path bukan kebetulan: penangan exception di
+| bootstrap/app.php merender error sebagai JSON untuk pola bintang-slash-api.
+| Tanpa segmen itu, error validasi dibalas HTML dan apiFetch gagal memparsenya.
+*/
+Route::prefix('assistant/api')->name('eva.assistant.')->group(function () {
+    // Endpoint terberat: satu request = satu putaran Pencarian A (FULLTEXT +
+    // fallback LIKE) atas seluruh materi. Ini juga endpoint EVA pertama yang
+    // terbuka tanpa penjaga identitas, jadi throttle-nya bukan pelengkap.
+    Route::post('/ask', [EvaAssistantController::class, 'ask'])
+        ->middleware('throttle:20,1')
+        ->name('ask');
+    Route::post('/rate', [EvaAssistantController::class, 'rate'])
+        ->middleware('throttle:30,1')
+        ->name('rate');
+    Route::post('/rate/note', [EvaAssistantController::class, 'note'])
+        ->middleware('throttle:30,1')
+        ->name('note');
+    Route::post('/ticket-draft', [EvaAssistantController::class, 'ticketDraft'])
+        ->middleware('throttle:20,1')
+        ->name('ticket-draft');
 });
 
 // Read by any workspace that needs live SLA data (Requester new-ticket form).
