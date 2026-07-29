@@ -200,6 +200,22 @@
 .eva-app {
     --eva-sidebar-width: 280px;
     --eva-page-max: 1240px;
+
+    /*
+       EVA menyatakan diri TERANG, apa pun setelan OS.
+
+       Tim menambahkan dark mode lewat `:root { color-scheme: dark }` di
+       app.css, dan `color-scheme` MEWARIS — jadi tanpa baris ini kontrol
+       native di dalam konsol EVA (scrollbar, dropdown <select>, autofill)
+       dirender gelap oleh browser di atas latar yang tetap putih. Hasilnya
+       bukan tema gelap, melainkan campuran: daftar dropdown hitam menempel
+       pada tabel putih.
+
+       Ini pernyataan sementara yang jujur, bukan penolakan dark mode. Token
+       warna EVA seluruhnya nilai terang dan belum punya pasangan gelapnya;
+       begitu tema gelap EVA ditulis, baris ini yang pertama dicabut.
+    */
+    color-scheme: light;
 }
 
 html.eva-sidebar-collapsed .eva-app {
