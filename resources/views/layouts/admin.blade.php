@@ -8,22 +8,22 @@
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
 </head>
-<body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased">
-    <header class="sticky top-0 z-30 border-b border-gray-200 bg-white">
+<body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
+    <header class="sticky top-0 z-30 border-b border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-1">
         <div class="flex items-center justify-between px-6 py-3">
             <div class="flex items-center gap-8">
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-700 text-sm font-bold text-white">AK</span>
                     <span class="leading-tight">
-                        <span class="block text-sm font-bold text-gray-900">{{ config('helpdesk.company') }}</span>
-                        <span class="block text-xs text-gray-400">{{ config('helpdesk.product') }}</span>
+                        <span class="block text-sm font-bold text-gray-900 dark:text-ink-1">{{ config('helpdesk.company') }}</span>
+                        <span class="block text-xs text-gray-400 dark:text-ink-3">{{ config('helpdesk.product') }}</span>
                     </span>
                 </a>
                 <nav class="hidden items-center gap-1 lg:flex">
                     @foreach (config('helpdesk.admin_nav') as $item)
                         <a
                             href="{{ route($item['route']) }}"
-                            class="rounded-lg px-3 py-2 text-sm font-medium {{ request()->routeIs($item['route']) ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50' }}"
+                            class="rounded-lg px-3 py-2 text-sm font-medium {{ request()->routeIs($item['route']) ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover' }}"
                         >
                             {{ $item['label'] }}
                         </a>
@@ -31,8 +31,7 @@
                 </nav>
             </div>
             <div class="flex items-center gap-4">
-                <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications ?? []]) }}"></div>
-                <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '']) }}"></div>
+                <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '', 'profileUrl' => route('admin.profile')]) }}"></div>
             </div>
         </div>
     </header>

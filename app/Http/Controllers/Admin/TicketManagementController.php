@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditTrail;
 use App\Models\Ticket;
+use App\Support\CurrentActor;
 use App\Support\DummyData;
+use App\Support\TicketTimeline;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -12,11 +16,13 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Read-only admin console over the real `tickets` table. Administrator can
- * monitor every ticket (created by Requester via TicketController@store) but
- * cannot assign/reassign a PIC or change status here — that stays a
- * Team Lead/Support action for a later phase, so no mutating endpoints
- * exist on this controller.
+ * Mostly read-only admin console over the real `tickets` table. Administrator
+ * can monitor every ticket (created by Requester via TicketController@store)
+ * but cannot assign/reassign a PIC or change status here — that stays a
+ * Team Lead/Support action for a later phase. The one exception is
+ * toggleRating() — excluding a disputed/mistaken satisfaction rating from
+ * every average-rating calculation without deleting it (see rating_active
+ * on the tickets table).
  *
  * Scoped to `whereNotNull('requester_id')` so this list always matches what
  * the Requester side (My Tickets) actually has — a couple of orphaned rows
@@ -118,6 +124,42 @@ class TicketManagementController extends Controller
         }, $filename, ['Content-Type' => 'text/csv']);
     }
 
+    /**
+     * Flips whether this ticket's satisfaction_rating counts toward every
+     * average-rating calculation (Support IT/BPO's own displayed score,
+     * Team Lead's agent performance view, the "kirim teguran rating"
+     * threshold check — see Ticket::NO_SLA_STATUSES-style usages of
+     * rating_active across those controllers) — the rating and the
+     * Requester's feedback note stay exactly as given, this only excludes
+     * it from the math while switched off. Reversible at any time.
+     */
+    public function toggleRating(Ticket $ticket): JsonResponse
+    {
+        abort_if($ticket->satisfaction_rating === null, 422, 'Tiket ini belum memiliki rating dari Requester.');
+
+        $admin = CurrentActor::admin();
+        $wasActive = $ticket->rating_active;
+        $ticket->update(['rating_active' => ! $wasActive]);
+
+        AuditTrail::record($admin, [
+            'module' => 'ticket_management',
+            'action' => $wasActive ? 'deactivate' : 'activate',
+            'target_type' => 'ticket',
+            'target_id' => $ticket->id,
+            'target_name' => $ticket->ticket_no,
+            'old_value' => ['rating_active' => $wasActive],
+            'new_value' => ['rating_active' => ! $wasActive],
+            'description' => $wasActive
+                ? "{$admin->name} menonaktifkan rating tiket \"{$ticket->ticket_no}\" ({$ticket->satisfaction_rating}/5) dari perhitungan rata-rata."
+                : "{$admin->name} mengaktifkan kembali rating tiket \"{$ticket->ticket_no}\" ({$ticket->satisfaction_rating}/5) ke perhitungan rata-rata.",
+        ]);
+
+        return response()->json([
+            'rating' => $ticket->satisfaction_rating,
+            'ratingActive' => (bool) $ticket->fresh()->rating_active,
+        ]);
+    }
+
     private function presentRow(Ticket $t): array
     {
         return [
@@ -131,13 +173,15 @@ class TicketManagementController extends Controller
             'pic' => $this->picLabel($t),
             'status' => $t->status,
             'sla' => $this->slaPresent($t),
+            'rating' => $t->satisfaction_rating,
+            'ratingActive' => (bool) $t->rating_active,
             'createdAt' => $t->created_at->format('d M Y, H:i'),
             'createdAtIso' => $t->created_at->toIso8601String(),
             'description' => $t->description,
             'attachmentName' => $t->attachment_name,
             'attachmentUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
             'approvalInfo' => $this->approvalInfo($t),
-            'timeline' => $this->timelineSteps($t),
+            'timeline' => TicketTimeline::steps($t),
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'nik' => $t->requester->nip,
@@ -156,7 +200,7 @@ class TicketManagementController extends Controller
      */
     private function slaPresent(Ticket $t): array
     {
-        if (in_array($t->status, ['Draft', 'Waiting for Approval', 'Rejected'], true)) {
+        if (in_array($t->status, Ticket::NO_SLA_STATUSES, true)) {
             return ['label' => '—', 'kind' => 'none'];
         }
 
@@ -227,39 +271,11 @@ class TicketManagementController extends Controller
         }
 
         return match ($t->status) {
-            'Waiting for Approval' => 'Menunggu approval dari '.($t->approver?->name ?? '—').'.',
+            'Draft', 'Waiting for Approval' => 'Menunggu approval dari '.($t->approver?->name ?? '—').'.',
+            'Returned' => 'Dikembalikan untuk revisi oleh '.($t->approver?->name ?? '—').'.',
             'Rejected' => 'Ditolak oleh '.($t->approver?->name ?? '—').'.',
             default => 'Disetujui oleh '.($t->approver?->name ?? '—').'.',
         };
     }
 
-    /**
-     * Fixed 6-slot timeline (Ticket dibuat / Approval / Assign PIC /
-     * Progress / Resolved / Closed) derived purely from the ticket's
-     * current fields — mirrors App\Support\TicketTimeline's read-only,
-     * no-workflow-table approach, but in the admin console's fixed-slot
-     * shape rather than a variable step list.
-     */
-    private function timelineSteps(Ticket $t): array
-    {
-        $inProgressStatuses = ['Assigned', 'In Progress', 'Waiting for Response'];
-
-        return [
-            ['label' => 'Ticket dibuat', 'value' => $t->created_at->format('d M Y, H:i')],
-            ['label' => 'Approval', 'value' => match (true) {
-                ! $t->approver_id => 'Tidak diperlukan',
-                $t->status === 'Waiting for Approval' => 'Menunggu',
-                $t->status === 'Rejected' => 'Ditolak',
-                default => 'Disetujui',
-            }],
-            ['label' => 'Assign PIC', 'value' => $this->picLabel($t) ?? 'Menunggu Assignment'],
-            ['label' => 'Progress', 'value' => match (true) {
-                in_array($t->status, $inProgressStatuses, true) => $t->status,
-                in_array($t->status, Ticket::DONE_STATUSES, true) => 'Selesai',
-                default => 'Belum',
-            }],
-            ['label' => 'Resolved', 'value' => $t->resolved_at ? $t->resolved_at->format('d M Y, H:i') : 'Belum'],
-            ['label' => 'Closed', 'value' => $t->status === 'Closed' ? $t->updated_at->format('d M Y, H:i') : 'Belum'],
-        ];
-    }
 }

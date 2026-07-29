@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\ServiceCatalogSubject;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
@@ -26,7 +28,6 @@ class TicketController extends Controller
             'subject_name' => 'nullable|string|max:255',
             'issue_category' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:5000',
-            'attachment_name' => 'nullable|string|max:255',
             'approver_id' => 'nullable|integer|exists:users,id',
             'requires_approval' => 'nullable|boolean',
             'is_draft' => 'nullable|boolean',
@@ -62,12 +63,10 @@ class TicketController extends Controller
             default => 'Open',
         };
 
-        $assignedAgentId = isset($data['catalog_subject_id'])
-            ? ServiceCatalogSubject::find($data['catalog_subject_id'])?->support_agent_id
-            : null;
+        $assignedAgentId = $this->resolveAssignedAgentId($data['catalog_subject_id'] ?? null);
 
         $ticket = Ticket::create([
-            'ticket_no' => $prefix.'-'.$now->format('Y').'-'.str_pad((string) (Ticket::count() + 1), 4, '0', STR_PAD_LEFT),
+            'ticket_no' => $prefix.'-'.$now->format('Y').'-'.$this->nextTicketNumber($now),
             'title' => $data['title'],
             'requester_name' => $requester->name,
             'requester_id' => $requester->id,
@@ -77,7 +76,6 @@ class TicketController extends Controller
             'subject_name' => $data['subject_name'] ?? null,
             'issue_category' => $data['issue_category'] ?? null,
             'description' => $data['description'] ?? null,
-            'attachment_name' => $data['attachment_name'] ?? null,
             'sla_policy_id' => $policy->id,
             'priority' => $policy->priority,
             'approver_id' => $requiresApproval ? ($data['approver_id'] ?? null) : null,
@@ -99,6 +97,8 @@ class TicketController extends Controller
                 : "Tiket {$ticket->ticket_no} berhasil dibuat dan dikirim ke Tim Support.";
 
             NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dibuat', $message);
+            $this->notifyApproverOfNewRequest($ticket, $requester);
+            $this->notifyAgentOfNewAssignment($ticket, $requiresApproval);
         }
 
         return response()->json([
@@ -108,18 +108,19 @@ class TicketController extends Controller
     }
 
     /**
-     * Drafts are the only tickets a Requester can still change after
-     * creation — once submitted (Open/Waiting for Approval/...), the ticket
-     * is locked in, matching TicketDetailController's comment/reopen/close
-     * actions which never touch the original request fields. ticket_no is
-     * never regenerated here, even if issue_category changes, since it must
-     * stay fixed once assigned.
+     * Drafts and Returned (sent back for revision) are the only tickets a
+     * Requester can still change after creation — once submitted and past
+     * approval (Open/Waiting for Approval/...), the ticket is locked in,
+     * matching TicketDetailController's comment/reopen/close actions which
+     * never touch the original request fields. ticket_no is never
+     * regenerated here, even if issue_category changes, since it must stay
+     * fixed once assigned.
      */
     public function update(Request $request, Ticket $ticket): JsonResponse
     {
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
-        abort_unless($ticket->status === 'Draft', 422, 'Only draft tickets can be edited.');
+        abort_unless(in_array($ticket->status, ['Draft', 'Returned'], true), 422, 'Only draft or returned tickets can be edited.');
 
         $data = $request->validate([
             'title' => 'required|string|max:255',
@@ -155,9 +156,7 @@ class TicketController extends Controller
             default => 'Open',
         };
 
-        $assignedAgentId = isset($data['catalog_subject_id'])
-            ? ServiceCatalogSubject::find($data['catalog_subject_id'])?->support_agent_id
-            : null;
+        $assignedAgentId = $this->resolveAssignedAgentId($data['catalog_subject_id'] ?? null);
 
         $ticket->update([
             'title' => $data['title'],
@@ -188,6 +187,8 @@ class TicketController extends Controller
                 : "Tiket {$ticket->ticket_no} berhasil dikirim ke Tim Support.";
 
             NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dikirim', $message);
+            $this->notifyApproverOfNewRequest($ticket->fresh(), $requester);
+            $this->notifyAgentOfNewAssignment($ticket->fresh(), $requiresApproval);
         }
 
         return response()->json([
@@ -195,4 +196,103 @@ class TicketController extends Controller
             'sla_status' => $ticket->fresh()->sla_status,
         ]);
     }
+
+    /**
+     * Only a Draft or Returned ticket is still purely "mine" to discard
+     * outright — same status boundary update() already enforces, since
+     * anything past that has already reached an Approver/Support queue.
+     */
+    public function destroy(Ticket $ticket): JsonResponse
+    {
+        $requester = CurrentActor::requester();
+        abort_unless($ticket->requester_id === $requester->id, 403);
+        abort_unless(in_array($ticket->status, ['Draft', 'Returned'], true), 422, 'Only draft or returned tickets can be deleted.');
+
+        foreach ($ticket->attachments as $attachment) {
+            Storage::disk('public')->delete($attachment->path);
+        }
+        $ticket->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * `Ticket::count() + 1` broke as soon as any ticket got deleted (e.g. a
+     * Requester clearing out old drafts): the count drops, so the next
+     * ticket reuses a number that's still taken by a surviving row, hitting
+     * the ticket_no unique constraint. Basing this on the highest number
+     * actually in use for the year is immune to gaps from deletions — it
+     * only ever moves forward, regardless of how many rows disappeared.
+     */
+    private function nextTicketNumber(Carbon $now): string
+    {
+        $maxSuffix = (int) Ticket::query()
+            ->where('ticket_no', 'like', '%-'.$now->format('Y').'-%')
+            ->selectRaw("MAX(CAST(SUBSTRING_INDEX(ticket_no, '-', -1) AS UNSIGNED)) as m")
+            ->value('m');
+
+        return str_pad((string) ($maxSuffix + 1), 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * A catalog subject may only have one of its two agent slots filled —
+     * some subjects route straight to IT with no BPO slot at all (support_
+     * agent_id null, it_agent_id set). Falling back to it_agent_id here
+     * keeps that ticket from being created with no PIC whatsoever; a Level 2
+     * subject (both slots filled) still resolves to the BPO slot first,
+     * matching the existing BPO-first-line handling.
+     */
+    private function resolveAssignedAgentId(?int $catalogSubjectId): ?int
+    {
+        if (! $catalogSubjectId) {
+            return null;
+        }
+
+        $subject = ServiceCatalogSubject::find($catalogSubjectId);
+
+        return $subject?->support_agent_id ?? $subject?->it_agent_id;
+    }
+
+    /**
+     * Lets the assigned approver's notification bell (and Approval Inbox
+     * metrics) reflect a new request the moment it lands in their queue,
+     * mirroring the "Menunggu keputusan" alert from the Approval Workspace
+     * mockup — otherwise they'd only find out by checking the inbox cold.
+     */
+    private function notifyApproverOfNewRequest(Ticket $ticket, User $requester): void
+    {
+        if ($ticket->status !== 'Waiting for Approval' || ! $ticket->approver) {
+            return;
+        }
+
+        NotificationService::notify(
+            $ticket->approver,
+            $ticket,
+            'waiting_decision',
+            'Menunggu Keputusan Anda',
+            "Tiket {$ticket->ticket_no} dari {$requester->name} menunggu persetujuan Anda."
+        );
+    }
+
+    /**
+     * A ticket that skips approval lands directly in Support's queue — its
+     * PIC needs the same "new work landed" alert an Approver gets for
+     * "Waiting for Approval". Approved-and-forwarded tickets are handled
+     * separately by ApprovalController::decide(), since routing only
+     * happens there once a decision is made.
+     */
+    private function notifyAgentOfNewAssignment(Ticket $ticket, bool $requiresApproval): void
+    {
+        if ($requiresApproval || $ticket->status !== 'Open') {
+            return;
+        }
+
+        NotificationService::notifyAssignedAgent(
+            $ticket,
+            'ticket_created',
+            'Tiket Baru Ditugaskan',
+            "Tiket {$ticket->ticket_no} \"{$ticket->title}\" telah ditugaskan ke Anda."
+        );
+    }
+
 }

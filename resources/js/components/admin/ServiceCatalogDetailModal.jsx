@@ -27,7 +27,7 @@ export default function ServiceCatalogDetailModal({ subject, onClose }) {
             </div>
 
             <ModalFooter>
-                <button onClick={onClose} className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800">Tutup</button>
+                <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">Tutup</button>
             </ModalFooter>
         </Modal>
     );
@@ -35,9 +35,9 @@ export default function ServiceCatalogDetailModal({ subject, onClose }) {
 
 function Detail({ label, value }) {
     return (
-        <div className="rounded-lg bg-gray-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
-            <p className="mt-1 text-sm font-medium text-gray-900">{value}</p>
+        <div className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>
+            <p className="mt-1 text-sm font-medium text-gray-900 dark:text-ink-1">{value}</p>
         </div>
     );
 }

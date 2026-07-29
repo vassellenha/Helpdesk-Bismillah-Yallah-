@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './Modal';
+import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
 
 const ISSUE_CATEGORIES = ['Incident', 'Service Request', 'Access Request'];
@@ -112,75 +113,73 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
             />
 
             <div className="space-y-4 overflow-y-auto px-6 py-5">
-                {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+                {error && <p className="rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
                 <Field label="Issue Category">
-                    <select value={form.issue_category} onChange={(e) => set('issue_category', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                        {ISSUE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                    </select>
+                    <SelectMenu value={form.issue_category} onChange={(v) => set('issue_category', v)} options={ISSUE_CATEGORIES.map((c) => ({ value: c, label: c }))} />
                 </Field>
 
                 <Field label="Layanan">
-                    <input value={form.layanan} onChange={(e) => set('layanan', e.target.value)} placeholder="mis. SAP, VPN, Printer" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
+                    <input value={form.layanan} onChange={(e) => set('layanan', e.target.value)} placeholder="mis. SAP, VPN, Printer" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
                 <Field label="Sub Category">
-                    <input value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)} placeholder="mis. Login SAP" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
+                    <input value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)} placeholder="mis. Login SAP" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
                 <Field label="Subject">
-                    <input value={form.subject} onChange={(e) => set('subject', e.target.value)} placeholder="mis. Password Expired" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
+                    <input value={form.subject} onChange={(e) => set('subject', e.target.value)} placeholder="mis. Password Expired" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
                 <Field label="Requires Approval">
-                    <select value={form.requires_approval} onChange={(e) => set('requires_approval', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                        <option value="false">No</option>
-                        <option value="true">Yes</option>
-                    </select>
+                    <SelectMenu
+                        value={form.requires_approval}
+                        onChange={(v) => set('requires_approval', v)}
+                        options={[{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }]}
+                    />
                 </Field>
 
                 <Field label="Level">
-                    <select
+                    <SelectMenu
                         value={form.levelKey}
-                        onChange={(e) => selectLevel(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none"
-                    >
-                        {LEVEL_OPTIONS.map((opt) => (
-                            <option key={opt.key} value={opt.key}>{opt.label}</option>
-                        ))}
-                    </select>
+                        onChange={selectLevel}
+                        options={LEVEL_OPTIONS.map((opt) => ({ value: opt.key, label: opt.label }))}
+                    />
                 </Field>
 
                 <div className={selectedLevel.key === 'l2-both' ? 'grid grid-cols-2 gap-4' : ''}>
                     {showBpoField && (
                         <Field label="Support BPO">
-                            <select value={form.support_agent_id} onChange={(e) => set('support_agent_id', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                                <option value="">Pilih...</option>
-                                {bpoAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                            </select>
+                            <SelectMenu
+                                value={String(form.support_agent_id ?? '')}
+                                onChange={(v) => set('support_agent_id', v)}
+                                options={[{ value: '', label: 'Pilih...' }, ...bpoAgents.map((a) => ({ value: String(a.id), label: a.name }))]}
+                            />
                         </Field>
                     )}
                     {showItField && (
                         <Field label="Support IT">
-                            <select value={form.it_agent_id} onChange={(e) => set('it_agent_id', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                                <option value="">Pilih...</option>
-                                {itAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                            </select>
+                            <SelectMenu
+                                value={String(form.it_agent_id ?? '')}
+                                onChange={(v) => set('it_agent_id', v)}
+                                options={[{ value: '', label: 'Pilih...' }, ...itAgents.map((a) => ({ value: String(a.id), label: a.name }))]}
+                            />
                         </Field>
                     )}
                 </div>
 
                 <Field label="Status">
-                    <select value={form.status} onChange={(e) => set('status', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                        <option value="active">Aktif</option>
-                        <option value="inactive">Nonaktif</option>
-                    </select>
+                    <SelectMenu
+                        value={form.status}
+                        onChange={(v) => set('status', v)}
+                        options={[{ value: 'active', label: 'Aktif' }, { value: 'inactive', label: 'Nonaktif' }]}
+                    />
                 </Field>
             </div>
 
             <ModalFooter>
-                <button onClick={onClose} className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-medium text-blue-700 hover:bg-white">Batal</button>
-                <button onClick={save} disabled={saving || !form.layanan || !form.subcategory || !form.subject} className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
+                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
+                <button onClick={save} disabled={saving || !form.layanan || !form.subcategory || !form.subject} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">
                     {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
             </ModalFooter>
@@ -191,7 +190,7 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
 function Field({ label, children }) {
     return (
         <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-ink-2">{label}</label>
             {children}
         </div>
     );

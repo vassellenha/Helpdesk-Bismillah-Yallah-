@@ -30,7 +30,6 @@ class SlaPolicyController extends Controller
         return view('admin.sla', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'notifications' => DummyData::notifications(),
             'policies' => SlaPolicy::orderBy('id')->get(),
             'ticketSlaBreakdown' => $this->ticketSlaBreakdown(),
         ]);

@@ -77,7 +77,7 @@ class DashboardController extends Controller
 
         $counts = [
             'All' => $tickets->count(),
-            'Draft' => $tickets->where('status', 'Draft')->count(),
+            'Draft' => $tickets->whereIn('status', ['Draft', 'Returned'])->count(),
             'Active' => $tickets->whereIn('status', Ticket::ACTIVE_STATUSES)->count(),
             'Completed' => $tickets->whereIn('status', Ticket::DONE_STATUSES)->count(),
             'Rejected' => $tickets->where('status', 'Rejected')->count(),
@@ -89,26 +89,6 @@ class DashboardController extends Controller
             'notifications' => $this->notifications($requester, $tickets),
             'tickets' => $rows,
             'counts' => $counts,
-        ]);
-    }
-
-    public function approver(): View
-    {
-        return view('dashboard.approver', [
-            'role' => 'approver',
-            'queue' => DummyData::approvalQueue(),
-            'notifications' => DummyData::notifications(),
-        ]);
-    }
-
-    public function support(): View
-    {
-        return view('dashboard.support', [
-            'role' => 'support',
-            'tickets' => DummyData::tickets(),
-            'agents' => DummyData::agents(),
-            'categories' => DummyData::categories(),
-            'notifications' => DummyData::notifications(),
         ]);
     }
 
@@ -125,8 +105,12 @@ class DashboardController extends Controller
 
     public function eva(): View
     {
+        $eva = CurrentActor::knowledgeAdmin();
+
         return view('dashboard.eva', [
             'role' => 'eva',
+            'currentUser' => ['name' => $eva->name, 'title' => $eva->jabatan, 'initials' => $this->initials($eva->name)],
+            'profileUrl' => route('eva.profile'),
             'articles' => DummyData::knowledgeArticles(),
             'unanswered' => DummyData::unansweredQuestions(),
             'notifications' => DummyData::notifications(),

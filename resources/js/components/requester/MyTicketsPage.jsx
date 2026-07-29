@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import NewTicketModal from '../NewTicketModal';
+import SelectMenu from '../SelectMenu';
+import { apiFetch } from '../../lib/api';
 
 const ACTIVE_STATUSES = ['Waiting for Approval', 'Open', 'Assigned', 'In Progress', 'Waiting for Response'];
 const DONE_STATUSES = ['Resolved', 'Completed', 'Closed'];
@@ -20,7 +22,7 @@ const COLUMNS = [
 
 function inTab(tab, status) {
     if (tab === 'All') return true;
-    if (tab === 'Draft') return status === 'Draft';
+    if (tab === 'Draft') return status === 'Draft' || status === 'Returned';
     if (tab === 'Active') return ACTIVE_STATUSES.includes(status);
     if (tab === 'Completed') return DONE_STATUSES.includes(status);
     return status === 'Rejected';
@@ -33,7 +35,44 @@ function sortValue(row, key) {
     return (row[key] ?? '').toString().toLowerCase();
 }
 
-export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, approversUrl, submitUrl }) {
+function DeleteConfirmModal({ count, deleting, onCancel, onConfirm }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={() => !deleting && onCancel()}>
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 dark:bg-bad-soft text-red-600 dark:text-bad-text">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6 M14 11v6" /></svg>
+                    </span>
+                    <div>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Hapus {count} draft tiket?</h2>
+                        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">
+                            Tiket yang dipilih akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-5 flex justify-end gap-2.5">
+                    <button
+                        onClick={onCancel}
+                        disabled={deleting}
+                        className="rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Tidak
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={deleting}
+                        className="rounded-full bg-red-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {deleting ? 'Menghapus…' : 'Ya, Hapus'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl, approversUrl, submitUrl }) {
+    const [tickets, setTickets] = useState(initialTickets);
     const [tab, setTab] = useState('All');
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('All Issue Categories');
@@ -43,6 +82,29 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
     const [period, setPeriod] = useState('Last 6 months');
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [deleting, setDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
+
+    // Selecting drafts to delete is only meaningful while the Draft tab is
+    // active — leaving it clears the checkboxes instead of letting a stale
+    // selection carry over and silently delete the wrong tickets later.
+    useEffect(() => {
+        if (tab !== 'Draft') setSelectedIds(new Set());
+    }, [tab]);
+
+    // Counts are derived live from the ticket list (not a server-supplied
+    // prop) so they stay correct right after a client-side delete, with no
+    // page reload needed — matches DashboardController::myTickets()'s bucket
+    // logic exactly.
+    const counts = useMemo(() => ({
+        All: tickets.length,
+        Draft: tickets.filter((t) => inTab('Draft', t.status)).length,
+        Active: tickets.filter((t) => inTab('Active', t.status)).length,
+        Completed: tickets.filter((t) => inTab('Completed', t.status)).length,
+        Rejected: tickets.filter((t) => inTab('Rejected', t.status)).length,
+    }), [tickets]);
 
     function toggleSort(key) {
         if (key === sortKey) {
@@ -84,28 +146,65 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
     }, [tickets, tab, category, service, subcategory, priority, period, search, sortKey, sortDir]);
 
     const tabs = ['All', 'Draft', 'Active', 'Completed', 'Rejected'];
+    const allFilteredSelected = filtered.length > 0 && filtered.every((row) => selectedIds.has(row.id));
+
+    function toggleRow(id) {
+        setSelectedIds((current) => {
+            const next = new Set(current);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }
+
+    function toggleSelectAll() {
+        setSelectedIds((current) => {
+            if (allFilteredSelected) return new Set();
+            return new Set(filtered.map((row) => row.id));
+        });
+    }
+
+    async function deleteSelected() {
+        if (selectedIds.size === 0) return;
+
+        setDeleting(true);
+        setDeleteError('');
+        const ids = [...selectedIds];
+        const results = await Promise.allSettled(ids.map((id) => apiFetch(`/requester/tickets/${id}`, { method: 'DELETE' })));
+        const deletedIds = ids.filter((_, i) => results[i].status === 'fulfilled');
+
+        setTickets((current) => current.filter((t) => !deletedIds.includes(t.id)));
+        setSelectedIds(new Set());
+        setDeleting(false);
+        setShowDeleteConfirm(false);
+
+        const failedCount = results.length - deletedIds.length;
+        if (failedCount > 0) {
+            setDeleteError(`${failedCount} tiket gagal dihapus. Coba lagi.`);
+        }
+    }
 
     return (
         <div className="flex flex-col gap-7">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">My Tickets</h1>
-                    <p className="mt-1 text-[13px] text-gray-400">Track the history and progress of every ticket you have submitted.</p>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">My Tickets</h1>
+                    <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">Track the history and progress of every ticket you have submitted.</p>
                 </div>
                 <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} />
             </div>
 
-            <div className="flex w-fit gap-1.5 rounded-xl border border-gray-200 bg-white p-1.5 shadow-sm">
+            <div className="flex w-fit gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-sm">
                 {tabs.map((t) => {
                     const active = tab === t;
                     return (
                         <button
                             key={t}
                             onClick={() => setTab(t)}
-                            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 dark:bg-blue-500 text-white' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
                         >
                             {t}
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-panel-3 text-gray-400 dark:text-ink-3'}`}>
                                 {counts[t] ?? 0}
                             </span>
                         </button>
@@ -114,47 +213,76 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-                <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-[10px] border border-gray-200 bg-white px-3 py-2.5">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-3 py-2.5">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400 dark:text-ink-3"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         type="text"
                         placeholder="Search by ticket number or title…"
-                        className="flex-1 border-none bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-400"
+                        className="flex-1 border-none bg-transparent text-[13px] text-gray-900 dark:text-ink-1 outline-none placeholder:text-gray-400"
                     />
                 </div>
-                <select value={service} onChange={(e) => setService(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
-                    {services.map((s) => <option key={s}>{s}</option>)}
-                </select>
-                <select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
-                    {subcategories.map((s) => <option key={s}>{s}</option>)}
-                </select>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
-                    {categories.map((c) => <option key={c}>{c}</option>)}
-                </select>
-                <select value={priority} onChange={(e) => setPriority(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
-                    {['All Priorities', 'Critical', 'High', 'Medium', 'Low'].map((p) => <option key={p}>{p}</option>)}
-                </select>
-                <select value={period} onChange={(e) => setPeriod(e.target.value)} className="rounded-[10px] border border-gray-200 bg-white px-3 py-2.5 text-[13px] text-gray-700 outline-none">
-                    {Object.keys(PERIOD_DAYS).map((p) => <option key={p}>{p}</option>)}
-                </select>
+                <SelectMenu value={service} onChange={setService} options={services.map((s) => ({ value: s, label: s }))} />
+                <SelectMenu value={subcategory} onChange={setSubcategory} options={subcategories.map((s) => ({ value: s, label: s }))} />
+                <SelectMenu value={category} onChange={setCategory} options={categories.map((c) => ({ value: c, label: c }))} />
+                <SelectMenu value={priority} onChange={setPriority} options={['All Priorities', 'Critical', 'High', 'Medium', 'Low'].map((p) => ({ value: p, label: p }))} />
+                <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: p }))} />
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {tab === 'Draft' && selectedIds.size > 0 && (
+                <div className="flex items-center justify-between rounded-xl border border-blue-200 dark:border-edge-strong bg-blue-50 dark:bg-accent-soft px-4 py-3">
+                    <span className="text-[13px] font-semibold text-blue-800 dark:text-accent-text">{selectedIds.size} tiket dipilih</span>
+                    <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        disabled={deleting}
+                        className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {deleting ? 'Menghapus…' : 'Hapus Terpilih'}
+                    </button>
+                </div>
+            )}
+
+            {deleteError && (
+                <p className="rounded-xl border border-red-200 bg-red-50 dark:bg-bad-soft dark:border-transparent px-4 py-3 text-[13px] font-medium text-red-700 dark:text-bad-text">
+                    {deleteError}
+                </p>
+            )}
+
+            {showDeleteConfirm && (
+                <DeleteConfirmModal
+                    count={selectedIds.size}
+                    deleting={deleting}
+                    onCancel={() => setShowDeleteConfirm(false)}
+                    onConfirm={deleteSelected}
+                />
+            )}
+
+            <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="min-w-[860px] w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50 text-[11px] font-bold uppercase tracking-wide text-gray-400">
+                            <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
+                                {tab === 'Draft' && (
+                                    <th className="w-10 px-4 py-3.5 pl-6">
+                                        <input
+                                            type="checkbox"
+                                            checked={allFilteredSelected}
+                                            onChange={toggleSelectAll}
+                                            className="h-4 w-4 rounded border-gray-300 dark:border-edge-strong"
+                                        />
+                                    </th>
+                                )}
                                 {COLUMNS.map((col) => (
                                     <th key={col.key} className="px-4 py-3.5 text-left first:pl-6 last:pr-6">
                                         <button
                                             type="button"
                                             onClick={() => toggleSort(col.key)}
-                                            className="flex items-center gap-1 uppercase tracking-wide text-gray-400 hover:text-gray-700"
+                                            className="flex items-center gap-1 uppercase tracking-wide text-gray-400 dark:text-ink-3 hover:text-gray-700 dark:hover:text-ink-1"
                                         >
                                             {col.label}
-                                            <span aria-hidden="true" className={sortKey === col.key ? 'text-gray-600' : 'text-gray-300'}>
+                                            <span aria-hidden="true" className={sortKey === col.key ? 'text-gray-600 dark:text-ink-2' : 'text-gray-300'}>
                                                 {sortKey === col.key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                                             </span>
                                         </button>
@@ -167,30 +295,40 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
                                 <tr
                                     key={row.id}
                                     onClick={() => row.href && (window.location.href = row.href)}
-                                    className="cursor-pointer border-b border-gray-50 last:border-0 hover:bg-blue-50/40"
+                                    className="cursor-pointer border-b border-gray-50 last:border-0 dark:border-transparent dark:even:bg-white/[0.03] hover:bg-blue-50/40 dark:hover:bg-panel-hover"
                                 >
-                                    <td className="px-4 py-4 pl-6 font-bold text-blue-600">{row.id}</td>
+                                    {tab === 'Draft' && (
+                                        <td className="px-4 py-4 pl-6" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(row.id)}
+                                                onChange={() => toggleRow(row.id)}
+                                                className="h-4 w-4 rounded border-gray-300 dark:border-edge-strong"
+                                            />
+                                        </td>
+                                    )}
+                                    <td className={`px-4 py-4 font-bold text-blue-600 dark:text-accent-text ${tab === 'Draft' ? '' : 'pl-6'}`}>{row.id}</td>
                                     <td className="px-4 py-4">
-                                        <p className="max-w-[240px] truncate font-semibold text-gray-900">{row.title}</p>
-                                        <p className="mt-0.5 text-xs text-gray-400">{row.app}</p>
+                                        <p className="max-w-[240px] truncate font-semibold text-gray-900 dark:text-ink-1">{row.title}</p>
+                                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{row.app}</p>
                                     </td>
-                                    <td className="px-4 py-4 text-gray-700">{row.category}</td>
+                                    <td className="px-4 py-4 text-gray-700 dark:text-ink-2">{row.category}</td>
                                     <td className="px-4 py-4"><PriorityBadge priority={row.priority} /></td>
                                     <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
                                     <td className="px-4 py-4 font-semibold" style={{ color: SLA_COLOR[row.slaKind] }}>{row.sla}</td>
-                                    <td className="px-4 py-4 pr-6 text-gray-400">{row.created}</td>
+                                    <td className="px-4 py-4 pr-6 text-gray-400 dark:text-ink-3">{row.created}</td>
                                 </tr>
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center text-sm text-gray-400">No tickets match these filters.</td>
+                                    <td colSpan={tab === 'Draft' ? 8 : 7} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">No tickets match these filters.</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
                 <div className="flex items-center justify-between px-5 py-3">
-                    <span className="text-xs text-gray-400">Showing {filtered.length} of {tickets.length} tickets</span>
+                    <span className="text-xs text-gray-400 dark:text-ink-3">Showing {filtered.length} of {tickets.length} tickets</span>
                 </div>
             </div>
         </div>

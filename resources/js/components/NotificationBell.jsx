@@ -20,7 +20,7 @@ export default function NotificationBell({ notifications = [] }) {
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-500 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-panel-hover"
                 aria-label="Notifikasi"
             >
                 <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
@@ -40,25 +40,25 @@ export default function NotificationBell({ notifications = [] }) {
             </button>
 
             {open && (
-                <div className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                        <p className="text-sm font-semibold text-gray-900">Notifikasi</p>
-                        <span className="text-xs text-gray-400">{unreadCount} belum dibaca</span>
+                <div className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-lg">
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-edge px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-ink-1">Notifikasi</p>
+                        <span className="text-xs text-gray-400 dark:text-ink-3">{unreadCount} belum dibaca</span>
                     </div>
                     <ul className="max-h-80 overflow-y-auto">
                         {notifications.map((n) => (
-                            <li key={n.id} className="border-b border-gray-50 px-4 py-3 last:border-0 hover:bg-gray-50">
+                            <li key={n.id} className="border-b border-gray-50 dark:border-transparent px-4 py-3 last:border-0 hover:bg-gray-50 dark:hover:bg-panel-hover">
                                 <div className="flex items-start gap-2">
-                                    {n.unread && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />}
+                                    {n.unread && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600 dark:bg-blue-500" />}
                                     <div className={n.unread ? '' : 'ml-3.5'}>
-                                        <p className="text-sm text-gray-800">{n.title}</p>
-                                        <p className="mt-0.5 text-xs text-gray-400">{n.time}</p>
+                                        <p className="text-sm text-gray-800 dark:text-ink-1">{n.title}</p>
+                                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{n.time}</p>
                                     </div>
                                 </div>
                             </li>
                         ))}
                         {notifications.length === 0 && (
-                            <li className="px-4 py-6 text-center text-sm text-gray-400">Tidak ada notifikasi.</li>
+                            <li className="px-4 py-6 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada notifikasi.</li>
                         )}
                     </ul>
                 </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './Modal';
+import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -47,43 +48,45 @@ export default function SlaPolicyModal({ policy, onClose, onSaved }) {
             <ModalHeader title={isEdit ? 'Edit SLA Policy' : 'Tambah SLA Policy'} subtitle="Tetapkan target waktu dan aturan eskalasi." onClose={onClose} />
 
             <div className="space-y-4 overflow-y-auto px-6 py-5">
-                {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+                {error && <p className="rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
                 <Field label="Nama Policy">
-                    <input value={form.policy_name} onChange={(e) => set('policy_name', e.target.value)} placeholder="Nama policy SLA" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
+                    <input value={form.policy_name} onChange={(e) => set('policy_name', e.target.value)} placeholder="Nama policy SLA" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
                 <Field label="Prioritas">
-                    <select value={form.priority} onChange={(e) => set('priority', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                        <option value="">Pilih...</option>
-                        {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                    <SelectMenu
+                        value={form.priority}
+                        onChange={(v) => set('priority', v)}
+                        options={[{ value: '', label: 'Pilih...' }, ...PRIORITIES.map((p) => ({ value: p, label: p }))]}
+                    />
                 </Field>
 
                 <div className="grid grid-cols-2 gap-4">
                     <Field label="Response Time (menit)">
-                        <input type="number" min="1" value={form.response_time_minutes} onChange={(e) => set('response_time_minutes', e.target.value)} placeholder="mis. 120" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
+                        <input type="number" min="1" value={form.response_time_minutes} onChange={(e) => set('response_time_minutes', e.target.value)} placeholder="mis. 120" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                     </Field>
                     <Field label="Resolution Time (menit)">
-                        <input type="number" min="1" value={form.resolution_time_minutes} onChange={(e) => set('resolution_time_minutes', e.target.value)} placeholder="mis. 480" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
+                        <input type="number" min="1" value={form.resolution_time_minutes} onChange={(e) => set('resolution_time_minutes', e.target.value)} placeholder="mis. 480" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                     </Field>
                 </div>
 
                 <Field label="Warning Threshold (%)">
-                    <input type="number" min="1" max="100" value={form.warning_threshold_percent} onChange={(e) => set('warning_threshold_percent', e.target.value)} placeholder="mis. 80" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none" />
+                    <input type="number" min="1" max="100" value={form.warning_threshold_percent} onChange={(e) => set('warning_threshold_percent', e.target.value)} placeholder="mis. 80" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
                 <Field label="Status">
-                    <select value={form.status} onChange={(e) => set('status', e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none">
-                        <option value="active">Aktif</option>
-                        <option value="inactive">Nonaktif</option>
-                    </select>
+                    <SelectMenu
+                        value={form.status}
+                        onChange={(v) => set('status', v)}
+                        options={[{ value: 'active', label: 'Aktif' }, { value: 'inactive', label: 'Nonaktif' }]}
+                    />
                 </Field>
             </div>
 
             <ModalFooter>
-                <button onClick={onClose} className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-medium text-blue-700 hover:bg-white">Batal</button>
-                <button onClick={save} disabled={saving} className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50">
+                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
+                <button onClick={save} disabled={saving} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:opacity-50">
                     {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
             </ModalFooter>
@@ -94,7 +97,7 @@ export default function SlaPolicyModal({ policy, onClose, onSaved }) {
 function Field({ label, children }) {
     return (
         <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-ink-2">{label}</label>
             {children}
         </div>
     );

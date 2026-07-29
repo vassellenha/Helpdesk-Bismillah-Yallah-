@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SlaPolicyModal from './SlaPolicyModal';
 import { apiFetch } from '../../lib/api';
+import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 function formatMinutes(minutes) {
     if (minutes % 1440 === 0) return `${minutes / 1440} Hari`;
@@ -58,28 +59,28 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
         <div>
             <div className="mb-6 flex items-start justify-between gap-3">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900">Konfigurasi SLA</h1>
-                    <p className="mt-1 text-sm text-gray-500">Atur target SLA, peringatan, notifikasi pelanggaran, dan eskalasi otomatis.</p>
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">Konfigurasi SLA</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Atur target SLA, peringatan, notifikasi pelanggaran, dan eskalasi otomatis.</p>
                 </div>
-                <button onClick={() => setModal('add')} className="shrink-0 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800">
+                <button onClick={() => setModal('add')} className="shrink-0 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
                     + Tambah SLA Policy
                 </button>
             </div>
 
-            {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+            {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
             <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <Stat label="SLA POLICY AKTIF" value={activeCount} bg="bg-blue-50" color="text-blue-600" />
-                <Stat label="TICKET WITHIN SLA" value={`${ticketSlaBreakdown[0]?.percent ?? 0}%`} bg="bg-emerald-50" color="text-emerald-600" />
-                <Stat label="SLA WARNING" value={`${ticketSlaBreakdown[1]?.percent ?? 0}%`} bg="bg-amber-50" color="text-amber-600" />
-                <Stat label="SLA BREACH" value={`${ticketSlaBreakdown[2]?.percent ?? 0}%`} bg="bg-red-50" color="text-red-600" />
+                <Stat label="SLA POLICY AKTIF" value={activeCount} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
+                <Stat label="TICKET WITHIN SLA" value={`${ticketSlaBreakdown[0]?.percent ?? 0}%`} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
+                <Stat label="SLA WARNING" value={`${ticketSlaBreakdown[1]?.percent ?? 0}%`} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
+                <Stat label="SLA BREACH" value={`${ticketSlaBreakdown[2]?.percent ?? 0}%`} bg="bg-red-50 dark:bg-bad-soft" color="text-red-600 dark:text-bad-text" />
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-100 text-sm">
+                    <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                         <thead>
-                            <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <tr className="bg-gray-50 dark:bg-panel-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                                 <th className="px-5 py-3">Nama SLA</th>
                                 <th className="px-5 py-3">Prioritas</th>
                                 <th className="px-5 py-3">Response Time</th>
@@ -89,24 +90,24 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                                 <th className="px-5 py-3 text-right">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-50 dark:divide-transparent">
                             {policies.map((p) => (
-                                <tr key={p.id} className="hover:bg-gray-50">
-                                    <td className="px-5 py-3 font-semibold text-gray-900">{p.policy_name}</td>
+                                <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                                    <td className="px-5 py-3 font-semibold text-gray-900 dark:text-ink-1">{p.policy_name}</td>
                                     <td className="px-5 py-3">
                                         <PriorityBadge priority={p.priority} />
                                     </td>
-                                    <td className="px-5 py-3 text-gray-600">{formatMinutes(p.response_time_minutes)}</td>
-                                    <td className="px-5 py-3 text-gray-600">{formatMinutes(p.resolution_time_minutes)}</td>
-                                    <td className="px-5 py-3 text-gray-600">{p.warning_threshold_percent}%</td>
+                                    <td className="px-5 py-3 text-gray-600 dark:text-ink-2">{formatMinutes(p.response_time_minutes)}</td>
+                                    <td className="px-5 py-3 text-gray-600 dark:text-ink-2">{formatMinutes(p.resolution_time_minutes)}</td>
+                                    <td className="px-5 py-3 text-gray-600 dark:text-ink-2">{p.warning_threshold_percent}%</td>
                                     <td className="px-5 py-3">
-                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${p.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${p.status === 'active' ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text' : 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2'}`}>
                                             <span className={`h-1.5 w-1.5 rounded-full ${p.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                                             {p.status === 'active' ? 'Aktif' : 'Nonaktif'}
                                         </span>
                                     </td>
                                     <td className="px-5 py-3 text-right">
-                                        <button onClick={(e) => openMenu(e, p)} className="rounded-full border border-gray-200 px-2.5 py-1 text-gray-500 hover:bg-gray-100">
+                                        <button onClick={(e) => openMenu(e, p)} className="rounded-full border border-gray-200 dark:border-edge-strong px-2.5 py-1 text-gray-500 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-panel-hover">
                                             •••
                                         </button>
                                     </td>
@@ -121,22 +122,22 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                 <div
                     ref={menuRef}
                     style={{ top: menu.top, left: menu.left }}
-                    className="fixed z-50 w-40 overflow-hidden rounded-lg border border-gray-200 bg-white text-left shadow-lg"
+                    className="fixed z-50 w-40 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-left shadow-lg"
                 >
-                    <button onClick={() => { setModal({ type: 'detail', policy: menu.policy }); setMenu(null); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50">
+                    <button onClick={() => { setModal({ type: 'detail', policy: menu.policy }); setMenu(null); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         <SearchIcon /> Lihat Detail
                     </button>
-                    <button onClick={() => { setModal({ type: 'edit', policy: menu.policy }); setMenu(null); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50">
+                    <button onClick={() => { setModal({ type: 'edit', policy: menu.policy }); setMenu(null); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         <EditIcon /> Edit
                     </button>
-                    <button onClick={() => toggleStatus(menu.policy)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50">
+                    <button onClick={() => toggleStatus(menu.policy)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
                         <ToggleIcon /> {menu.policy.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
                     </button>
                 </div>
             )}
 
-            <div className="mt-6 flex items-start gap-2 rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
-                <span className="mt-0.5 h-full w-1 shrink-0 rounded bg-blue-600" />
+            <div className="mt-6 flex items-start gap-2 rounded-lg bg-blue-50 dark:bg-accent-soft p-4 text-sm text-blue-900 dark:text-accent-text">
+                <span className="mt-0.5 h-full w-1 shrink-0 rounded bg-blue-600 dark:bg-blue-500" />
                 <p>
                     <strong className="block">Bagaimana SLA dihitung</strong>
                     Sistem menghitung SLA secara otomatis sejak tiket dibuat. Notifikasi SLA Warning dikirim sebelum tenggat tercapai, dan notifikasi SLA
@@ -156,7 +157,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
 
 function SearchIcon() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-gray-400">
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-gray-400 dark:text-ink-3">
             <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6" />
             <path d="m20 20-3-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
@@ -165,7 +166,7 @@ function SearchIcon() {
 
 function EditIcon() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-gray-400">
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-gray-400 dark:text-ink-3">
             <path d="M12 20h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -183,37 +184,38 @@ function ToggleIcon() {
 
 function Stat({ label, value, bg, color }) {
     return (
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
             <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${bg} ${color}`}>
                 <span className="h-2.5 w-2.5 rounded-full bg-current" />
             </span>
-            <p className="mt-3 text-2xl font-bold text-gray-900">{value}</p>
-            <p className="text-xs font-medium text-gray-400">{label}</p>
+            <p className="mt-3 text-2xl font-bold text-gray-900 dark:text-ink-1">{value}</p>
+            <p className="text-xs font-medium text-gray-400 dark:text-ink-3">{label}</p>
         </div>
     );
 }
 
 const PRIORITY_STYLES = {
-    Critical: 'bg-red-50 text-red-700',
-    High: 'bg-orange-50 text-orange-700',
-    Medium: 'bg-blue-50 text-blue-700',
-    Low: 'bg-gray-100 text-gray-500',
+    Critical: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text',
+    High: 'bg-orange-50 dark:bg-warn-soft text-orange-700 dark:text-warn-text',
+    Medium: 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text',
+    Low: 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2',
 };
 
 function PriorityBadge({ priority }) {
-    return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${PRIORITY_STYLES[priority] ?? 'bg-gray-100 text-gray-600'}`}>{priority}</span>;
+    return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${PRIORITY_STYLES[priority] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2'}`}>{priority}</span>;
 }
 
 function PolicyDetailModal({ policy, onClose }) {
+    useLockBodyScroll();
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
-            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-start justify-between border-b border-gray-100 px-6 py-4">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-6 py-4">
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900">Detail SLA Policy</h2>
-                        <p className="mt-0.5 text-sm text-gray-500">{policy.policy_name}</p>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">Detail SLA Policy</h2>
+                        <p className="mt-0.5 text-sm text-gray-500 dark:text-ink-2">{policy.policy_name}</p>
                     </div>
-                    <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">✕</button>
+                    <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600">✕</button>
                 </div>
                 <div className="grid grid-cols-2 gap-4 px-6 py-5 text-sm">
                     <Detail label="Prioritas" value={policy.priority} />
@@ -222,8 +224,8 @@ function PolicyDetailModal({ policy, onClose }) {
                     <Detail label="Warning Threshold" value={`${policy.warning_threshold_percent}%`} />
                     <Detail label="Status" value={policy.status === 'active' ? 'Aktif' : 'Nonaktif'} />
                 </div>
-                <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4">
-                    <button onClick={onClose} className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800">Tutup</button>
+                <div className="flex justify-end border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
+                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">Tutup</button>
                 </div>
             </div>
         </div>
@@ -232,9 +234,9 @@ function PolicyDetailModal({ policy, onClose }) {
 
 function Detail({ label, value }) {
     return (
-        <div className="rounded-lg bg-gray-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
-            <p className="mt-1 text-sm font-medium text-gray-900">{value}</p>
+        <div className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>
+            <p className="mt-1 text-sm font-medium text-gray-900 dark:text-ink-1">{value}</p>
         </div>
     );
 }

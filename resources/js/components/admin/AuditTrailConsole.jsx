@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import useLockBodyScroll from '../../lib/useLockBodyScroll';
+import SelectMenu from '../SelectMenu';
 
 const ALL = 'Semua';
 const PAGE_SIZE = 15;
@@ -7,6 +9,10 @@ const MODULE_LABELS = {
     service_catalog: 'Service Catalog',
     sla_configuration: 'Konfigurasi SLA',
     user_role_management: 'User & Role Management',
+    ticket_approval: 'Approval Tiket',
+    ticket_support: 'Penanganan Support',
+    team_lead: 'Team Lead',
+    ticket_management: 'Ticket Management',
 };
 
 const ACTION_LABELS = {
@@ -17,6 +23,16 @@ const ACTION_LABELS = {
     assign_support: 'Ubah Support',
     change_level: 'Ubah Level',
     change_role: 'Ubah Role',
+    approve: 'Setujui',
+    request_revision: 'Minta Perbaikan',
+    reject: 'Tolak',
+    resolve: 'Tutup Layanan',
+    escalate: 'Eskalasi',
+    remind: 'Kirim Teguran',
+    reassign: 'Alihkan Tiket',
+    raise_priority: 'Naikkan Prioritas',
+    remind_rating: 'Teguran Rating',
+    return: 'Dikembalikan',
 };
 
 export default function AuditTrailConsole({ logs, administrators }) {
@@ -28,6 +44,10 @@ export default function AuditTrailConsole({ logs, administrators }) {
     const [dateTo, setDateTo] = useState('');
     const [page, setPage] = useState(1);
     const [detailLog, setDetailLog] = useState(null);
+
+    const moduleOptions = useMemo(() => [{ value: ALL, label: 'Semua Modul' }, ...Object.entries(MODULE_LABELS).map(([v, label]) => ({ value: v, label }))], []);
+    const actionOptions = useMemo(() => [{ value: ALL, label: 'Semua Aktivitas' }, ...Object.entries(ACTION_LABELS).map(([v, label]) => ({ value: v, label }))], []);
+    const adminOptions = useMemo(() => [{ value: ALL, label: 'Semua Pengguna' }, ...administrators.map((a) => ({ value: a, label: a }))], [administrators]);
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
@@ -73,63 +93,54 @@ export default function AuditTrailConsole({ logs, administrators }) {
     return (
         <div>
             <div className="mb-6">
-                <h1 className="text-3xl font-extrabold text-gray-900">Audit Trail Viewer</h1>
-                <p className="mt-1 text-sm text-gray-500">Riwayat perubahan konfigurasi oleh Administrator — Service Catalog, Konfigurasi SLA, dan User &amp; Role Management.</p>
+                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">Audit Trail Viewer</h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Riwayat aktivitas seluruh pengguna — Service Catalog, Konfigurasi SLA, User &amp; Role Management, Approval, dan Penanganan Tiket.</p>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div className="flex flex-col gap-3 border-b border-gray-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-gray-100 dark:border-edge p-4 lg:flex-row lg:items-center lg:justify-between">
                     <input
                         value={search}
                         onChange={(e) => updateFilter(setSearch)(e.target.value)}
-                        placeholder="Cari target, administrator, atau deskripsi"
-                        className="w-full max-w-sm rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                        placeholder="Cari target, pengguna, atau deskripsi"
+                        className="w-full max-w-sm rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                        <select value={moduleFilter} onChange={(e) => updateFilter(setModuleFilter)(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
-                            <option value={ALL}>Semua Modul</option>
-                            {Object.entries(MODULE_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-                        </select>
-                        <select value={actionFilter} onChange={(e) => updateFilter(setActionFilter)(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
-                            <option value={ALL}>Semua Aktivitas</option>
-                            {Object.entries(ACTION_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-                        </select>
-                        <select value={adminFilter} onChange={(e) => updateFilter(setAdminFilter)(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none">
-                            <option value={ALL}>Semua Administrator</option>
-                            {administrators.map((a) => <option key={a}>{a}</option>)}
-                        </select>
-                        <input type="date" value={dateFrom} onChange={(e) => updateFilter(setDateFrom)(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none" />
-                        <span className="text-sm text-gray-400">—</span>
-                        <input type="date" value={dateTo} onChange={(e) => updateFilter(setDateTo)(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none" />
-                        <button onClick={resetFilters} className="text-sm font-medium text-blue-700 hover:text-blue-800">Reset Filter</button>
+                        <SelectMenu value={moduleFilter} onChange={updateFilter(setModuleFilter)} options={moduleOptions} />
+                        <SelectMenu value={actionFilter} onChange={updateFilter(setActionFilter)} options={actionOptions} />
+                        <SelectMenu value={adminFilter} onChange={updateFilter(setAdminFilter)} options={adminOptions} />
+                        <input type="date" value={dateFrom} onChange={(e) => updateFilter(setDateFrom)(e.target.value)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none" />
+                        <span className="text-sm text-gray-400 dark:text-ink-3">—</span>
+                        <input type="date" value={dateTo} onChange={(e) => updateFilter(setDateTo)(e.target.value)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none" />
+                        <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">Reset Filter</button>
                     </div>
                 </div>
-                <p className="px-4 pt-3 text-sm text-gray-400">Menampilkan {filtered.length === 0 ? 0 : (page_ - 1) * PAGE_SIZE + 1}–{Math.min(page_ * PAGE_SIZE, filtered.length)} dari {filtered.length} aktivitas</p>
+                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">Menampilkan {filtered.length === 0 ? 0 : (page_ - 1) * PAGE_SIZE + 1}–{Math.min(page_ * PAGE_SIZE, filtered.length)} dari {filtered.length} aktivitas</p>
 
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-100 text-sm">
+                    <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                         <thead>
-                            <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                                 <th className="px-4 py-3">Waktu</th>
-                                <th className="px-4 py-3">Administrator</th>
+                                <th className="px-4 py-3">Pengguna</th>
                                 <th className="px-4 py-3">Modul</th>
                                 <th className="px-4 py-3">Aktivitas</th>
                                 <th className="px-4 py-3">Target</th>
                                 <th className="px-4 py-3 text-right">Detail</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-50 dark:divide-transparent">
                             {paginated.map((l) => (
-                                <tr key={l.id} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 text-gray-500">{l.waktu}</td>
-                                    <td className="px-4 py-3 font-medium text-gray-900">{l.administrator}</td>
+                                <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                                    <td className="px-4 py-3 text-gray-500 dark:text-ink-2">{l.waktu}</td>
+                                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-ink-1">{l.administrator}</td>
                                     <td className="px-4 py-3">
-                                        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{l.module_label}</span>
+                                        <span className="rounded-full bg-gray-100 dark:bg-panel-3 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-ink-2">{l.module_label}</span>
                                     </td>
-                                    <td className="px-4 py-3 text-gray-700">{l.description}</td>
-                                    <td className="px-4 py-3 text-gray-600">{l.target_name}</td>
+                                    <td className="px-4 py-3 text-gray-700 dark:text-ink-2">{l.description}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{l.target_name}</td>
                                     <td className="px-4 py-3 text-right">
-                                        <button onClick={() => setDetailLog(l)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50">
+                                        <button onClick={() => setDetailLog(l)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-accent-text hover:bg-blue-50 dark:hover:bg-panel-hover">
                                             Lihat Detail
                                         </button>
                                     </td>
@@ -137,8 +148,8 @@ export default function AuditTrailConsole({ logs, administrators }) {
                             ))}
                             {paginated.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-14 text-center text-sm text-gray-400">
-                                        {logs.length === 0 ? 'Belum ada aktivitas administrator.' : 'Tidak ada aktivitas yang cocok dengan filter.'}
+                                    <td colSpan={6} className="px-4 py-14 text-center text-sm text-gray-400 dark:text-ink-3">
+                                        {logs.length === 0 ? 'Belum ada aktivitas.' : 'Tidak ada aktivitas yang cocok dengan filter.'}
                                     </td>
                                 </tr>
                             )}
@@ -147,19 +158,19 @@ export default function AuditTrailConsole({ logs, administrators }) {
                 </div>
 
                 {filtered.length > 0 && (
-                    <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
+                    <div className="flex items-center justify-between border-t border-gray-100 dark:border-edge px-4 py-3">
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                             disabled={page_ === 1}
-                            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             ← Sebelumnya
                         </button>
-                        <span className="text-sm text-gray-500">Halaman {page_} dari {totalPages}</span>
+                        <span className="text-sm text-gray-500 dark:text-ink-2">Halaman {page_} dari {totalPages}</span>
                         <button
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                             disabled={page_ === totalPages}
-                            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Berikutnya →
                         </button>
@@ -184,50 +195,63 @@ function humanizeValue(value) {
 }
 
 function DetailModal({ log, onClose }) {
-    const keys = Array.from(new Set([...(Object.keys(log.old_value ?? {})), ...(Object.keys(log.new_value ?? {}))]));
+    useLockBodyScroll();
+    const oldValue = log.old_value ?? {};
+    const newValue = log.new_value ?? {};
+    const keys = Array.from(new Set([...Object.keys(oldValue), ...Object.keys(newValue)]));
+    // Notification-only actions (teguran, remind_rating, …) never carry a
+    // "before" state — showing an all-dashes Sebelum column for those just
+    // adds noise, so collapse to a single Field/Nilai layout instead.
+    const hasBefore = Object.values(oldValue).some((v) => v !== null && v !== undefined && v !== '');
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
-            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-start justify-between border-b border-gray-100 px-6 py-4">
-                    <div>
-                        <p className="text-xs font-medium text-gray-400">{log.module_label} · {log.action_label}</p>
-                        <h2 className="text-lg font-bold text-gray-900">{log.target_name}</h2>
+            <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start justify-between gap-3 border-b border-gray-100 dark:border-edge px-6 py-4">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-gray-100 dark:bg-panel-3 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-ink-2">{log.module_label}</span>
+                            <span className="text-xs font-medium text-gray-400 dark:text-ink-3">{log.action_label}</span>
+                        </div>
+                        <h2 className="mt-1.5 truncate text-lg font-bold text-gray-900 dark:text-ink-1">{log.target_name}</h2>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{log.administrator} · {log.waktu}</p>
                     </div>
-                    <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">✕</button>
+                    <button onClick={onClose} className="shrink-0 rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600">✕</button>
                 </div>
 
-                <div className="px-6 py-4">
-                    <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{log.description}</p>
-                </div>
+                <div className="flex-1 overflow-y-auto">
+                    <div className="px-6 py-4">
+                        <p className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3 text-sm leading-relaxed text-gray-700 dark:text-ink-2">{log.description}</p>
+                    </div>
 
-                {keys.length > 0 ? (
-                    <div className="max-h-80 overflow-y-auto px-6 pb-6">
-                        <table className="min-w-full divide-y divide-gray-100 text-sm">
-                            <thead>
-                                <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                    <th className="py-2">Field</th>
-                                    <th className="py-2">Sebelum</th>
-                                    <th className="py-2">Sesudah</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {keys.map((key) => (
-                                    <tr key={key}>
-                                        <td className="py-2 pr-3 font-medium text-gray-700">{humanizeKey(key)}</td>
-                                        <td className="py-2 pr-3 text-gray-500">{humanizeValue(log.old_value?.[key])}</td>
-                                        <td className="py-2 font-medium text-gray-900">{humanizeValue(log.new_value?.[key])}</td>
+                    {keys.length > 0 ? (
+                        <div className="px-6 pb-6">
+                            <table className="min-w-full table-fixed divide-y divide-gray-100 dark:divide-transparent text-sm">
+                                <thead>
+                                    <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
+                                        <th className="w-1/3 py-2 pr-4">Field</th>
+                                        {hasBefore && <th className="w-1/3 py-2 pr-4">Sebelum</th>}
+                                        <th className="py-2">{hasBefore ? 'Sesudah' : 'Nilai'}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <p className="px-6 pb-6 text-sm text-gray-400">Tidak ada detail nilai tambahan untuk aktivitas ini.</p>
-                )}
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 dark:divide-transparent">
+                                    {keys.map((key) => (
+                                        <tr key={key} className="dark:even:bg-white/[0.03]">
+                                            <td className="py-2.5 pr-4 align-top font-medium text-gray-700 dark:text-ink-2">{humanizeKey(key)}</td>
+                                            {hasBefore && <td className="py-2.5 pr-4 align-top text-gray-500 dark:text-ink-2">{humanizeValue(oldValue[key])}</td>}
+                                            <td className="py-2.5 align-top font-medium text-gray-900 dark:text-ink-1">{humanizeValue(newValue[key])}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p className="px-6 pb-6 text-sm text-gray-400 dark:text-ink-3">Tidak ada detail nilai tambahan untuk aktivitas ini.</p>
+                    )}
+                </div>
 
-                <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4">
-                    <button onClick={onClose} className="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800">Tutup</button>
+                <div className="flex justify-end border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
+                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">Tutup</button>
                 </div>
             </div>
         </div>

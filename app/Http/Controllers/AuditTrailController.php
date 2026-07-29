@@ -15,7 +15,6 @@ class AuditTrailController extends Controller
         return view('admin.audit-trail', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'notifications' => DummyData::notifications(),
             'logs' => $logs->map(fn ($log) => [
                 'id' => $log->id,
                 'waktu' => $log->created_at->format('d M Y, H:i'),
@@ -41,6 +40,10 @@ class AuditTrailController extends Controller
             'service_catalog' => 'Service Catalog',
             'sla_configuration' => 'Konfigurasi SLA',
             'user_role_management' => 'User & Role Management',
+            'ticket_approval' => 'Approval Tiket',
+            'ticket_support' => 'Penanganan Support',
+            'team_lead' => 'Team Lead',
+            'ticket_management' => 'Ticket Management',
             default => $module,
         };
     }
@@ -55,6 +58,16 @@ class AuditTrailController extends Controller
             'assign_support' => 'Ubah Support',
             'change_level' => 'Ubah Level',
             'change_role' => 'Ubah Role',
+            'approve' => 'Setujui',
+            'request_revision' => 'Minta Perbaikan',
+            'reject' => 'Tolak',
+            'resolve' => 'Tutup Layanan',
+            'escalate' => 'Eskalasi',
+            'remind' => 'Kirim Teguran',
+            'reassign' => 'Alihkan Tiket',
+            'raise_priority' => 'Naikkan Prioritas',
+            'remind_rating' => 'Teguran Rating',
+            'return' => 'Dikembalikan',
             default => $action,
         };
     }

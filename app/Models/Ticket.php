@@ -4,29 +4,96 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
+/**
+ * @property int $id
+ * @property string $ticket_no
+ * @property string $title
+ * @property string|null $requester_name
+ * @property int|null $requester_id
+ * @property string|null $service_name
+ * @property string|null $subcategory_name
+ * @property string|null $subject_name
+ * @property string|null $issue_category
+ * @property string|null $description
+ * @property string|null $category
+ * @property int|null $sla_policy_id
+ * @property string $priority
+ * @property int|null $approver_id
+ * @property int|null $assigned_agent_id
+ * @property int|null $catalog_subject_id
+ * @property int $response_time_minutes
+ * @property int $resolution_time_minutes
+ * @property int $warning_threshold_percent
+ * @property Carbon $response_due_at
+ * @property Carbon $resolution_due_at
+ * @property Carbon $warning_at
+ * @property string $status
+ * @property bool $is_draft
+ * @property Carbon|null $resolved_at
+ * @property int|null $satisfaction_rating
+ * @property bool $rating_active
+ * @property string|null $feedback_note
+ * @property Carbon|null $escalated_at
+ * @property string|null $escalation_note
+ * @property string|null $reopen_note
+ * @property Carbon|null $reopen_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read string $sla_status
+ * @property-read int|null $sla_minutes_remaining
+ * @property-read string $sla_kind
+ * @property-read string $sla_label
+ * @property-read SlaPolicy|null $slaPolicy
+ * @property-read User|null $requester
+ * @property-read User|null $approver
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketComment> $comments
+ * @property-read SupportAgent|null $assignedAgent
+ * @property-read ServiceCatalogSubject|null $catalogSubject
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketNotification> $notifications
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketApproval> $approvals
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TicketAttachment> $attachments
+ */
 class Ticket extends Model
 {
     public const ACTIVE_STATUSES = ['Waiting for Approval', 'Open', 'Assigned', 'In Progress', 'Waiting for Response'];
 
     public const DONE_STATUSES = ['Resolved', 'Completed', 'Closed'];
 
+    /** Statuses with no active SLA countdown — never submitted, not yet decided, or dead-ended. */
+    public const NO_SLA_STATUSES = ['Draft', 'Returned', 'Waiting for Approval', 'Rejected'];
+
+    /**
+     * Statuses where the ticket hasn't actually reached Support yet — still
+     * being drafted/edited by the Requester, sitting with an Approver, or
+     * dead-ended before ever routing to Support. `assigned_agent_id` is
+     * frozen at creation time (see TicketController::store()), so without
+     * this check Support could otherwise see/act on a ticket the Approver
+     * hasn't released to them.
+     */
+    public const NOT_YET_RELEASED_STATUSES = ['Draft', 'Returned', 'Waiting for Approval', 'Rejected'];
+
     protected $fillable = [
         'ticket_no', 'title', 'requester_name', 'requester_id',
         'service_name', 'subcategory_name', 'subject_name', 'issue_category', 'description',
-        'attachment_name', 'attachment_path',
         'category', 'sla_policy_id', 'priority', 'approver_id', 'assigned_agent_id', 'catalog_subject_id',
         'response_time_minutes', 'resolution_time_minutes', 'warning_threshold_percent',
         'response_due_at', 'resolution_due_at', 'warning_at',
-        'status', 'is_draft', 'resolved_at', 'satisfaction_rating',
+        'status', 'is_draft', 'resolved_at', 'satisfaction_rating', 'rating_active', 'feedback_note',
+        'escalated_at', 'escalation_note',
+        'reopen_note', 'reopen_at',
     ];
 
     protected $casts = [
         'response_due_at' => 'datetime',
         'resolution_due_at' => 'datetime',
         'warning_at' => 'datetime',
+        'reopen_at' => 'datetime',
         'resolved_at' => 'datetime',
+        'escalated_at' => 'datetime',
         'is_draft' => 'boolean',
+        'rating_active' => 'boolean',
     ];
 
     public function slaPolicy()
@@ -62,6 +129,31 @@ class Ticket extends Model
     public function notifications()
     {
         return $this->hasMany(TicketNotification::class);
+    }
+
+    public function approvals()
+    {
+        return $this->hasMany(TicketApproval::class)->orderBy('created_at');
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(TicketAttachment::class)->orderBy('created_at');
+    }
+
+    /**
+     * Shared shape for `attachments` across every ticket-detail/list
+     * endpoint (Requester, Approver, Support, Support BPO, Admin), so a
+     * ticket's files are presented identically everywhere instead of each
+     * controller hand-rolling the Storage URL lookup.
+     */
+    public function attachmentsPayload(): array
+    {
+        return $this->attachments->map(fn (TicketAttachment $a) => [
+            'id' => $a->id,
+            'name' => $a->name,
+            'url' => Storage::disk('public')->url($a->path),
+        ])->values()->all();
     }
 
     /**
@@ -101,17 +193,17 @@ class Ticket extends Model
      */
     public function getSlaMinutesRemainingAttribute(): ?int
     {
-        if (in_array($this->status, ['Draft', 'Waiting for Approval', 'Rejected'], true)) {
+        if (in_array($this->status, self::NO_SLA_STATUSES, true)) {
             return null;
         }
 
         if (in_array($this->status, self::DONE_STATUSES, true)) {
             return $this->resolved_at
-                ? $this->resolved_at->diffInMinutes($this->resolution_due_at, false)
+                ? (int) $this->resolved_at->diffInMinutes($this->resolution_due_at, false)
                 : 0;
         }
 
-        return Carbon::now()->diffInMinutes($this->resolution_due_at, false);
+        return (int) Carbon::now()->diffInMinutes($this->resolution_due_at, false);
     }
 
     public function getSlaKindAttribute(): string
@@ -145,7 +237,7 @@ class Ticket extends Model
             return 'Not started';
         }
 
-        if (in_array($this->status, ['Draft', 'Rejected'], true)) {
+        if (in_array($this->status, ['Draft', 'Returned', 'Rejected'], true)) {
             return '—';
         }
 

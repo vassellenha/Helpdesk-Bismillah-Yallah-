@@ -1,7 +1,6 @@
 import RoleSwitcher from './RoleSwitcher';
 import NotificationBell from './NotificationBell';
 import TicketWorkspace from './TicketWorkspace';
-import ApprovalQueue from './ApprovalQueue';
 import AgentsPanel from './AgentsPanel';
 import SlaChart from './SlaChart';
 import CategoryChart from './CategoryChart';
@@ -37,6 +36,17 @@ import EvaTaxonomy from './eva/EvaTaxonomy';
 import EvaTicketRecommendation from './eva/EvaTicketRecommendation';
 import EvaTrainingOverview from './eva/EvaTrainingOverview';
 import EvaAssistantWidget from './eva/EvaAssistantWidget';
+import ApproverTopNav from './approver/ApproverTopNav';
+import ApprovalInbox from './approver/ApprovalInbox';
+import ApprovalTicketDetail from './approver/ApprovalTicketDetail';
+import ApprovalHistoryPage from './approver/ApprovalHistoryPage';
+import SupportDashboard from './support/SupportDashboard';
+import SupportHistoryPage from './support/SupportHistoryPage';
+import SupportTicketDetail from './support/SupportTicketDetail';
+import SlaComplianceDonut from './charts/SlaComplianceDonut';
+import TeamLeadTopNav from './teamlead/TeamLeadTopNav';
+import TeamLeadWorkspace from './teamlead/TeamLeadWorkspace';
+import TeamLeadTicketDetail from './teamlead/TeamLeadTicketDetail';
 
 // Central map from `data-react="Name"` (set in Blade) to the component
 // that should be mounted on that node. Add new islands here only.
@@ -44,7 +54,6 @@ export const registry = {
     RoleSwitcher,
     NotificationBell,
     TicketWorkspace,
-    ApprovalQueue,
     AgentsPanel,
     SlaChart,
     CategoryChart,
@@ -84,4 +93,15 @@ export const registry = {
     // Widget asisten di portal — satu-satunya komponen EVA yang hidup di luar
     // konsol admin.
     EvaAssistantWidget,
+    ApproverTopNav,
+    ApprovalInbox,
+    ApprovalTicketDetail,
+    ApprovalHistoryPage,
+    SupportDashboard,
+    SupportHistoryPage,
+    SupportTicketDetail,
+    SlaComplianceDonut,
+    TeamLeadTopNav,
+    TeamLeadWorkspace,
+    TeamLeadTicketDetail,
 };
