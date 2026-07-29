@@ -6,6 +6,73 @@
 
 ---
 
+## MULAI DARI SINI (29 Juli 2026, sesi malam-2) — pull tim + mode gelap
+
+**PERINGATAN PALING PENTING: pekerjaan EVA hidup di branch `eva/local-work`,
+bukan `main`.** Setelah menarik 50 commit tim, `main` dijadikan cermin bersih
+`origin/main`. Berpindah ke `main` membuat SELURUH berkas EVA lenyap dari
+working tree — itu normal, bukan kehilangan data, tapi sangat mengagetkan.
+Selalu `git checkout eva/local-work` sebelum bekerja. `git push` tetap
+DILARANG MUTLAK.
+
+### Yang dikerjakan
+
+1. **Pull 50 commit tim** (`d6e15db`). Tim tidak menyentuh satu pun berkas EVA;
+   tabrakan hanya di 6 berkas tim yang EVA ikut sunting, semuanya "dua sisi
+   menambah baris di tempat sama". Knowledge Base terbukti utuh (8 artikel,
+   6 FAQ, 9 dokumen, 99 log, 50 penilaian — identik sebelum/sesudah), katalog
+   tetap 140 subject, 0 tautan `catalog_subject_id` putus.
+2. **Mode gelap** untuk 14 layar konsol + widget chat.
+
+### Dua kerusakan dari pull yang TIDAK terlihat dari konflik merge
+
+Keduanya lolos justru KARENA tim tidak menyentuh berkas EVA — yang menabrak
+adalah asumsi lingkungan, bukan kode yang bertabrakan.
+
+- **243 dari 286 tes mati.** Enam migrasi tim memakai
+  `DB::statement("ALTER TABLE audit_trails MODIFY ... ENUM(...)")`. `MODIFY`
+  hanya dikenal MySQL; tes berjalan di SQLite. Yang gagal bukan satu tes —
+  migrasinya mati di tengah, jadi tiap tes berbasis database tak pernah sampai
+  ke logikanya. Diberi penjaga driver (pola yang sama dengan FULLTEXT `kb_*`).
+  **Ini menyunting berkas TIM dan akan bentrok di pull berikutnya.**
+- **`color-scheme: dark` tim bocor ke `.eva-app`.** Properti itu mewaris, jadi
+  scrollbar dan dropdown EVA menghitam di atas tabel yang tetap putih. Sekarang
+  tidak relevan lagi karena EVA punya mode gelap sungguhan.
+
+### Mode gelap — cara kerjanya
+
+Mengikuti OS/browser saja, tanpa sakelar, sama persis dengan tim. Nilainya
+diambil dari palet tim di `app.css`, bukan dikarang sendiri: EVA dan halaman
+tim tampil bersebelahan di portal, jadi palet kedua yang "mirip tapi tidak
+sama" akan langsung ketahuan.
+
+**Yang ditimpa HANYA nilai token** di `@media (prefers-color-scheme: dark)
+.eva-app`. Nol komponen perlu tahu mode mana yang berlaku.
+
+**Tiga hal yang harus diperbaiki lebih dulu — catat, karena semuanya jenis
+kesalahan yang hanya muncul setelah token dibalik:**
+
+1. **SOLID vs INK wajib dipisah.** `--red-600` dipakai 12× sebagai warna TEKS
+   di atas latar merah lembut, dan sekali sebagai LATAR tombol Hapus yang
+   tulisannya putih. Satu nilai gelap tidak bisa melayani keduanya. Ditambah
+   `--red-solid` / `--green-solid` untuk pemakaian latar.
+2. **`--surface` dan `--surface-muted` tidak pernah ada.** Komponen merujuknya
+   lewat nilai cadangan (`var(--surface, #fff)`) — jadi cadangan itulah yang
+   selalu dipakai, dan ia buta terhadap mode. Dialog akan tetap putih.
+3. **Gradien merek memakai `--blue-ink` sebagai ujung gelap.** Token itu adalah
+   warna TEKS di atas biru lembut, jadi di mode gelap ia berbalik jadi biru
+   muda dan gradiennya memudar. Dipisah ke `--blue-gradient-end`.
+
+**Aturan ke depan: jangan pernah menulis warna harfiah di JSX EVA.** 25 warna
+hardcode diganti token; nol tersisa. Warna yang tidak lewat token adalah warna
+yang buta terhadap mode.
+
+Diverifikasi di browser pada KEDUA mode: Article Library, Coverage Dashboard
+(termasuk Recharts dan bar kesiapan), Unanswered Questions + dialognya,
+Rating & Feedback, dan widget chat di portal. Mode terang tidak berubah.
+
+---
+
 ## MULAI DARI SINI (29 Juli 2026, sesi malam) — EVA punya permukaan
 
 **Keadaan: `php artisan test` → 286 hijau (825 assertion).** Sesi ini memasang
