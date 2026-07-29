@@ -66,7 +66,7 @@ class TicketController extends Controller
         $assignedAgentId = $this->resolveAssignedAgentId($data['catalog_subject_id'] ?? null);
 
         $ticket = Ticket::create([
-            'ticket_no' => $prefix.'-'.$now->format('Y').'-'.str_pad((string) (Ticket::count() + 1), 4, '0', STR_PAD_LEFT),
+            'ticket_no' => $prefix.'-'.$now->format('Y').'-'.$this->nextTicketNumber($now),
             'title' => $data['title'],
             'requester_name' => $requester->name,
             'requester_id' => $requester->id,
@@ -214,6 +214,24 @@ class TicketController extends Controller
         $ticket->delete();
 
         return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * `Ticket::count() + 1` broke as soon as any ticket got deleted (e.g. a
+     * Requester clearing out old drafts): the count drops, so the next
+     * ticket reuses a number that's still taken by a surviving row, hitting
+     * the ticket_no unique constraint. Basing this on the highest number
+     * actually in use for the year is immune to gaps from deletions — it
+     * only ever moves forward, regardless of how many rows disappeared.
+     */
+    private function nextTicketNumber(Carbon $now): string
+    {
+        $maxSuffix = (int) Ticket::query()
+            ->where('ticket_no', 'like', '%-'.$now->format('Y').'-%')
+            ->selectRaw("MAX(CAST(SUBSTRING_INDEX(ticket_no, '-', -1) AS UNSIGNED)) as m")
+            ->value('m');
+
+        return str_pad((string) ($maxSuffix + 1), 4, '0', STR_PAD_LEFT);
     }
 
     /**
