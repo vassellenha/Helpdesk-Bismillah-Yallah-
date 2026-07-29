@@ -6,6 +6,97 @@
 
 ---
 
+## MULAI DARI SINI (29 Juli 2026, sesi malam-3) — serah terima
+
+**Keadaan: bersih.** 289 tes hijau (839 assertion), working tree kosong, nol
+migrasi tertunda, nol job gagal. Semua sudah di-commit ke branch lokal.
+
+### LANGKAH PERTAMA SEBELUM APA PUN
+
+```bash
+git branch --show-current      # HARUS eva/local-work
+```
+
+**Kalau hasilnya `main`, berkas EVA akan terlihat HILANG SEMUA** — binding di
+`AppServiceProvider`, `app/Services/Knowledge/`, komponen `eva/*.jsx`, migrasi
+`kb_*`. Itu normal: sejak pull, `main` sengaja dijadikan cermin bersih
+`origin/main` dan nol berisi EVA. Perbaikannya satu baris:
+
+```bash
+git checkout eva/local-work
+```
+
+Ini sudah pernah terjadi sekali di sesi ini (lewat IDE/GitHub Desktop) dan
+sempat terbaca seperti pekerjaan yang terhapus. **`git push` tetap DILARANG
+MUTLAK.**
+
+### Nyalakan — TIGA hal (tidak berubah)
+
+1. MySQL lewat XAMPP GUI → Manage Servers → MySQL Database → Start
+2. `php artisan serve --port=8000`
+3. `php artisan queue:work` di terminal terpisah — wajib, kalau tidak dokumen
+   berhenti di `processing` selamanya tanpa error apa pun
+4. `php artisan test` → pastikan 289 hijau sebelum menyentuh apa pun
+
+### Riwayat commit sesi ini (branch `eva/local-work`)
+
+```
+e98bbac feat: kotak ulasan selalu tampil di bawah rating
+f597a8b feat: sembunyikan angka keyakinan & ambang dari widget karyawan
+ea28465 docs: catat pull tim, dua kerusakannya, dan cara kerja mode gelap
+590e8e1 feat: mode gelap untuk konsol KB dan widget chat EVA
+2217b27 fix: migrasi enum tim jalan di SQLite
+6c7319e merge: tarik 50 commit tim (d6e15db)
+0db763b feat: EVA Knowledge Base + widget asisten di portal
+d6e15db fix                                    ← ujung origin/main
+```
+
+### Tiga perubahan terakhir pada widget, berikut alasannya
+
+1. **Mode gelap** — ikut OS/browser, tanpa sakelar. Rinciannya di bagian
+   "sesi malam-2" di bawah, termasuk tiga jebakan token yang wajib dibaca
+   sebelum menyentuh warna apa pun.
+2. **Angka keyakinan & ambang DICABUT dari widget** atas permintaan pemilik.
+   Keduanya alat kerja admin; tempatnya tetap di EVA Preview. Prop
+   `thresholds` ikut dicabut sampai ke `AssistantWidget::props()`. **Dua tes
+   mengunci kedua sisinya** — widget tidak boleh menerimanya, EVA Preview
+   harus tetap menerimanya.
+3. **Kotak ulasan selalu tampil di bawah bintang**, tidak lagi hanya saat
+   nilai ≤ 3. Kotaknya sudah ada sejak awal tapi tersembunyi, sehingga ulasan
+   POSITIF tak pernah bisa ditulis siapa pun — padahal panel Rating & Feedback
+   menyaring tanggapan berdasarkan ada-tidaknya KALIMAT, bukan bintangnya.
+   Chip alasan tetap khusus nilai rendah (isinya keluhan).
+
+**Batasan yang disadari:** bintang wajib diberi lebih dulu karena
+`kb_answer_ratings.stars` NOT NULL — tanpa bintang tidak ada baris yang bisa
+ditempeli ulasan. Kotaknya tetap terlihat sejak awal, tombol kirimnya yang
+mati. Kalau pemilik ingin ulasan TANPA bintang, itu butuh migrasi
+(`stars` nullable) DAN keputusan bagaimana ulasan tanpa bintang ikut dihitung
+di rata-rata & sebaran layar Rating & Feedback. **Belum ditanyakan.**
+
+### Pekerjaan berikutnya (belum diputuskan / belum dikerjakan)
+
+1. **Pekerjaan ISI** — kesiapan masih 9% (13/140). Daftar tugasnya sudah ada
+   sendiri di layar Ticket Recommendation & Unanswered Questions, dan
+   `php artisan eva:mine-ticket-subjects`.
+2. **6 migrasi TIM sudah disunting** (penjaga driver SQLite). Minimal dan benar
+   secara umum, tapi **akan bentrok di pull berikutnya**. Layak diusulkan ke
+   rekan tim sebagai perbaikan di sisi mereka.
+3. **FASE 2 audit (dua celah IDOR sisa) — blocked menunggu SSO.** Celah IDOR
+   percakapan sudah ditutup; ticket-draft dan rating masih terbuka.
+4. **`EVA_LOCAL_ACTOR`** tetap yang PERTAMA harus dicabut saat SSO datang.
+5. **Keputusan pgvector/PostgreSQL** sebelum kode embedding ditulis.
+6. Widget baru dipasang di `layouts/portal.blade.php`. Layout requester sengaja
+   belum, atas keputusan pemilik.
+
+### Cadangan pra-pull masih ada
+
+`ADHI/Helpdesk 2.0/_backup-pre-pull-20260729/` — `project.tar.gz` (62 MB,
+termasuk `.git` dan `.env`) + `db.sql` (326 KB, 14 tabel KB berikut datanya).
+Aman dihapus kalau sudah yakin.
+
+---
+
 ## MULAI DARI SINI (29 Juli 2026, sesi malam-2) — pull tim + mode gelap
 
 **PERINGATAN PALING PENTING: pekerjaan EVA hidup di branch `eva/local-work`,
