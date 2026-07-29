@@ -200,6 +200,39 @@ final class AssistantWidgetTest extends TestCase
         $this->assertSame('Bagian verifikasi OTP-nya tidak dijelaskan.', $rating->comment);
     }
 
+    /**
+     * Ulasan BINTANG TINGGI ikut sampai ke Rating & Feedback.
+     *
+     * Sebelumnya kotak ulasan hanya muncul untuk nilai rendah, jadi jalur ini
+     * tidak pernah dilewati siapa pun walau backend-nya selalu menerimanya.
+     * Yang dikunci di sini bukan cuma barisnya tersimpan, melainkan bahwa
+     * kalimatnya benar-benar TERBACA ADMIN — panel Rating & Feedback menyaring
+     * tanggapan berdasarkan ada-tidaknya kalimat, bukan berdasarkan bintang,
+     * dan tes ini yang menahan penyaring itu supaya tidak diam-diam diperketat.
+     */
+    public function test_ulasan_bintang_lima_muncul_di_layar_rating(): void
+    {
+        $logId = $this->postJson(route('eva.assistant.ask'), ['question' => 'cara reset password SAP'])
+            ->json('answer_log_id');
+
+        $this->postJson(route('eva.assistant.rate'), ['answer_log_id' => $logId, 'stars' => 5])->assertOk();
+
+        $this->postJson(route('eva.assistant.note'), [
+            'answer_log_id' => $logId,
+            'comment' => 'Panduannya jelas dan langsungnya berhasil.',
+        ])->assertOk();
+
+        $rating = AnswerRating::sole();
+        $this->assertSame(5, $rating->stars);
+        $this->assertSame('Panduannya jelas dan langsungnya berhasil.', $rating->comment);
+        $this->assertNull($rating->reason, 'Chip alasan memang tidak ditawarkan pada nilai tinggi.');
+
+        $this->actingAsEvaAdmin();
+        $this->get(route('eva.ratings'))
+            ->assertOk()
+            ->assertSee('Panduannya jelas dan langsungnya berhasil.', false);
+    }
+
     public function test_catatan_tanpa_penilaian_ditolak(): void
     {
         $logId = $this->postJson(route('eva.assistant.ask'), ['question' => 'cara reset password SAP'])

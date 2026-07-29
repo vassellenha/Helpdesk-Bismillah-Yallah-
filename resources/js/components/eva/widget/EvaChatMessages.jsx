@@ -122,28 +122,37 @@ function AnswerBubble({ message, onRate, onNote }) {
 }
 
 /**
- * Bintang, lalu kotak catatan bila nilainya rendah.
+ * Bintang, lalu kotak ulasan.
  *
- * Kotak catatan hanya muncul untuk nilai rendah dengan alasan yang disengaja:
- * bintang lima tidak menghasilkan pekerjaan bagi siapa pun, sedangkan bintang
- * satu tanpa keterangan menyisakan pertanyaan "apanya yang salah" yang tidak
- * bisa dijawab siapa pun. Meminta catatan pada keduanya membuat orang berhenti
- * memberi nilai sama sekali.
+ * Kotak ulasannya SELALU tampil di bawah bintang, bukan hanya saat nilainya
+ * rendah. Ulasan bintang lima juga berguna: ia menandai materi yang sudah
+ * benar, dan Rating & Feedback menyaring tanggapan berdasarkan ada-tidaknya
+ * kalimat, bukan berdasarkan bintangnya.
  *
- * Bintangnya dikirim LEBIH DULU dan langsung terkunci. Catatan menyusul sebagai
- * penyempurna baris yang sama — kalau karyawan menutup widget tanpa menulis
- * apa pun, nilainya tetap tercatat.
+ * Yang tetap bergantung pada nilai adalah CHIP ALASAN — isinya keluhan
+ * ("langkahnya kurang lengkap"), jadi menyodorkannya pada bintang lima hanya
+ * membingungkan.
+ *
+ * Bintangnya dikirim LEBIH DULU dan langsung terkunci; ulasan menyusul sebagai
+ * penyempurna baris yang sama. Kalau karyawan menutup widget tanpa menulis apa
+ * pun, nilainya tetap tercatat. Bintang wajib duluan karena `kb_answer_ratings.
+ * stars` NOT NULL — tanpa bintang, tidak ada baris yang bisa ditempeli ulasan.
  */
 function RatingRow({ message, onRate, onNote }) {
     const [note, setNote] = useState('');
     const [reason, setReason] = useState(null);
-    const [noteSent, setNoteSent] = useState(false);
+    // null | 'sent' | 'skipped' — DIBEDAKAN, bukan satu boolean. "Lewati" tidak
+    // mengirim apa pun, jadi menjawabnya dengan "ulasan Anda sudah kami catat"
+    // adalah kalimat yang tidak benar.
+    const [noteState, setNoteState] = useState(null);
 
     const rated = Boolean(message.stars);
-    const wantsNote = rated && message.stars <= LOW_RATING_MAX && !noteSent && !message.rateError;
+    const isLowRating = rated && message.stars <= LOW_RATING_MAX;
+    const wantsNote = noteState === null && !message.rateError;
+    const canSend = rated && Boolean(reason || note.trim());
 
     function submitNote() {
-        setNoteSent(true);
+        setNoteState('sent');
         onNote({ reason, comment: note.trim() || null });
     }
 
@@ -168,42 +177,51 @@ function RatingRow({ message, onRate, onNote }) {
 
             {wantsNote && (
                 <div className="eva-w-note">
-                    <div className="eva-w-chips">
-                        {FEEDBACK_REASONS.map((item) => (
-                            <button
-                                key={item}
-                                type="button"
-                                className="eva-w-chip"
-                                data-on={reason === item ? 'yes' : 'no'}
-                                onClick={() => setReason(reason === item ? null : item)}
-                            >
-                                {item}
-                            </button>
-                        ))}
-                    </div>
+                    {isLowRating && (
+                        <div className="eva-w-chips">
+                            {FEEDBACK_REASONS.map((item) => (
+                                <button
+                                    key={item}
+                                    type="button"
+                                    className="eva-w-chip"
+                                    data-on={reason === item ? 'yes' : 'no'}
+                                    onClick={() => setReason(reason === item ? null : item)}
+                                >
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     <textarea
                         className="eva-w-textarea"
                         name="eva-feedback-note"
-                        aria-label="Catatan untuk penilaian jawaban EVA"
+                        aria-label="Ulasan Anda tentang jawaban EVA"
                         rows={2}
                         value={note}
                         maxLength={2000}
-                        placeholder="Bagian mana yang belum sesuai? (opsional)"
+                        placeholder={
+                            isLowRating
+                                ? 'Bagian mana yang belum sesuai?'
+                                : 'Tulis ulasan Anda tentang jawaban ini…'
+                        }
                         onChange={(e) => setNote(e.target.value)}
                     />
                     <div className="eva-w-note-actions">
-                        <button type="button" className="eva-w-btn" onClick={submitNote} disabled={!reason && !note.trim()}>
-                            Kirim catatan
+                        <button type="button" className="eva-w-btn" onClick={submitNote} disabled={!canSend}>
+                            Kirim ulasan
                         </button>
-                        <button type="button" className="eva-w-btn-ghost" onClick={() => setNoteSent(true)}>
+                        <button type="button" className="eva-w-btn-ghost" onClick={() => setNoteState('skipped')}>
                             Lewati
                         </button>
                     </div>
+                    {!rated && (note.trim() || reason) && (
+                        <div className="eva-w-muted">Beri bintang dulu, lalu ulasannya bisa dikirim.</div>
+                    )}
                 </div>
             )}
 
-            {noteSent && !message.rateError && (
-                <div className="eva-w-muted">Terima kasih. Masukan Anda sudah kami catat.</div>
+            {noteState === 'sent' && !message.rateError && (
+                <div className="eva-w-muted">Terima kasih. Ulasan Anda sudah kami catat.</div>
             )}
 
             {message.rateError && <div className="eva-w-error">{message.rateError}</div>}
