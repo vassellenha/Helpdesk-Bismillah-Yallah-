@@ -4,6 +4,25 @@ return [
     'company' => 'Adhi Karya',
     'product' => 'Helpdesk 2.0',
 
+    /*
+    |--------------------------------------------------------------------------
+    | SLA
+    |--------------------------------------------------------------------------
+    |
+    | Escalating a ticket hands it to a different team that has to pick the case
+    | up from scratch, so the resolution deadline is extended rather than left to
+    | breach on work the new owner never had time to do. The extension is a
+    | percentage of the policy's own resolution window, which keeps it
+    | proportional to priority — a Critical ticket gains far less clock time than
+    | a Low one. The original resolution_time_minutes is never overwritten; the
+    | granted minutes accumulate in tickets.sla_extension_minutes so the original
+    | commitment and every extension stay separately auditable.
+    |
+    */
+    'sla' => [
+        'escalation_extension_percent' => (int) env('SLA_ESCALATION_EXTENSION_PERCENT', 50),
+    ],
+
     // Centralized role metadata used by the role-select portal and the
     // sidebar navigation. Swap the dummy `route` targets for real
     // controller actions as each workspace is wired to the database.

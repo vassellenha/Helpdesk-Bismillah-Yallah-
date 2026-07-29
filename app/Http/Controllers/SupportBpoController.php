@@ -167,6 +167,9 @@ class SupportBpoController extends Controller
             'message' => $data['message'],
         ]);
 
+        // First reply from Support is what stops the response clock.
+        $ticket->markFirstResponse($comment->created_at);
+
         NotificationService::notifyDiscussionParticipants($ticket, $bpoUser, 'Support BPO', $data['message']);
 
         return response()->json($this->presentComment($comment), 201);
@@ -235,6 +238,13 @@ class SupportBpoController extends Controller
             'escalation_note' => $data['note'],
         ]);
 
+        // Support IT starts this case from scratch, so the resolution clock is
+        // extended rather than left to breach on time they never had.
+        $grantedMinutes = $ticket->grantEscalationExtension();
+        $extensionNote = $grantedMinutes > 0
+            ? " Batas SLA diperpanjang {$grantedMinutes} menit."
+            : '';
+
         AuditTrail::record($bpoUser, [
             'module' => 'ticket_support',
             'action' => 'escalate',
@@ -242,8 +252,12 @@ class SupportBpoController extends Controller
             'target_id' => $ticket->id,
             'target_name' => $ticket->ticket_no,
             'old_value' => ['assigned_agent' => $agent->name],
-            'new_value' => ['assigned_agent' => $itAgent->name, 'catatan' => $data['note']],
-            'description' => "{$bpoUser->name} mengeskalasi tiket \"{$ticket->ticket_no}\" ke Support IT ({$itAgent->name}): {$data['note']}",
+            'new_value' => [
+                'assigned_agent' => $itAgent->name,
+                'catatan' => $data['note'],
+                'sla_extension_minutes' => $grantedMinutes,
+            ],
+            'description' => "{$bpoUser->name} mengeskalasi tiket \"{$ticket->ticket_no}\" ke Support IT ({$itAgent->name}): {$data['note']}{$extensionNote}",
         ]);
 
         if ($ticket->requester) {
@@ -470,11 +484,6 @@ class SupportBpoController extends Controller
 
     private function presentTicket(Ticket $t, SupportAgent $agent): array
     {
-        $elapsedPct = 0;
-        if ($t->sla_minutes_remaining !== null && $t->resolution_time_minutes > 0) {
-            $elapsedPct = (int) round((1 - max($t->sla_minutes_remaining, 0) / $t->resolution_time_minutes) * 100);
-            $elapsedPct = max(0, min(100, $t->sla_kind === 'breach' ? 100 : $elapsedPct));
-        }
 
         $isDone = in_array($t->status, Ticket::DONE_STATUSES, true);
 
@@ -490,6 +499,7 @@ class SupportBpoController extends Controller
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
+            'ratingActive' => (bool) $t->rating_active,
             'reopenNote' => $t->reopen_note ? ['note' => $t->reopen_note, 'at' => $t->reopen_at->format('M j, Y · H:i')] : null,
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
@@ -497,9 +507,8 @@ class SupportBpoController extends Controller
                 'email' => $t->requester->email,
             ] : null,
             'sla' => [
+                ...$t->slaPayload(),
                 'label' => $isDone ? 'Selesai dalam SLA' : $t->sla_label,
-                'kind' => $t->sla_kind,
-                'pct' => $elapsedPct,
             ],
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,

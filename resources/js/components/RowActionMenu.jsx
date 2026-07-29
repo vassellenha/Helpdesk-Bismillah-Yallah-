@@ -64,6 +64,10 @@ export default function RowActionMenu({ anchor, items, onClose, width = 176 }) {
                         )}
                         {item.label}
                     </button>
+                    {/* Warns before the click when an action cannot fully take effect. */}
+                    {item.note && (
+                        <p className="px-3 pb-2 text-[11px] leading-snug text-gray-400 dark:text-ink-3">{item.note}</p>
+                    )}
                 </div>
             ))}
         </div>

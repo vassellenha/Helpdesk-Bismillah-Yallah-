@@ -426,6 +426,8 @@ class ApprovalController extends Controller
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
+            'ratingActive' => (bool) $t->rating_active,
+            'sla' => $t->slaPayload(),
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'unit' => $t->requester->unit,

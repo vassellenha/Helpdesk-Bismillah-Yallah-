@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
-import FeedbackDisplay from '../FeedbackDisplay';
+import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
@@ -284,11 +284,14 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                         </Card>
                     ) : null}
 
-                    {ticket.status === 'Closed' && ticket.satisfactionRating && (
-                        <Card title="Feedback">
-                            <FeedbackDisplay rating={ticket.satisfactionRating} note={ticket.feedbackNote} />
-                        </Card>
-                    )}
+                    <Card title="SLA">
+                        <SlaPanel
+                            sla={ticket.sla}
+                            rating={ticket.satisfactionRating}
+                            feedbackNote={ticket.feedbackNote}
+                            ratingActive={ticket.ratingActive ?? true}
+                        />
+                    </Card>
 
                     <Card title="Riwayat Status">
                         <div className="flex flex-col">

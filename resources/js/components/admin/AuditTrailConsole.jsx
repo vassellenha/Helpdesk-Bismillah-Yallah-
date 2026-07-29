@@ -13,6 +13,7 @@ const MODULE_LABELS = {
     ticket_support: 'Penanganan Support',
     team_lead: 'Team Lead',
     ticket_management: 'Ticket Management',
+    integration: 'Integrasi',
 };
 
 const ACTION_LABELS = {
@@ -33,6 +34,7 @@ const ACTION_LABELS = {
     raise_priority: 'Naikkan Prioritas',
     remind_rating: 'Teguran Rating',
     return: 'Dikembalikan',
+    sync: 'Sinkronisasi',
 };
 
 export default function AuditTrailConsole({ logs, administrators }) {

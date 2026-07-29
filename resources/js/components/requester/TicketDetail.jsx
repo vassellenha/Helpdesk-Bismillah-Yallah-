@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import NewTicketModal from '../NewTicketModal';
-import FeedbackDisplay from '../FeedbackDisplay';
+import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
-const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
 
 const TIMELINE_DOT = {
     done: 'bg-emerald-500',
@@ -479,25 +478,13 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
 
                 <div className="flex flex-col gap-6">
                     <Card title="SLA">
-                        <div className="mb-3 flex items-center justify-between">
-                            <span className="text-[13px] text-gray-500 dark:text-ink-2">Resolution target</span>
-                            <span className="text-[13px] font-bold" style={{ color: SLA_COLOR[ticket.sla.kind] }}>{ticket.sla.label}</span>
-                        </div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
-                            <div className="h-full rounded-full" style={{ width: `${ticket.sla.pct}%`, backgroundColor: SLA_COLOR[ticket.sla.kind] }} />
-                        </div>
-                        <div className="mt-4 space-y-2 border-t border-gray-100 dark:border-edge pt-3.5 text-[13px]">
-                            <div className="flex justify-between"><span className="text-gray-500 dark:text-ink-2">Response target</span><span className="font-semibold text-gray-800 dark:text-ink-1">{ticket.sla.responseTarget}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500 dark:text-ink-2">Resolution target</span><span className="font-semibold text-gray-800 dark:text-ink-1">{ticket.sla.resolutionTarget}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500 dark:text-ink-2">Priority</span><span className="font-semibold text-gray-800 dark:text-ink-1">{ticket.priority}</span></div>
-                        </div>
+                        <SlaPanel
+                            sla={ticket.sla}
+                            rating={ticket.satisfactionRating}
+                            feedbackNote={ticket.feedbackNote}
+                            ratingActive={ticket.ratingActive ?? true}
+                        />
                     </Card>
-
-                    {status === 'Closed' && ticket.satisfactionRating && (
-                        <Card title="Feedback">
-                            <FeedbackDisplay rating={ticket.satisfactionRating} note={ticket.feedbackNote} />
-                        </Card>
-                    )}
 
                     <Card title="People">
                         <div className="flex flex-col gap-3.5">

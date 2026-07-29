@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+import RatingStars from '../RatingStars';
 
 const STATUS_STYLES = {
     Draft: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20',
@@ -295,13 +296,7 @@ function RatingCell({ ticket, busy, onToggle }) {
 
     return (
         <div className="flex items-center gap-2">
-            <span className={`flex items-center gap-0.5 ${ticket.ratingActive ? '' : 'opacity-40 grayscale'}`}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                    <svg key={n} width="12" height="12" viewBox="0 0 24 24" fill={n <= ticket.rating ? '#f59e0b' : 'none'} stroke={n <= ticket.rating ? '#f59e0b' : '#d1d5db'} strokeWidth="1.6" strokeLinejoin="round">
-                        <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" />
-                    </svg>
-                ))}
-            </span>
+            <RatingStars rating={ticket.rating} size={12} muted={!ticket.ratingActive} />
             <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onToggle(ticket); }}
@@ -350,6 +345,17 @@ function TicketDetailModal({ ticket: t, onClose }) {
                             <Detail label="Priority" value={<PriorityBadge priority={t.priority} />} />
                             <Detail label="SLA" value={<span className={SLA_TEXT_STYLES[t.sla.kind]}>{t.sla.label}</span>} />
                             <Detail label="Status" value={<StatusBadge status={t.status} />} />
+                            <Detail
+                                label="Rating Requester"
+                                span
+                                value={t.rating ? (
+                                    <span className="flex items-center gap-1.5">
+                                        <RatingStars rating={t.rating} muted={!t.ratingActive} />
+                                        <span>{t.rating}/5</span>
+                                        {!t.ratingActive && <span className="text-xs text-gray-400 dark:text-ink-3">· dikecualikan dari rata-rata</span>}
+                                    </span>
+                                ) : 'Belum dinilai'}
+                            />
                         </div>
                         <div className="rounded-lg bg-gray-50 dark:bg-panel-3 p-4">
                             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Status Tiket</p>
@@ -389,16 +395,26 @@ function TicketDetailModal({ ticket: t, onClose }) {
                     <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">Deskripsi</h3>
                     <p className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3 text-sm text-gray-700 dark:text-ink-2">{t.description || '—'}</p>
 
-                    {t.attachmentName && (
+                    {(t.attachments ?? []).length > 0 && (
                         <>
                             <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">Lampiran</h3>
-                            {t.attachmentUrl ? (
-                                <a href={t.attachmentUrl} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong p-3 text-sm text-blue-700 dark:text-accent-text hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                                    📎 {t.attachmentName}
-                                </a>
-                            ) : (
-                                <p className="rounded-lg border border-gray-200 dark:border-edge-strong p-3 text-sm text-gray-500 dark:text-ink-2">📎 {t.attachmentName}</p>
-                            )}
+                            <div className="flex flex-col gap-2">
+                                {t.attachments.map((a) => (a.missing ? (
+                                    <p key={a.id} className="rounded-lg border border-gray-200 dark:border-edge-strong p-3 text-sm text-gray-400 dark:text-ink-3">
+                                        📎 {a.name} · <span className="italic">berkas tidak ditemukan di penyimpanan</span>
+                                    </p>
+                                ) : (
+                                    <a
+                                        key={a.id}
+                                        href={a.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong p-3 text-sm text-blue-700 dark:text-accent-text hover:bg-gray-50 dark:hover:bg-panel-hover"
+                                    >
+                                        📎 {a.name}
+                                    </a>
+                                )))}
+                            </div>
                         </>
                     )}
 

@@ -21,6 +21,9 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
     const [menu, setMenu] = useState(null); // { user, top, left }
     const [modal, setModal] = useState(null); // 'role' | 'addRole' | 'addUser' | { type: 'manageUser', user }
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
+    const [syncing, setSyncing] = useState(false);
+    const [syncResult, setSyncResult] = useState(null);
 
     function openMenu(e, user) {
         if (menu?.user.id === user.id) {
@@ -28,7 +31,10 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
             return;
         }
         const rect = e.currentTarget.getBoundingClientRect();
-        setMenu({ user, ...menuPositionFor(rect) });
+        // The employment-status note adds a third line, so the flip-above
+        // calculation needs the taller estimate or the menu clips off-screen.
+        const height = user.employment_status === 'Nonaktif' ? 150 : 96;
+        setMenu({ user, ...menuPositionFor(rect, { height }) });
     }
 
     const roleNames = useMemo(() => Array.from(new Set(users.flatMap((u) => u.roles))), [users]);
@@ -52,11 +58,37 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
     async function toggleUserStatus(id) {
         setMenu(null);
         setError('');
+        setNotice('');
         try {
             const updated = await apiFetch(`/admin/users/${id}/toggle`, { method: 'POST' });
             setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+
+            // Enabling access on someone the company API reports as no longer
+            // employed succeeds but changes nothing visible — say so, otherwise
+            // the row just stays "Nonaktif" and the click looks broken.
+            if (updated.helpdesk_access === 'enabled' && updated.status === 'Nonaktif') {
+                setNotice(
+                    `Akses helpdesk ${updated.name} sudah diaktifkan, tetapi akunnya tetap nonaktif karena ${updated.status_reason.toLowerCase()}. ` +
+                    'Status kepegawaian hanya bisa berubah dari API perusahaan.'
+                );
+            }
         } catch (e) {
             setError(e.message || 'Gagal memperbarui status user.');
+        }
+    }
+
+    async function syncEmployees() {
+        setError('');
+        setSyncResult(null);
+        setSyncing(true);
+        try {
+            const { summary, users: fresh } = await apiFetch('/admin/users/sync', { method: 'POST' });
+            setUsers(fresh);
+            setSyncResult(summary);
+        } catch (e) {
+            setError(e.message || 'Sinkronisasi data pegawai gagal.');
+        } finally {
+            setSyncing(false);
         }
     }
 
@@ -82,6 +114,26 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Kelola pengguna aplikasi, multi-role, akses autentikasi, dan penugasan support.</p>
                 </div>
                 <div className="flex shrink-0 gap-2">
+                    <button
+                        onClick={syncEmployees}
+                        disabled={syncing}
+                        title="Tarik data pegawai terbaru dari API perusahaan"
+                        className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
+                            aria-hidden="true"
+                        >
+                            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                            <path d="M21 3v6h-6" />
+                        </svg>
+                        {syncing ? 'Menyinkronkan…' : 'Sync Data Pegawai'}
+                    </button>
                     <button onClick={() => setModal('role')} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         ⚙ Kelola Role
                     </button>
@@ -92,6 +144,63 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
             </div>
 
             {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
+
+            {notice && (
+                <div className="mb-4 flex items-start justify-between gap-3 rounded-lg bg-amber-50 dark:bg-warn-soft p-3 text-sm text-amber-800 dark:text-warn-text">
+                    <p>{notice}</p>
+                    <button
+                        onClick={() => setNotice('')}
+                        className="shrink-0 rounded p-0.5 text-amber-600 dark:text-warn-text hover:bg-amber-100 dark:hover:bg-panel-hover"
+                        aria-label="Tutup"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
+            {syncResult && (
+                <div className="mb-4 rounded-lg bg-emerald-50 dark:bg-ok-soft p-3 text-sm text-emerald-800 dark:text-ok-text">
+                    <div className="flex items-start justify-between gap-3">
+                        <p>
+                            <span className="font-semibold">Sinkronisasi selesai.</span>{' '}
+                            {syncResult.fetched} data diterima — {syncResult.created} dibuat, {syncResult.updated} diperbarui,{' '}
+                            {syncResult.unchanged} tidak berubah
+                            {syncResult.deactivated > 0 && <>, {syncResult.deactivated} dinonaktifkan</>}
+                            {syncResult.skipped.length > 0 && <>, {syncResult.skipped.length} dilewati</>}.
+                        </p>
+                        <button
+                            onClick={() => setSyncResult(null)}
+                            className="shrink-0 rounded p-0.5 text-emerald-600 dark:text-ok-text hover:bg-emerald-100 dark:hover:bg-panel-hover"
+                            aria-label="Tutup"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    {syncResult.changes.length > 0 && (
+                        <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs">
+                            {syncResult.changes.map((c) => (
+                                <li key={c.name}>
+                                    <span className="font-medium">{c.name}</span> — {c.fields.join(', ')}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {syncResult.skipped.length > 0 && (
+                        <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs">
+                            {syncResult.skipped.map((reason) => (
+                                <li key={reason}>{reason}</li>
+                            ))}
+                        </ul>
+                    )}
+                    {syncResult.kept_empty > 0 && (
+                        <p className="mt-2 text-xs opacity-80">
+                            {syncResult.kept_empty} field dipertahankan karena API tidak mengirim nilainya — field tersebut
+                            tidak dikembalikan oleh sync, jadi perubahan manualmu di sana tetap bertahan.
+                        </p>
+                    )}
+                    <p className="mt-2 text-xs opacity-80">Tercatat di Audit Trail — modul “Integrasi”.</p>
+                </div>
+            )}
 
             <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <Stat label="TOTAL USER" value={users.length} color="text-blue-600 dark:text-accent-text" bg="bg-blue-50 dark:bg-accent-soft" />
@@ -128,7 +237,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                             <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                                 <th className="px-4 py-3">Nama</th>
                                 <th className="px-4 py-3">NIP</th>
-                                <th className="px-4 py-3">Email / WhatsApp</th>
+                                <th className="px-4 py-3">Email / Telepon</th>
                                 <th className="px-4 py-3">Unit Kerja</th>
                                 <th className="px-4 py-3">Jabatan</th>
                                 <th className="px-4 py-3">Role</th>
@@ -144,7 +253,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                                     <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{u.nip}</td>
                                     <td className="px-4 py-3">
                                         <p className="text-gray-700 dark:text-ink-2">{u.email}</p>
-                                        <p className="text-xs text-gray-400 dark:text-ink-3">{u.whatsapp}</p>
+                                        <p className="text-xs text-gray-400 dark:text-ink-3">{u.phone}</p>
                                     </td>
                                     <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{u.unit}</td>
                                     <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{u.jabatan}</td>
@@ -160,6 +269,9 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                                             <span className={`h-1.5 w-1.5 rounded-full ${u.status === 'Aktif' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                                             {u.status}
                                         </span>
+                                        {u.status_reason && (
+                                            <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">{u.status_reason}</p>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 text-gray-500 dark:text-ink-2">{u.last_login}</td>
                                     <td className="px-4 py-3 text-right">
@@ -189,9 +301,14 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                     items={[
                         { label: 'Edit', icon: ICON_EDIT, onClick: () => setModal({ type: 'manageUser', user: menu.user }) },
                         {
-                            label: menu.user.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan',
-                            icon: menu.user.status === 'Aktif' ? ICON_DEACTIVATE : ICON_ACTIVATE,
-                            tone: menu.user.status === 'Aktif' ? 'danger' : 'success',
+                            // Toggles helpdesk access only — employment status comes
+                            // from the company API and cannot be changed from here.
+                            label: menu.user.helpdesk_access === 'enabled' ? 'Nonaktifkan Akses' : 'Aktifkan Akses',
+                            icon: menu.user.helpdesk_access === 'enabled' ? ICON_DEACTIVATE : ICON_ACTIVATE,
+                            tone: menu.user.helpdesk_access === 'enabled' ? 'danger' : 'success',
+                            note: menu.user.employment_status === 'Nonaktif'
+                                ? 'Akun tetap nonaktif: pegawai ini nonaktif di data kepegawaian dari API perusahaan.'
+                                : null,
                             divider: true,
                             onClick: () => toggleUserStatus(menu.user.id),
                         },

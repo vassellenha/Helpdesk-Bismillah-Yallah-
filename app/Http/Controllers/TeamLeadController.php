@@ -315,7 +315,11 @@ class TeamLeadController extends Controller
                 'createdAt' => $ticket->created_at->format('d M Y · H:i'),
                 'sla' => $ticket->sla_label,
                 'slaKind' => $ticket->sla_kind,
+                'slaPanel' => $ticket->slaPayload(),
                 'resolutionDue' => optional($ticket->resolution_due_at)->format('d M Y · H:i'),
+                'satisfactionRating' => $ticket->satisfaction_rating,
+                'feedbackNote' => $ticket->feedback_note,
+                'ratingActive' => (bool) $ticket->rating_active,
                 'agent' => $ticket->assignedAgent?->name ?? 'Belum ada PIC',
                 'agentId' => $ticket->assigned_agent_id,
                 'requester' => $ticket->requester ? [

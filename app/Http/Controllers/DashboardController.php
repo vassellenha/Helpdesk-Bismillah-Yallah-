@@ -119,12 +119,6 @@ class DashboardController extends Controller
 
     private function presentRow(Ticket $t): array
     {
-        $elapsedPct = 0;
-        if ($t->sla_minutes_remaining !== null && $t->resolution_time_minutes > 0) {
-            $elapsedPct = (int) round((1 - max($t->sla_minutes_remaining, 0) / $t->resolution_time_minutes) * 100);
-            $elapsedPct = max(0, min(100, $t->sla_kind === 'breach' ? 100 : $elapsedPct));
-        }
-
         return [
             'id' => $t->ticket_no,
             'title' => $t->title,
@@ -137,7 +131,7 @@ class DashboardController extends Controller
             'sla' => $t->sla_label,
             'slaKind' => $t->sla_kind,
             'slaMinutes' => $t->sla_minutes_remaining,
-            'slaPct' => $elapsedPct,
+            'slaPct' => $t->sla_elapsed_percent,
             'created' => $t->created_at->format('M j, Y'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('requester.tickets.show', $t),

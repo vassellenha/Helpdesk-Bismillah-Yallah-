@@ -86,15 +86,13 @@ class TicketDetailController extends Controller
             'path' => $path,
         ]);
 
+        // Same shape as Ticket::attachmentsPayload() so the viewer never has to
+        // care whether a list came from a page load or from an upload response.
+        $attachments = $ticket->load('attachments')->attachmentsPayload();
+
         return response()->json([
-            'attachment' => [
-                'id' => $attachment->id,
-                'name' => $attachment->name,
-                'url' => Storage::disk('public')->url($attachment->path),
-            ],
-            'attachments' => $ticket->attachments()->get()
-                ->map(fn (TicketAttachment $a) => ['id' => $a->id, 'name' => $a->name, 'url' => Storage::disk('public')->url($a->path)])
-                ->values(),
+            'attachment' => collect($attachments)->firstWhere('id', $attachment->id),
+            'attachments' => $attachments,
         ], 201);
     }
 
@@ -239,12 +237,6 @@ class TicketDetailController extends Controller
             }
         }
 
-        $elapsedPct = 0;
-        if ($t->sla_minutes_remaining !== null && $t->resolution_time_minutes > 0) {
-            $elapsedPct = (int) round((1 - max($t->sla_minutes_remaining, 0) / $t->resolution_time_minutes) * 100);
-            $elapsedPct = max(0, min(100, $t->sla_kind === 'breach' ? 100 : $elapsedPct));
-        }
-
         return [
             'id' => $t->ticket_no,
             'title' => $t->title,
@@ -274,13 +266,8 @@ class TicketDetailController extends Controller
                 'agentName' => $supportReturnAudit->actor?->name ?? 'Tim Support',
                 'at' => $supportReturnAudit->created_at->format('M j, Y · H:i'),
             ] : null,
-            'sla' => [
-                'label' => $t->sla_label,
-                'kind' => $t->sla_kind,
-                'pct' => $elapsedPct,
-                'responseTarget' => $this->formatMinutes($t->response_time_minutes),
-                'resolutionTarget' => $this->formatMinutes($t->resolution_time_minutes),
-            ],
+            'sla' => $t->slaPayload(),
+            'ratingActive' => (bool) $t->rating_active,
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
                 'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
@@ -357,18 +344,6 @@ class TicketDetailController extends Controller
             'message' => $c->message,
             'at' => $c->created_at->format('M j · H:i'),
         ];
-    }
-
-    private function formatMinutes(int $minutes): string
-    {
-        if ($minutes % 1440 === 0) {
-            return ($minutes / 1440).' day'.($minutes / 1440 > 1 ? 's' : '');
-        }
-        if ($minutes % 60 === 0) {
-            return ($minutes / 60).' hour'.($minutes / 60 > 1 ? 's' : '');
-        }
-
-        return "{$minutes} minutes";
     }
 
     private function initials(string $name): string

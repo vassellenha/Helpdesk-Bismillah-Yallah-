@@ -3,6 +3,8 @@ import { StatusBadge, PriorityBadge } from '../StatusBadge';
 import RemindModal from './RemindModal';
 import ReassignModal from './ReassignModal';
 import RaisePriorityModal from './RaisePriorityModal';
+import SlaPanel from '../SlaPanel';
+
 
 const STEP_STYLE = {
     done: { dot: 'bg-emerald-500', text: 'text-gray-800 dark:text-ink-1' },
@@ -99,6 +101,16 @@ export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], c
                                     </div>
                                 ))}
                             </dl>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">SLA</h2>
+                            <SlaPanel
+                                sla={ticket.slaPanel}
+                                rating={ticket.satisfactionRating}
+                                feedbackNote={ticket.feedbackNote}
+                                ratingActive={ticket.ratingActive ?? true}
+                            />
                         </div>
 
                         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">

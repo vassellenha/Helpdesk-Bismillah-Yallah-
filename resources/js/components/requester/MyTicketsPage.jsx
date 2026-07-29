@@ -4,8 +4,6 @@ import NewTicketModal from '../NewTicketModal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
 
-const ACTIVE_STATUSES = ['Waiting for Approval', 'Open', 'Assigned', 'In Progress', 'Waiting for Response'];
-const DONE_STATUSES = ['Resolved', 'Completed', 'Closed'];
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
 const PERIOD_DAYS = { 'Last 30 days': 30, 'Last 3 months': 92, 'Last 6 months': 183, 'This year': 366 };
 const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
@@ -20,12 +18,30 @@ const COLUMNS = [
     { key: 'createdAt', label: 'Created' },
 ];
 
+// Same status pills the Approver's My Tickets uses, so a requester and an
+// approver reading the same ticket describe its state with the same word.
+// "Draft" is the one addition — only a requester has unsent tickets.
+const STATUS_PILLS = ['Semua', 'Draft', 'Returned', 'Waiting for Approval', 'Open', 'In Progress', 'Resolved', 'Closed', 'Rejected'];
+
+const STATUS_BUCKET = {
+    Draft: (s) => s === 'Draft',
+    Returned: (s) => s === 'Returned',
+    'Waiting for Approval': (s) => s === 'Waiting for Approval',
+    Open: (s) => s === 'Open',
+    'In Progress': (s) => ['Assigned', 'In Progress', 'Waiting for Response'].includes(s),
+    Resolved: (s) => s === 'Resolved',
+    Closed: (s) => ['Closed', 'Completed'].includes(s),
+    Rejected: (s) => s === 'Rejected',
+};
+
+// Draft and Returned are the only tickets still purely the requester's to
+// discard — TicketController::destroy() enforces the same boundary.
+const BULK_DELETABLE = ['Draft', 'Returned'];
+
 function inTab(tab, status) {
-    if (tab === 'All') return true;
-    if (tab === 'Draft') return status === 'Draft' || status === 'Returned';
-    if (tab === 'Active') return ACTIVE_STATUSES.includes(status);
-    if (tab === 'Completed') return DONE_STATUSES.includes(status);
-    return status === 'Rejected';
+    if (tab === 'Semua') return true;
+    const test = STATUS_BUCKET[tab];
+    return test ? test(status) : true;
 }
 
 function sortValue(row, key) {
@@ -35,7 +51,7 @@ function sortValue(row, key) {
     return (row[key] ?? '').toString().toLowerCase();
 }
 
-function DeleteConfirmModal({ count, deleting, onCancel, onConfirm }) {
+function DeleteConfirmModal({ count, label, deleting, onCancel, onConfirm }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={() => !deleting && onCancel()}>
             <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -44,7 +60,7 @@ function DeleteConfirmModal({ count, deleting, onCancel, onConfirm }) {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6 M14 11v6" /></svg>
                     </span>
                     <div>
-                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Hapus {count} draft tiket?</h2>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Hapus {count} tiket {label}?</h2>
                         <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">
                             Tiket yang dipilih akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
                         </p>
@@ -73,7 +89,7 @@ function DeleteConfirmModal({ count, deleting, onCancel, onConfirm }) {
 
 export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl, approversUrl, submitUrl }) {
     const [tickets, setTickets] = useState(initialTickets);
-    const [tab, setTab] = useState('All');
+    const [tab, setTab] = useState('Semua');
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('All Issue Categories');
     const [service, setService] = useState('All Layanan');
@@ -87,24 +103,18 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteError, setDeleteError] = useState('');
 
-    // Selecting drafts to delete is only meaningful while the Draft tab is
-    // active — leaving it clears the checkboxes instead of letting a stale
-    // selection carry over and silently delete the wrong tickets later.
-    useEffect(() => {
-        if (tab !== 'Draft') setSelectedIds(new Set());
-    }, [tab]);
+    const bulkDeletable = BULK_DELETABLE.includes(tab);
 
-    // Counts are derived live from the ticket list (not a server-supplied
-    // prop) so they stay correct right after a client-side delete, with no
-    // page reload needed — matches DashboardController::myTickets()'s bucket
-    // logic exactly.
-    const counts = useMemo(() => ({
-        All: tickets.length,
-        Draft: tickets.filter((t) => inTab('Draft', t.status)).length,
-        Active: tickets.filter((t) => inTab('Active', t.status)).length,
-        Completed: tickets.filter((t) => inTab('Completed', t.status)).length,
-        Rejected: tickets.filter((t) => inTab('Rejected', t.status)).length,
-    }), [tickets]);
+    // Selecting tickets to delete is only meaningful on a bulk-deletable tab —
+    // leaving it clears the checkboxes instead of letting a stale selection
+    // carry over and silently delete the wrong tickets later.
+    useEffect(() => {
+        if (! bulkDeletable) setSelectedIds(new Set());
+    }, [bulkDeletable]);
+
+    // Derived live from the ticket list (not a server-supplied prop) so it stays
+    // correct right after a client-side delete, with no page reload.
+    const returnedCount = useMemo(() => tickets.filter((t) => t.status === 'Returned').length, [tickets]);
 
     function toggleSort(key) {
         if (key === sortKey) {
@@ -131,7 +141,8 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
             if (new Date(t.createdAt).getTime() < cutoff) return false;
             if (search.trim() !== '') {
                 const q = search.trim().toLowerCase();
-                if (!t.id.toLowerCase().includes(q) && !t.title.toLowerCase().includes(q)) return false;
+                const haystack = `${t.id} ${t.title} ${t.service ?? ''}`.toLowerCase();
+                if (!haystack.includes(q)) return false;
             }
             return true;
         });
@@ -145,7 +156,6 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
         return rows;
     }, [tickets, tab, category, service, subcategory, priority, period, search, sortKey, sortDir]);
 
-    const tabs = ['All', 'Draft', 'Active', 'Completed', 'Rejected'];
     const allFilteredSelected = filtered.length > 0 && filtered.every((row) => selectedIds.has(row.id));
 
     function toggleRow(id) {
@@ -194,43 +204,56 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                 <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} />
             </div>
 
-            <div className="flex w-fit gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-sm">
-                {tabs.map((t) => {
-                    const active = tab === t;
-                    return (
-                        <button
-                            key={t}
-                            onClick={() => setTab(t)}
-                            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 dark:bg-blue-500 text-white' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
-                        >
-                            {t}
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-panel-3 text-gray-400 dark:text-ink-3'}`}>
-                                {counts[t] ?? 0}
-                            </span>
-                        </button>
-                    );
-                })}
+            {returnedCount > 0 && tab !== 'Returned' && (
+                <button
+                    type="button"
+                    onClick={() => setTab('Returned')}
+                    className="flex items-center gap-3 rounded-xl border border-amber-200 dark:border-transparent bg-amber-50 dark:bg-warn-soft px-4 py-3 text-left text-[13px] text-amber-800 dark:text-warn-text hover:bg-amber-100 dark:hover:bg-panel-hover"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 14 4 9l5-5" /><path d="M20 20v-7a4 4 0 0 0-4-4H4" /></svg>
+                    <span>
+                        <span className="font-bold">{returnedCount} tiket dikembalikan Tim Support untuk diperbaiki.</span>{' '}
+                        Buka tiketnya, baca catatan Support, lalu tekan “Edit &amp; Resubmit” untuk mengirim ulang.
+                    </span>
+                </button>
+            )}
+
+            <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-3 shadow-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400 dark:text-ink-3"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    type="text"
+                    placeholder="Cari tiket, judul, atau layanan…"
+                    className="flex-1 border-none bg-transparent text-[13px] text-gray-900 dark:text-ink-1 outline-none placeholder:text-gray-400"
+                />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-3 py-2.5">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400 dark:text-ink-3"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        type="text"
-                        placeholder="Search by ticket number or title…"
-                        className="flex-1 border-none bg-transparent text-[13px] text-gray-900 dark:text-ink-1 outline-none placeholder:text-gray-400"
-                    />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-sm">
+                    {STATUS_PILLS.map((p) => {
+                        const active = tab === p;
+                        return (
+                            <button
+                                key={p}
+                                onClick={() => setTab(p)}
+                                className={`rounded-lg px-3.5 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 dark:bg-blue-500 text-white' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
+                            >
+                                {p}
+                            </button>
+                        );
+                    })}
                 </div>
-                <SelectMenu value={service} onChange={setService} options={services.map((s) => ({ value: s, label: s }))} />
-                <SelectMenu value={subcategory} onChange={setSubcategory} options={subcategories.map((s) => ({ value: s, label: s }))} />
-                <SelectMenu value={category} onChange={setCategory} options={categories.map((c) => ({ value: c, label: c }))} />
-                <SelectMenu value={priority} onChange={setPriority} options={['All Priorities', 'Critical', 'High', 'Medium', 'Low'].map((p) => ({ value: p, label: p }))} />
-                <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: p }))} />
+                <div className="flex flex-wrap items-center gap-3">
+                    <SelectMenu value={service} onChange={setService} options={services.map((s) => ({ value: s, label: s }))} />
+                    <SelectMenu value={subcategory} onChange={setSubcategory} options={subcategories.map((s) => ({ value: s, label: s }))} />
+                    <SelectMenu value={category} onChange={setCategory} options={categories.map((c) => ({ value: c, label: c }))} />
+                    <SelectMenu value={priority} onChange={setPriority} options={['All Priorities', 'Critical', 'High', 'Medium', 'Low'].map((p) => ({ value: p, label: p }))} />
+                    <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: p }))} />
+                </div>
             </div>
 
-            {tab === 'Draft' && selectedIds.size > 0 && (
+            {bulkDeletable && selectedIds.size > 0 && (
                 <div className="flex items-center justify-between rounded-xl border border-blue-200 dark:border-edge-strong bg-blue-50 dark:bg-accent-soft px-4 py-3">
                     <span className="text-[13px] font-semibold text-blue-800 dark:text-accent-text">{selectedIds.size} tiket dipilih</span>
                     <button
@@ -253,6 +276,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
             {showDeleteConfirm && (
                 <DeleteConfirmModal
                     count={selectedIds.size}
+                    label={tab === 'Returned' ? 'yang dikembalikan' : 'draft'}
                     deleting={deleting}
                     onCancel={() => setShowDeleteConfirm(false)}
                     onConfirm={deleteSelected}
@@ -264,7 +288,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                     <table className="min-w-[860px] w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                {tab === 'Draft' && (
+                                {bulkDeletable && (
                                     <th className="w-10 px-4 py-3.5 pl-6">
                                         <input
                                             type="checkbox"
@@ -297,7 +321,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                                     onClick={() => row.href && (window.location.href = row.href)}
                                     className="cursor-pointer border-b border-gray-50 last:border-0 dark:border-transparent dark:even:bg-white/[0.03] hover:bg-blue-50/40 dark:hover:bg-panel-hover"
                                 >
-                                    {tab === 'Draft' && (
+                                    {bulkDeletable && (
                                         <td className="px-4 py-4 pl-6" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
@@ -307,7 +331,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                                             />
                                         </td>
                                     )}
-                                    <td className={`px-4 py-4 font-bold text-blue-600 dark:text-accent-text ${tab === 'Draft' ? '' : 'pl-6'}`}>{row.id}</td>
+                                    <td className={`px-4 py-4 font-bold text-blue-600 dark:text-accent-text ${bulkDeletable ? '' : 'pl-6'}`}>{row.id}</td>
                                     <td className="px-4 py-4">
                                         <p className="max-w-[240px] truncate font-semibold text-gray-900 dark:text-ink-1">{row.title}</p>
                                         <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{row.app}</p>
@@ -321,7 +345,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={tab === 'Draft' ? 8 : 7} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">No tickets match these filters.</td>
+                                    <td colSpan={bulkDeletable ? 8 : 7} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">No tickets match these filters.</td>
                                 </tr>
                             )}
                         </tbody>

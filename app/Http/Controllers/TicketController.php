@@ -87,6 +87,7 @@ class TicketController extends Controller
             'response_due_at' => $now->clone()->addMinutes($policy->response_time_minutes),
             'resolution_due_at' => $resolutionDueAt,
             'warning_at' => $warningAt,
+            'sla_started_at' => $now,
             'status' => $status,
             'is_draft' => $isDraft,
         ]);
@@ -176,6 +177,11 @@ class TicketController extends Controller
             'warning_threshold_percent' => $policy->warning_threshold_percent,
             'response_due_at' => $now->clone()->addMinutes($policy->response_time_minutes),
             'resolution_due_at' => $now->clone()->addMinutes($policy->resolution_time_minutes),
+            // A resubmitted ticket gets a fresh SLA, so last round's response
+            // stamp and escalation credit must not carry over into it.
+            'sla_started_at' => $now,
+            'first_response_at' => null,
+            'sla_extension_minutes' => 0,
             'warning_at' => $now->clone()->addMinutes((int) round($policy->resolution_time_minutes * $policy->warning_threshold_percent / 100)),
             'status' => $status,
             'is_draft' => $isDraft,

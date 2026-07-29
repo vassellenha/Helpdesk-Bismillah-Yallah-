@@ -171,6 +171,9 @@ class SupportController extends Controller
             'message' => $data['message'],
         ]);
 
+        // First reply from Support is what stops the response clock.
+        $ticket->markFirstResponse($comment->created_at);
+
         NotificationService::notifyDiscussionParticipants($ticket, $supportUser, 'Support IT', $data['message']);
 
         return response()->json($this->presentComment($comment), 201);
@@ -415,12 +418,6 @@ class SupportController extends Controller
 
     private function presentTicket(Ticket $t, SupportAgent $agent): array
     {
-        $elapsedPct = 0;
-        if ($t->sla_minutes_remaining !== null && $t->resolution_time_minutes > 0) {
-            $elapsedPct = (int) round((1 - max($t->sla_minutes_remaining, 0) / $t->resolution_time_minutes) * 100);
-            $elapsedPct = max(0, min(100, $t->sla_kind === 'breach' ? 100 : $elapsedPct));
-        }
-
         $isDone = in_array($t->status, Ticket::DONE_STATUSES, true);
 
         return [
@@ -435,6 +432,7 @@ class SupportController extends Controller
             'createdAt' => $t->created_at->format('M j, Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
+            'ratingActive' => (bool) $t->rating_active,
             'reopenNote' => $t->reopen_note ? ['note' => $t->reopen_note, 'at' => $t->reopen_at->format('M j, Y · H:i')] : null,
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
@@ -442,9 +440,8 @@ class SupportController extends Controller
                 'email' => $t->requester->email,
             ] : null,
             'sla' => [
+                ...$t->slaPayload(),
                 'label' => $isDone ? 'Selesai dalam SLA' : $t->sla_label,
-                'kind' => $t->sla_kind,
-                'pct' => $elapsedPct,
             ],
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
