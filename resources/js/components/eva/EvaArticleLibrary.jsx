@@ -338,7 +338,7 @@ function EditorDrawer({ draft, subjects, onChange, onClose, onSave }) {
     return (
         <div
             style={{
-                position: 'fixed', inset: 0, background: 'rgba(11,28,48,.34)',
+                position: 'fixed', inset: 0, background: 'var(--overlay)',
                 display: 'flex', justifyContent: 'flex-end', zIndex: 50,
             }}
             onClick={onClose}

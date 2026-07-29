@@ -362,7 +362,7 @@ function Chip({ active, onClick, children }) {
                 whiteSpace: 'nowrap',
                 border: `1px solid ${active ? 'transparent' : 'var(--border)'}`,
                 background: active ? 'var(--blue-500)' : 'var(--white)',
-                color: active ? '#fff' : 'var(--ink-700)',
+                color: active ? 'var(--on-accent)' : 'var(--ink-700)',
             }}
         >
             {children}

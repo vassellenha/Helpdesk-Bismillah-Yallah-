@@ -183,7 +183,7 @@ export default function EvaUnansweredQuestions({
                     <div style={{ padding: '12px 20px 4px' }}>
                         <p style={{
                             margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-900)',
-                            padding: '10px 12px', background: 'var(--surface-muted, #f6f7f9)',
+                            padding: '10px 12px', background: 'var(--surface-muted)',
                             borderRadius: '6px', borderLeft: '3px solid var(--border-soft)',
                         }}>
                             “{asking.question}”

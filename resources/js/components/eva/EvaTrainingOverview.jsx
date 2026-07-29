@@ -75,7 +75,7 @@ export default function EvaTrainingOverview({ sources: initialSources, readiness
             </StatRow>
 
             {bothOff && (
-                <div style={{ marginBottom: '16px', padding: '12px 15px', borderRadius: 'var(--r-md)', background: 'rgba(220,38,38,.07)', border: '1px solid rgba(220,38,38,.25)', fontSize: '12.5px', color: 'var(--red-600)', lineHeight: 1.6 }}>
+                <div style={{ marginBottom: '16px', padding: '12px 15px', borderRadius: 'var(--r-md)', background: 'var(--red-soft-weak)', border: '1px solid var(--red-border)', fontSize: '12.5px', color: 'var(--red-600)', lineHeight: 1.6 }}>
                     <strong>Kedua sumber mati.</strong> EVA tidak akan bisa menjawab pertanyaan apa pun —
                     setiap pertanyaan berakhir sebagai tawaran draf tiket. Nyalakan minimal satu sumber.
                 </div>

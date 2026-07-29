@@ -109,7 +109,7 @@ export default function EvaPreview({ endpoints, thresholds }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,320px)', gap: '16px', alignItems: 'start' }}>
                 <Card style={{ display: 'flex', flexDirection: 'column', height: '620px', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 17px', borderBottom: '1px solid var(--border-soft)' }}>
-                        <span style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(145deg,var(--blue-500),var(--blue-ink))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 700 }}>
+                        <span style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(145deg,var(--blue-500),var(--blue-gradient-end))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-accent)', fontSize: '12px', fontWeight: 700 }}>
                             E
                         </span>
                         <div style={{ flex: 1 }}>
@@ -189,7 +189,7 @@ export default function EvaPreview({ endpoints, thresholds }) {
 
 function UserBubble({ text }) {
     return (
-        <div style={{ alignSelf: 'flex-end', maxWidth: '78%', background: 'var(--blue-500)', color: '#fff', padding: '10px 13px', borderRadius: '14px 14px 4px 14px', fontSize: '13px', lineHeight: 1.55 }}>
+        <div style={{ alignSelf: 'flex-end', maxWidth: '78%', background: 'var(--blue-500)', color: 'var(--on-accent)', padding: '10px 13px', borderRadius: '14px 14px 4px 14px', fontSize: '13px', lineHeight: 1.55 }}>
             {text}
         </div>
     );

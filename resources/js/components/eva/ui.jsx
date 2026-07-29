@@ -80,9 +80,9 @@ export function Badge({ children, tone = 'neutral' }) {
     const tones = {
         neutral: { color: 'var(--slate-500)', background: 'var(--surface-tint)' },
         blue: { color: 'var(--blue-ink)', background: 'var(--blue-050)' },
-        green: { color: 'var(--green-500)', background: 'rgba(52,199,89,.13)' },
-        amber: { color: '#B26A00', background: 'rgba(210,140,0,.13)' },
-        red: { color: 'var(--red-600)', background: 'rgba(186,26,24,.10)' },
+        green: { color: 'var(--green-500)', background: 'var(--green-soft)' },
+        amber: { color: 'var(--amber-ink)', background: 'var(--amber-soft)' },
+        red: { color: 'var(--red-600)', background: 'var(--red-soft)' },
     };
 
     return (
@@ -118,11 +118,11 @@ export function Toggle({ on, onChange, label }) {
                 cursor: 'pointer',
                 display: 'flex',
                 justifyContent: on ? 'flex-end' : 'flex-start',
-                background: on ? 'var(--green-500)' : 'var(--border)',
+                background: on ? 'var(--green-solid)' : 'var(--border)',
                 transition: 'background .18s ease',
             }}
         >
-            <span style={{ width: '19px', height: '19px', borderRadius: '999px', background: '#fff', boxShadow: '0 1px 3px var(--shadow-25)' }} />
+            <span style={{ width: '19px', height: '19px', borderRadius: '999px', background: 'var(--on-accent)', boxShadow: '0 1px 3px var(--shadow-25)' }} />
         </button>
     );
 }
@@ -148,12 +148,12 @@ export const labelStyle = {
 
 export function Button({ children, onClick, variant = 'primary', type = 'button', disabled }) {
     const variants = {
-        primary: { background: 'var(--blue-500)', color: '#fff', border: 'none' },
+        primary: { background: 'var(--blue-500)', color: 'var(--on-accent)', border: 'none' },
         ghost: { background: 'var(--white)', color: 'var(--ink-700)', border: '1px solid var(--border)' },
         danger: { background: 'var(--white)', color: 'var(--red-600)', border: '1px solid var(--border)' },
         // Merah penuh — untuk tindakan merusak yang harus terbaca sebagai
         // merusak sejak sebelum diklik.
-        dangerPrimary: { background: 'var(--red-600)', color: '#fff', border: 'none' },
+        dangerPrimary: { background: 'var(--red-solid)', color: 'var(--on-accent)', border: 'none' },
     };
 
     return (
@@ -224,7 +224,7 @@ export function Modal({ title, children, onClose, width = '460px' }) {
             style={{
                 position: 'fixed', inset: 0, zIndex: 60, display: 'flex',
                 alignItems: 'center', justifyContent: 'center', padding: '20px',
-                background: 'rgba(15, 23, 42, 0.45)',
+                background: 'var(--overlay)',
             }}
         >
             <div
@@ -232,8 +232,8 @@ export function Modal({ title, children, onClose, width = '460px' }) {
                 role="dialog"
                 aria-modal="true"
                 style={{
-                    width: '100%', maxWidth: width, background: 'var(--surface, #fff)',
-                    borderRadius: '10px', boxShadow: '0 18px 48px rgba(15, 23, 42, 0.28)',
+                    width: '100%', maxWidth: width, background: 'var(--surface)',
+                    borderRadius: '10px', boxShadow: '0 18px 48px var(--shadow-25)',
                     border: '1px solid var(--border-soft)', overflow: 'hidden',
                 }}
             >
@@ -256,8 +256,8 @@ export function ErrorBanner({ message, onDismiss }) {
                 display: 'flex',
                 gap: '10px',
                 alignItems: 'flex-start',
-                background: 'rgba(186,26,24,.07)',
-                border: '1px solid rgba(186,26,24,.22)',
+                background: 'var(--red-soft-weak)',
+                border: '1px solid var(--red-border)',
                 color: 'var(--red-600)',
                 borderRadius: 'var(--r-md)',
                 padding: '11px 14px',
@@ -421,7 +421,7 @@ function PageButton({ children, onClick, disabled, active, label }) {
                 opacity: disabled ? 0.4 : 1,
                 border: `1px solid ${active ? 'transparent' : 'var(--border)'}`,
                 background: active ? 'var(--blue-500)' : 'var(--white)',
-                color: active ? '#fff' : 'var(--ink-700)',
+                color: active ? 'var(--on-accent)' : 'var(--ink-700)',
             }}
         >
             {children}

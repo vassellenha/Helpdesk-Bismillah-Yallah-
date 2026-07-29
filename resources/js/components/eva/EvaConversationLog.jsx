@@ -350,7 +350,7 @@ function Turn({ turn }) {
                 padding: '10px 13px',
                 borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                 background: isUser ? 'var(--blue-500)' : 'var(--white)',
-                color: isUser ? '#fff' : 'var(--ink-800)',
+                color: isUser ? 'var(--on-accent)' : 'var(--ink-800)',
                 border: isUser ? 'none' : '1px solid var(--border)',
             }}
         >

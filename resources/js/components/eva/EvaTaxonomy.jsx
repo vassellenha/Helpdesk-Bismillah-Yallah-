@@ -249,8 +249,8 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
             </CardTitle>
 
             {duplicates.length > 0 && (
-                <div style={{ padding: '13px 18px', borderBottom: '1px solid var(--border-soft)', background: 'rgba(245,158,11,.07)' }}>
-                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#B26A00', marginBottom: '7px' }}>
+                <div style={{ padding: '13px 18px', borderBottom: '1px solid var(--border-soft)', background: 'var(--amber-soft-weak)' }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--amber-ink)', marginBottom: '7px' }}>
                         {duplicates.length} kelompok tag nyaris kembar
                     </div>
                     {/*

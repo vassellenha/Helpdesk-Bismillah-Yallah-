@@ -231,7 +231,7 @@ function LiveTest({ endpoint, threshold }) {
                                 padding: '9px 12px',
                                 borderRadius: 'var(--r-md)',
                                 color: result.would_answer ? 'var(--green-500)' : 'var(--red-600)',
-                                background: result.would_answer ? 'rgba(52,199,89,.13)' : 'rgba(186,26,24,.08)',
+                                background: result.would_answer ? 'var(--green-soft)' : 'var(--red-soft-weak)',
                             }}
                         >
                             {result.would_answer ? 'EVA akan menjawab pertanyaan ini' : 'EVA belum akan menjawab. Seluruh kandidat berada di bawah ambang.'}

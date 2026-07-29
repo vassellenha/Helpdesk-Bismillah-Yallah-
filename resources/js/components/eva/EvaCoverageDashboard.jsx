@@ -163,7 +163,7 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
                                 {/* Bar bertumpuk: biru = ditutup artikel, hijau = tambahan dari FAQ saja. */}
                                 <div style={{ display: 'flex', height: '8px', borderRadius: '999px', overflow: 'hidden', background: 'var(--surface-tint)' }}>
                                     <span style={{ width: `${row.article_percent}%`, background: 'var(--blue-500)' }} />
-                                    <span style={{ width: `${row.faq_percent}%`, background: 'var(--green-500)' }} />
+                                    <span style={{ width: `${row.faq_percent}%`, background: 'var(--green-solid)' }} />
                                 </div>
                             </div>
                         ))}
