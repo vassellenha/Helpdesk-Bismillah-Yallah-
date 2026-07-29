@@ -32,6 +32,7 @@ const ACTION_LABELS = {
     reassign: 'Alihkan Tiket',
     raise_priority: 'Naikkan Prioritas',
     remind_rating: 'Teguran Rating',
+    return: 'Dikembalikan',
 };
 
 export default function AuditTrailConsole({ logs, administrators }) {

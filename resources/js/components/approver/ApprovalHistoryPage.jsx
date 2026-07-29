@@ -18,9 +18,10 @@ const CARDS = [
     { key: 'Closed', label: 'Closed', icon: 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z', bg: 'bg-gray-100 dark:bg-panel-3', color: 'text-gray-500 dark:text-ink-2' },
 ];
 
-const STATUS_PILLS = ['Semua', 'Waiting for Approval', 'Open', 'In Progress', 'Resolved', 'Closed', 'Rejected'];
+const STATUS_PILLS = ['Semua', 'Returned', 'Waiting for Approval', 'Open', 'In Progress', 'Resolved', 'Closed', 'Rejected'];
 
 const STATUS_BUCKET = {
+    Returned: (s) => s === 'Returned',
     'Waiting for Approval': (s) => s === 'Waiting for Approval',
     Open: (s) => s === 'Open',
     'In Progress': (s) => ['Assigned', 'In Progress', 'Waiting for Response'].includes(s),

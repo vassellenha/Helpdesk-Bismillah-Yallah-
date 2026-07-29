@@ -128,11 +128,6 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Seluruh transaksi tiket Incident, Service Request, dan Role Access.</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                    <div className="flex items-center rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1 text-sm">
-                        <span className="rounded-md bg-blue-50 dark:bg-accent-soft px-3 py-1.5 font-medium text-blue-700 dark:text-accent-text">Administrator</span>
-                        <span title="Belum tersedia pada scope saat ini" className="cursor-not-allowed rounded-md px-3 py-1.5 text-gray-300">Team Lead</span>
-                        <span title="Belum tersedia pada scope saat ini" className="cursor-not-allowed rounded-md px-3 py-1.5 text-gray-300">Support</span>
-                    </div>
                     <button onClick={handleExport} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         ⬇ Export CSV
                     </button>

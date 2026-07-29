@@ -11,6 +11,7 @@ use App\Support\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
@@ -194,6 +195,25 @@ class TicketController extends Controller
             ...$ticket->fresh()->toArray(),
             'sla_status' => $ticket->fresh()->sla_status,
         ]);
+    }
+
+    /**
+     * Only a Draft or Returned ticket is still purely "mine" to discard
+     * outright — same status boundary update() already enforces, since
+     * anything past that has already reached an Approver/Support queue.
+     */
+    public function destroy(Ticket $ticket): JsonResponse
+    {
+        $requester = CurrentActor::requester();
+        abort_unless($ticket->requester_id === $requester->id, 403);
+        abort_unless(in_array($ticket->status, ['Draft', 'Returned'], true), 422, 'Only draft or returned tickets can be deleted.');
+
+        foreach ($ticket->attachments as $attachment) {
+            Storage::disk('public')->delete($attachment->path);
+        }
+        $ticket->delete();
+
+        return response()->json(['deleted' => true]);
     }
 
     /**

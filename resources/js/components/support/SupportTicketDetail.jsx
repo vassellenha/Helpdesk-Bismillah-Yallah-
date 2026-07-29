@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import FeedbackDisplay from '../FeedbackDisplay';
+import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 const TIMELINE_DOT = {
@@ -23,6 +24,12 @@ const CONFIRM_COPY = {
         body: (id) => `Tiket ${id} akan dieskalasi ke Tim IT Lanjutan untuk penanganan lebih dalam. Tindakan ini tercatat di riwayat status.`,
         button: 'Ya, Eskalasi',
         color: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
+    },
+    return: {
+        title: 'Kembalikan ke Requester?',
+        body: (id) => `Tiket ${id} akan dikembalikan ke requester untuk direvisi/dilengkapi. Requester akan menerima notifikasi dan bisa mengedit lalu mengirim ulang tiketnya. Tindakan ini tercatat di riwayat status.`,
+        button: 'Ya, Kembalikan',
+        color: 'bg-amber-600 hover:bg-amber-700',
     },
 };
 
@@ -112,7 +119,7 @@ function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onC
     );
 }
 
-export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], dataUrl, commentsUrl, resolveUrl, escalateUrl, ticketsUrl }) {
+export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], dataUrl, commentsUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
     const [timeline, setTimeline] = useState(initialTimeline);
     const [comments, setComments] = useState(initialComments);
@@ -140,13 +147,14 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
     async function confirmActionSubmit() {
         setSubmitting(true);
         setError('');
-        const url = confirmAction === 'resolve' ? resolveUrl : escalateUrl;
+        const url = confirmAction === 'resolve' ? resolveUrl : confirmAction === 'escalate' ? escalateUrl : returnUrl;
         try {
             await apiFetch(url, { method: 'POST', body: JSON.stringify({ note }) });
-            if (confirmAction === 'escalate') {
-                // Escalating hands the ticket off to Support IT — it no longer
-                // belongs to this queue, so re-fetching the same URL would 403.
-                // A real navigation away is correct here.
+            if (confirmAction === 'escalate' || confirmAction === 'return') {
+                // Escalating/returning hands the ticket off (to Support IT, or
+                // back to the requester) — it no longer belongs to this queue,
+                // so re-fetching the same URL would 403. A real navigation
+                // away is correct here.
                 window.location.href = ticketsUrl;
             } else {
                 const fresh = await apiFetch(dataUrl);
@@ -209,20 +217,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                         {ticket.attachments?.length > 0 && (
                             <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4">
                                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Lampiran</p>
-                                <div className="flex flex-col gap-1.5">
-                                    {ticket.attachments.map((a) => (
-                                        <a
-                                            key={a.id}
-                                            href={a.url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="inline-flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-2 text-[13px] font-medium text-blue-600 dark:text-accent-text hover:bg-gray-100 dark:hover:bg-panel-hover hover:underline"
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9" /></svg>
-                                            {a.name}
-                                        </a>
-                                    ))}
-                                </div>
+                                <AttachmentViewer attachments={ticket.attachments} />
                             </div>
                         )}
                     </Card>
@@ -321,6 +316,14 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                                             Eskalasi IT
                                         </button>
                                     )}
+                                    <button
+                                        onClick={() => setConfirmAction('return')}
+                                        disabled={!noteFilled}
+                                        className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-edge-strong bg-gray-100 dark:bg-panel-3 px-4 py-2.5 text-[13px] font-bold text-gray-500 dark:text-ink-2 enabled:border-red-200 enabled:bg-red-50 enabled:text-red-700 enabled:hover:bg-red-100 disabled:cursor-not-allowed"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>
+                                        Returned
+                                    </button>
                                 </div>
 
                                 <p className="mt-3 text-[11px] leading-relaxed text-gray-400 dark:text-ink-3">

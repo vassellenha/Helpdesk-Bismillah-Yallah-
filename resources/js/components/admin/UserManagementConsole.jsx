@@ -211,7 +211,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                     onSave={(role) => { upsertRole(role); setModal('role'); }}
                 />
             )}
-            {modal === 'addUser' && <AddUserModal onClose={() => setModal(null)} onSave={addUser} />}
+            {modal === 'addUser' && <AddUserModal roles={roles} onClose={() => setModal(null)} onSave={addUser} />}
             {modal?.type === 'manageUser' && (
                 <ManageUserModal user={modal.user} roles={roles} onClose={() => setModal(null)} onSave={saveUser} />
             )}

@@ -124,6 +124,7 @@ class SupportBpoController extends Controller
             'commentsUrl' => route('support-bpo.tickets.comments.store', $ticket),
             'resolveUrl' => route('support-bpo.tickets.resolve', $ticket),
             'escalateUrl' => route('support-bpo.tickets.escalate', $ticket),
+            'returnUrl' => route('support-bpo.tickets.return', $ticket),
             'ticketsUrl' => route('support-bpo.tickets'),
         ]);
     }
@@ -272,6 +273,50 @@ class SupportBpoController extends Controller
             'escalatedAt' => $fresh->escalated_at?->format('M j, Y · H:i'),
             'escalationNote' => $fresh->escalation_note,
         ]);
+    }
+
+    /**
+     * Sends a ticket back to the Requester for clarification/revision
+     * instead of resolving or escalating it — see
+     * SupportController::returnTicket() for the full reasoning (same
+     * "Returned" status the Approver's revision-request decision uses, and
+     * the ticket leaves this queue so the caller must navigate away rather
+     * than re-fetch dataUrl, same as escalate()).
+     */
+    public function returnTicket(Request $request, Ticket $ticket): JsonResponse
+    {
+        $bpoUser = CurrentActor::supportBpo();
+        $agent = $this->agentFor($bpoUser);
+        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
+
+        $data = $request->validate(['note' => 'required|string|max:3000']);
+        $oldStatus = $ticket->status;
+
+        $ticket->update(['status' => 'Returned']);
+
+        AuditTrail::record($bpoUser, [
+            'module' => 'ticket_support',
+            'action' => 'return',
+            'target_type' => 'ticket',
+            'target_id' => $ticket->id,
+            'target_name' => $ticket->ticket_no,
+            'old_value' => ['status' => $oldStatus],
+            'new_value' => ['status' => 'Returned', 'catatan' => $data['note']],
+            'description' => "{$bpoUser->name} mengembalikan tiket \"{$ticket->ticket_no}\" ke requester: {$data['note']}",
+        ]);
+
+        if ($ticket->requester) {
+            NotificationService::notify(
+                $ticket->requester,
+                $ticket,
+                'ticket_reopened',
+                'Tiket Dikembalikan',
+                "Tiket {$ticket->ticket_no} dikembalikan oleh Tim Support untuk direvisi: {$data['note']}"
+            );
+        }
+
+        return response()->json(['status' => $ticket->fresh()->status]);
     }
 
     public function markNotificationRead(TicketNotification $notification): JsonResponse

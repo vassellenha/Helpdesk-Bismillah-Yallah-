@@ -13,8 +13,22 @@ const FIELDS = [
     ['nama_proyek', 'Nama Proyek', 'Nama proyek (jika ada)'],
 ];
 
-export default function AddUserModal({ onClose, onSave }) {
+const ROLE_DESCRIPTIONS = {
+    Requester: 'Membuat & memantau tiket sendiri, mengakses Knowledge Base, memberi rating/feedback.',
+    Approver: 'Meninjau & memutuskan tiket yang membutuhkan persetujuan sebelum diteruskan ke Support.',
+    'Support IT': 'Menangani tiket layanan/aplikasi yang berada di bawah kepemilikan Tim IT.',
+    'Support BPO': 'Menangani tiket layanan/aplikasi yang berada di bawah kepemilikan Business Process Owner (unit bisnis).',
+    'Team Lead': 'Mengawasi layanan dan memantau seluruh tiket pada layanan yang menjadi tanggung jawabnya.',
+    Administrator: 'Akses konfigurasi penuh: user, role, SLA, service catalog, kategori, approval matrix, audit, integrasi.',
+    'Knowledge Administrator': 'Mengelola artikel, FAQ, approval knowledge, AI knowledge training, dan analytics.',
+};
+
+export default function AddUserModal({ roles, onClose, onSave }) {
     const [form, setForm] = useState({ name: '', nip: '', email: '', whatsapp: '', unit: '', jabatan: '', kode_proyek: '', nama_proyek: '', status: 'active' });
+    const [roleIds, setRoleIds] = useState(() => {
+        const requester = roles.find((r) => r.name === 'Requester');
+        return requester ? [requester.id] : [];
+    });
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -22,11 +36,15 @@ export default function AddUserModal({ onClose, onSave }) {
         setForm((prev) => ({ ...prev, [key]: value }));
     }
 
+    function toggleRole(id) {
+        setRoleIds((prev) => (prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]));
+    }
+
     async function save() {
         setError('');
         setSaving(true);
         try {
-            const created = await apiFetch('/admin/users', { method: 'POST', body: JSON.stringify(form) });
+            const created = await apiFetch('/admin/users', { method: 'POST', body: JSON.stringify({ ...form, role_ids: roleIds }) });
             onSave(created);
         } catch (e) {
             setError(e.message || 'Gagal menambahkan user.');
@@ -77,8 +95,27 @@ export default function AddUserModal({ onClose, onSave }) {
                 ))}
 
                 <Field label="Role">
-                    <div className="flex flex-wrap gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5">
-                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-accent-text">Requester</span>
+                    <div className="space-y-2">
+                        {roles.filter((r) => r.status_raw === 'active').map((r) => (
+                            <label
+                                key={r.id}
+                                className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm ${
+                                    roleIds.includes(r.id) ? 'border-blue-400 bg-blue-50 dark:bg-accent-soft' : 'border-gray-200 dark:border-edge-strong'
+                                } ${r.locked ? 'cursor-not-allowed opacity-60' : ''}`}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={roleIds.includes(r.id)}
+                                    disabled={r.locked}
+                                    onChange={() => toggleRole(r.id)}
+                                    className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-edge-strong"
+                                />
+                                <span>
+                                    <span className="block font-semibold text-gray-900 dark:text-ink-1">{r.name}</span>
+                                    <span className="text-xs text-gray-500 dark:text-ink-2">{ROLE_DESCRIPTIONS[r.name] ?? 'Role kustom.'}</span>
+                                </span>
+                            </label>
+                        ))}
                     </div>
                 </Field>
 
@@ -95,7 +132,7 @@ export default function AddUserModal({ onClose, onSave }) {
                 <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
                 <button
                     onClick={save}
-                    disabled={saving || !form.name || !form.email}
+                    disabled={saving || !form.name || !form.email || roleIds.length === 0}
                     className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {saving ? 'Menyimpan...' : 'Simpan'}

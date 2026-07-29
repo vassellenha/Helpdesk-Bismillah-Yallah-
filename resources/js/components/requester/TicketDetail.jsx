@@ -270,6 +270,21 @@ function ReopenNoteBanner({ reopenNote }) {
     );
 }
 
+function SupportReturnNoteBanner({ supportReturnNote }) {
+    return (
+        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-warn-soft p-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:text-warn-text">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+            </span>
+            <div className="min-w-0">
+                <p className="text-[13px] font-bold text-amber-800">Dikembalikan oleh {supportReturnNote.agentName}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-amber-900">{supportReturnNote.note}</p>
+                <p className="mt-1.5 text-[11px] text-amber-600 dark:text-warn-text">{supportReturnNote.at}</p>
+            </div>
+        </div>
+    );
+}
+
 function ResolutionNoteBanner({ resolutionNote }) {
     return (
         <div className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 dark:bg-ok-soft p-4">
@@ -363,6 +378,7 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
             </a>
 
             {ticket.approvalNote && <ApprovalNoteBanner approvalNote={ticket.approvalNote} />}
+            {ticket.supportReturnNote && <SupportReturnNoteBanner supportReturnNote={ticket.supportReturnNote} />}
             {ticket.reopenNote && <ReopenNoteBanner reopenNote={ticket.reopenNote} />}
             {ticket.resolutionNote && <ResolutionNoteBanner resolutionNote={ticket.resolutionNote} />}
 

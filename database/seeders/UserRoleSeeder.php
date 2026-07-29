@@ -11,7 +11,7 @@ class UserRoleSeeder extends Seeder
 {
     private const ROLES = [
         ['name' => 'Requester', 'type' => 'system', 'status' => 'active', 'locked' => false],
-        ['name' => 'Approver', 'type' => 'system', 'status' => 'active', 'locked' => true],
+        ['name' => 'Approver', 'type' => 'system', 'status' => 'active', 'locked' => false],
         ['name' => 'Support IT', 'type' => 'system', 'status' => 'active', 'locked' => false],
         ['name' => 'Support BPO', 'type' => 'system', 'status' => 'active', 'locked' => false],
         ['name' => 'Team Lead', 'type' => 'system', 'status' => 'active', 'locked' => false],

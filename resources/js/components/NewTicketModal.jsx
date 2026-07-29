@@ -134,7 +134,7 @@ export default function NewTicketModal({
     // A draft that an approver sent back for revision can only be re-submitted,
     // not re-saved as a fresh draft — so the "Save as Draft" action is hidden
     // in that case, leaving just Cancel and Submit Ticket.
-    const isRevision = editTicket?.approvalNote?.decision === 'revision_requested';
+    const isRevision = editTicket?.approvalNote?.decision === 'revision_requested' || !!editTicket?.supportReturnNote;
     const [open, setOpen] = useState(false);
     const [catalog, setCatalog] = useState(null);
     const [policies, setPolicies] = useState(null);
@@ -143,6 +143,7 @@ export default function NewTicketModal({
     const [approverOpen, setApproverOpen] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [attachments, setAttachments] = useState([]);
+    const [existingAttachments, setExistingAttachments] = useState([]);
     const [attachmentError, setAttachmentError] = useState('');
     const [previewFile, setPreviewFile] = useState(null);
     const [dragOver, setDragOver] = useState(false);
@@ -158,12 +159,14 @@ export default function NewTicketModal({
         setApprovers(null);
         setForm(emptyForm);
         setAttachments([]);
+        setExistingAttachments(editTicket?.attachments ?? []);
         setAttachmentError('');
         setError('');
         setCreated(null);
         apiFetch(catalogUrl).then(setCatalog).catch(() => setCatalog({ services: [], subcategories: [], subjects: [], issueCategories: [] }));
         apiFetch('/api/sla-policies/active').then(setPolicies).catch(() => setPolicies([]));
         apiFetch(approversUrl).then(setApprovers).catch(() => setApprovers([]));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, catalogUrl, approversUrl]);
 
     // Prefills the form from the existing draft once the catalog has
@@ -290,7 +293,7 @@ export default function NewTicketModal({
         setAttachments((current) => {
             const next = [...current];
             for (const file of files) {
-                if (next.length >= MAX_ATTACHMENTS) {
+                if (existingAttachments.length + next.length >= MAX_ATTACHMENTS) {
                     setAttachmentError(`You can attach up to ${MAX_ATTACHMENTS} files.`);
                     break;
                 }
@@ -313,6 +316,21 @@ export default function NewTicketModal({
         setAttachments((current) => current.filter((_, i) => i !== index));
     }
 
+    // Already-persisted attachments (from a previously saved draft) live on
+    // the server, not in this form's local state — removing one has to call
+    // the same destroy endpoint the ticket detail page uses, not just drop
+    // it from an in-memory list.
+    async function removeExistingAttachment(attachment) {
+        setAttachmentError('');
+        try {
+            await apiFetch(`/requester/tickets/${editTicket.id}/attachment/${attachment.id}`, { method: 'DELETE' });
+            setExistingAttachments((current) => current.filter((a) => a.id !== attachment.id));
+        } catch (e) {
+            setAttachmentError(e.message || 'Failed to remove attachment.');
+        }
+    }
+
+    const totalAttachmentCount = existingAttachments.length + attachments.length;
     const filteredApprovers = (approvers ?? []).filter((a) => a.name.toLowerCase().includes(approverQuery.toLowerCase()));
     const activePriorities = useMemo(() => new Set((policies ?? []).map((p) => p.priority)), [policies]);
 
@@ -473,9 +491,9 @@ export default function NewTicketModal({
                                 </div>
 
                                 {requiresApproval && (
-                                    <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+                                    <div className="rounded-2xl border border-blue-100 dark:border-edge-strong bg-blue-50 dark:bg-accent-soft p-4">
                                         <div className="flex items-center gap-2.5">
-                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:text-accent-text">
+                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-panel-2 text-blue-700 dark:text-accent-text">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
                                             </span>
                                             <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">Memerlukan Approval</span>
@@ -572,7 +590,7 @@ export default function NewTicketModal({
                                     </div>
                                 </Field>
 
-                                <Field label={`Attachment (Optional) · ${attachments.length}/${MAX_ATTACHMENTS}`}>
+                                <Field label={`Attachment (Optional) · ${totalAttachmentCount}/${MAX_ATTACHMENTS}`}>
                                     <label
                                         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                                         onDragLeave={() => setDragOver(false)}
@@ -582,7 +600,7 @@ export default function NewTicketModal({
                                             onAttachmentFiles(e.dataTransfer.files);
                                         }}
                                         className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed px-4 py-7 text-center ${
-                                            attachments.length >= MAX_ATTACHMENTS
+                                            totalAttachmentCount >= MAX_ATTACHMENTS
                                                 ? 'cursor-not-allowed border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3'
                                                 : `cursor-pointer ${dragOver ? 'border-blue-500 bg-blue-50 dark:bg-accent-soft' : 'border-blue-300 dark:border-blue-500/40 bg-blue-50/60 dark:bg-accent-soft/40 hover:bg-blue-50 dark:hover:bg-accent-soft'}`
                                         }`}
@@ -591,16 +609,34 @@ export default function NewTicketModal({
                                             type="file"
                                             accept=".png,.jpg,.jpeg,.pdf,.mp4,.mov,.webm"
                                             multiple
-                                            disabled={attachments.length >= MAX_ATTACHMENTS}
+                                            disabled={totalAttachmentCount >= MAX_ATTACHMENTS}
                                             className="hidden"
                                             onChange={(e) => { onAttachmentFiles(e.target.files); e.target.value = ''; }}
                                         />
                                         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700 dark:text-ink-2"><path d="M4 16.2A4.5 4.5 0 0 1 6.5 8a6 6 0 0 1 11.4 1.6A4 4 0 0 1 17.5 17H7"/><path d="M12 12v6"/><path d="m9 14.5 3-2.5 3 2.5"/></svg>
                                         <span className="text-[13px] font-bold text-gray-800 dark:text-ink-1">
-                                            {attachments.length >= MAX_ATTACHMENTS ? 'Maximum files reached' : 'Click to upload or drag files here'}
+                                            {totalAttachmentCount >= MAX_ATTACHMENTS ? 'Maximum files reached' : 'Click to upload or drag files here'}
                                         </span>
                                         <span className="text-[11px] text-gray-400 dark:text-ink-3">PNG, JPG, PDF, MP4, MOV, WEBM (Max. 30MB) · Maksimal {MAX_ATTACHMENTS} file</span>
                                     </label>
+                                    {existingAttachments.length > 0 && (
+                                        <div className="mt-2 space-y-1.5">
+                                            {existingAttachments.map((a) => (
+                                                <div key={`existing-${a.id}`} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-2 text-xs text-gray-700 dark:text-ink-2">
+                                                    <a
+                                                        href={a.url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="min-w-0 flex-1 truncate text-left hover:text-blue-700 hover:underline"
+                                                        title="Buka lampiran"
+                                                    >
+                                                        {a.name}
+                                                    </a>
+                                                    <button type="button" onClick={() => removeExistingAttachment(a)} className="shrink-0 font-semibold text-red-600 dark:text-bad-text hover:text-red-800 dark:hover:text-red-300">Remove</button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     {attachments.length > 0 && (
                                         <div className="mt-2 space-y-1.5">
                                             {attachments.map((file, i) => (

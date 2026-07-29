@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import NewTicketModal from '../NewTicketModal';
 import SelectMenu from '../SelectMenu';
+import { apiFetch } from '../../lib/api';
 
 const ACTIVE_STATUSES = ['Waiting for Approval', 'Open', 'Assigned', 'In Progress', 'Waiting for Response'];
 const DONE_STATUSES = ['Resolved', 'Completed', 'Closed'];
@@ -34,7 +35,8 @@ function sortValue(row, key) {
     return (row[key] ?? '').toString().toLowerCase();
 }
 
-export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, approversUrl, submitUrl }) {
+export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl, approversUrl, submitUrl }) {
+    const [tickets, setTickets] = useState(initialTickets);
     const [tab, setTab] = useState('All');
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('All Issue Categories');
@@ -44,6 +46,27 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
     const [period, setPeriod] = useState('Last 6 months');
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [deleting, setDeleting] = useState(false);
+
+    // Selecting drafts to delete is only meaningful while the Draft tab is
+    // active — leaving it clears the checkboxes instead of letting a stale
+    // selection carry over and silently delete the wrong tickets later.
+    useEffect(() => {
+        if (tab !== 'Draft') setSelectedIds(new Set());
+    }, [tab]);
+
+    // Counts are derived live from the ticket list (not a server-supplied
+    // prop) so they stay correct right after a client-side delete, with no
+    // page reload needed — matches DashboardController::myTickets()'s bucket
+    // logic exactly.
+    const counts = useMemo(() => ({
+        All: tickets.length,
+        Draft: tickets.filter((t) => inTab('Draft', t.status)).length,
+        Active: tickets.filter((t) => inTab('Active', t.status)).length,
+        Completed: tickets.filter((t) => inTab('Completed', t.status)).length,
+        Rejected: tickets.filter((t) => inTab('Rejected', t.status)).length,
+    }), [tickets]);
 
     function toggleSort(key) {
         if (key === sortKey) {
@@ -85,6 +108,42 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
     }, [tickets, tab, category, service, subcategory, priority, period, search, sortKey, sortDir]);
 
     const tabs = ['All', 'Draft', 'Active', 'Completed', 'Rejected'];
+    const allFilteredSelected = filtered.length > 0 && filtered.every((row) => selectedIds.has(row.id));
+
+    function toggleRow(id) {
+        setSelectedIds((current) => {
+            const next = new Set(current);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }
+
+    function toggleSelectAll() {
+        setSelectedIds((current) => {
+            if (allFilteredSelected) return new Set();
+            return new Set(filtered.map((row) => row.id));
+        });
+    }
+
+    async function deleteSelected() {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`Hapus ${selectedIds.size} draft tiket yang dipilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+
+        setDeleting(true);
+        const ids = [...selectedIds];
+        const results = await Promise.allSettled(ids.map((id) => apiFetch(`/requester/tickets/${id}`, { method: 'DELETE' })));
+        const deletedIds = ids.filter((_, i) => results[i].status === 'fulfilled');
+
+        setTickets((current) => current.filter((t) => !deletedIds.includes(t.id)));
+        setSelectedIds(new Set());
+        setDeleting(false);
+
+        const failedCount = results.length - deletedIds.length;
+        if (failedCount > 0) {
+            alert(`${failedCount} tiket gagal dihapus. Coba lagi.`);
+        }
+    }
 
     return (
         <div className="flex flex-col gap-7">
@@ -132,11 +191,35 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
                 <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: p }))} />
             </div>
 
+            {tab === 'Draft' && selectedIds.size > 0 && (
+                <div className="flex items-center justify-between rounded-xl border border-blue-200 dark:border-edge-strong bg-blue-50 dark:bg-accent-soft px-4 py-3">
+                    <span className="text-[13px] font-semibold text-blue-800 dark:text-accent-text">{selectedIds.size} tiket dipilih</span>
+                    <button
+                        type="button"
+                        onClick={deleteSelected}
+                        disabled={deleting}
+                        className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {deleting ? 'Menghapus…' : 'Hapus Terpilih'}
+                    </button>
+                </div>
+            )}
+
             <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="min-w-[860px] w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
+                                {tab === 'Draft' && (
+                                    <th className="w-10 px-4 py-3.5 pl-6">
+                                        <input
+                                            type="checkbox"
+                                            checked={allFilteredSelected}
+                                            onChange={toggleSelectAll}
+                                            className="h-4 w-4 rounded border-gray-300 dark:border-edge-strong"
+                                        />
+                                    </th>
+                                )}
                                 {COLUMNS.map((col) => (
                                     <th key={col.key} className="px-4 py-3.5 text-left first:pl-6 last:pr-6">
                                         <button
@@ -160,7 +243,17 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
                                     onClick={() => row.href && (window.location.href = row.href)}
                                     className="cursor-pointer border-b border-gray-50 last:border-0 dark:border-transparent dark:even:bg-white/[0.03] hover:bg-blue-50/40 dark:hover:bg-panel-hover"
                                 >
-                                    <td className="px-4 py-4 pl-6 font-bold text-blue-600 dark:text-accent-text">{row.id}</td>
+                                    {tab === 'Draft' && (
+                                        <td className="px-4 py-4 pl-6" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(row.id)}
+                                                onChange={() => toggleRow(row.id)}
+                                                className="h-4 w-4 rounded border-gray-300 dark:border-edge-strong"
+                                            />
+                                        </td>
+                                    )}
+                                    <td className={`px-4 py-4 font-bold text-blue-600 dark:text-accent-text ${tab === 'Draft' ? '' : 'pl-6'}`}>{row.id}</td>
                                     <td className="px-4 py-4">
                                         <p className="max-w-[240px] truncate font-semibold text-gray-900 dark:text-ink-1">{row.title}</p>
                                         <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{row.app}</p>
@@ -174,7 +267,7 @@ export default function MyTicketsPage({ tickets = [], counts = {}, catalogUrl, a
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">No tickets match these filters.</td>
+                                    <td colSpan={tab === 'Draft' ? 8 : 7} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">No tickets match these filters.</td>
                                 </tr>
                             )}
                         </tbody>

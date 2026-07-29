@@ -41,6 +41,7 @@ Route::prefix('approver')->name('approver.')->group(function () {
     Route::post('/tickets/{ticket}/decide', [ApprovalController::class, 'decide'])->name('tickets.decide');
     Route::post('/notifications/{notification}/read', [ApprovalController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [ApprovalController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
+    Route::post('/switch-approver', [ApprovalController::class, 'switchApprover'])->name('switch-approver');
 });
 
 Route::prefix('support')->name('support.')->group(function () {
@@ -50,6 +51,7 @@ Route::prefix('support')->name('support.')->group(function () {
     Route::get('/tickets/{ticket}/data', [SupportController::class, 'data'])->name('tickets.data');
     Route::post('/tickets/{ticket}/comments', [SupportController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/resolve', [SupportController::class, 'resolve'])->name('tickets.resolve');
+    Route::post('/tickets/{ticket}/return', [SupportController::class, 'returnTicket'])->name('tickets.return');
     Route::post('/notifications/{notification}/read', [SupportController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
     Route::post('/switch-agent', [SupportController::class, 'switchAgent'])->name('switch-agent');
@@ -63,6 +65,7 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
     Route::post('/tickets/{ticket}/comments', [SupportBpoController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/resolve', [SupportBpoController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/tickets/{ticket}/escalate', [SupportBpoController::class, 'escalate'])->name('tickets.escalate');
+    Route::post('/tickets/{ticket}/return', [SupportBpoController::class, 'returnTicket'])->name('tickets.return');
     Route::post('/notifications/{notification}/read', [SupportBpoController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportBpoController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
     Route::post('/switch-agent', [SupportBpoController::class, 'switchAgent'])->name('switch-agent');
@@ -90,6 +93,7 @@ Route::prefix('requester')->name('requester.')->group(function () {
     Route::get('/tickets/{ticket}', [TicketDetailController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{ticket}/data', [TicketDetailController::class, 'data'])->name('tickets.data');
     Route::put('/tickets/{ticket}', [TicketController::class, 'update'])->name('tickets.update');
+    Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
     Route::post('/tickets/{ticket}/comments', [TicketDetailController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/reopen', [TicketDetailController::class, 'reopen'])->name('tickets.reopen');
     Route::post('/tickets/{ticket}/close', [TicketDetailController::class, 'close'])->name('tickets.close');

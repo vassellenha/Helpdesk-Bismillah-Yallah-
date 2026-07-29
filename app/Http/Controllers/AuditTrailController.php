@@ -67,6 +67,7 @@ class AuditTrailController extends Controller
             'reassign' => 'Alihkan Tiket',
             'raise_priority' => 'Naikkan Prioritas',
             'remind_rating' => 'Teguran Rating',
+            'return' => 'Dikembalikan',
             default => $action,
         };
     }

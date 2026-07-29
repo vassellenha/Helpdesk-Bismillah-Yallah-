@@ -290,6 +290,24 @@ class ApprovalController extends Controller
         return response()->json(['status' => $ticket->fresh()->status]);
     }
 
+    /**
+     * Lets one browser session act as any user holding the Approver role —
+     * mirrors SupportController::switchAgent(). Every query in this
+     * controller already filters by approver_id, so switching never mixes
+     * one approver's queue into another's.
+     */
+    public function switchApprover(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate(['approver_id' => 'required|integer|exists:users,id']);
+
+        $user = User::findOrFail($data['approver_id']);
+        abort_unless($user->status === 'active' && $user->roles()->where('name', 'Approver')->exists(), 422, 'User tidak memiliki role Approver.');
+
+        session(['acting_approver_id' => $user->id]);
+
+        return redirect()->back();
+    }
+
     public function markNotificationRead(TicketNotification $notification): JsonResponse
     {
         $approver = CurrentActor::approver();

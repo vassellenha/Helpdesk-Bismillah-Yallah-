@@ -55,29 +55,35 @@ class UserRoleController extends Controller
             'kode_proyek' => 'nullable|string|max:100',
             'nama_proyek' => 'nullable|string|max:255',
             'status' => ['required', Rule::in(['active', 'inactive'])],
+            'role_ids' => 'nullable|array',
+            'role_ids.*' => 'integer|exists:roles,id',
         ]);
+        $roleIds = $data['role_ids'] ?? [];
+        unset($data['role_ids']);
         $actor = CurrentActor::admin();
 
-        $user = DB::transaction(function () use ($data, $actor) {
+        $user = DB::transaction(function () use ($data, $roleIds, $actor) {
             $user = User::create([
                 ...$data,
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]);
 
-            $requesterRole = Role::where('name', 'Requester')->first();
-            if ($requesterRole) {
-                $user->roles()->attach($requesterRole->id);
+            if ($roleIds === []) {
+                $requesterRole = Role::where('name', 'Requester')->first();
+                $roleIds = $requesterRole ? [$requesterRole->id] : [];
             }
+            $user->roles()->attach($roleIds);
 
+            $roleNames = Role::whereIn('id', $roleIds)->pluck('name')->implode(', ');
             AuditTrail::record($actor, [
                 'module' => 'user_role_management',
                 'action' => 'create',
                 'target_type' => 'user',
                 'target_id' => $user->id,
                 'target_name' => $user->name,
-                'new_value' => $data,
-                'description' => "{$actor->name} menambahkan user \"{$user->name}\".",
+                'new_value' => [...$data, 'roles' => $roleNames],
+                'description' => "{$actor->name} menambahkan user \"{$user->name}\" dengan role {$roleNames}.",
             ]);
 
             return $user;

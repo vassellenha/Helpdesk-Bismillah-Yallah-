@@ -11,13 +11,13 @@ use App\Models\User;
  * resolves that single persona to its actual users row instead of the
  * display-only DummyData::currentAdmin() array.
  *
- * support()/supportBpo() are the exception: since a catalog Subject can
- * route a ticket to any of several IT/BPO agents (not just one fixed
- * persona), which agent you're "acting as" is switchable at runtime via
- * the agent switcher in the Support/Support BPO layouts — see
- * SupportController::switchAgent() / SupportBpoController::switchAgent().
- * The session holds the chosen support_agents.id; an invalid or missing
- * selection falls back to the original fixed persona.
+ * support()/supportBpo()/approver() are the exception: since a ticket can
+ * be routed to any of several agents/approvers (not just one fixed
+ * persona), who you're "acting as" is switchable at runtime via the
+ * switcher in the Support/Support BPO/Approver layouts — see
+ * SupportController::switchAgent(), SupportBpoController::switchAgent(),
+ * ApprovalController::switchApprover(). The session holds the chosen id;
+ * an invalid or missing selection falls back to the original fixed persona.
  */
 class CurrentActor
 {
@@ -33,7 +33,7 @@ class CurrentActor
 
     public static function approver(): User
     {
-        return User::where('email', 'karina.putri@adhi.co.id')->firstOrFail();
+        return self::actingApproverUser() ?? User::where('email', 'karina.putri@adhi.co.id')->firstOrFail();
     }
 
     public static function support(): User
@@ -76,5 +76,20 @@ class CurrentActor
         }
 
         return User::find($agent->user_id);
+    }
+
+    private static function actingApproverUser(): ?User
+    {
+        $userId = session('acting_approver_id');
+        if (! $userId) {
+            return null;
+        }
+
+        $user = User::find($userId);
+        if (! $user || $user->status !== 'active' || ! $user->roles()->where('name', 'Approver')->exists()) {
+            return null;
+        }
+
+        return $user;
     }
 }

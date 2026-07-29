@@ -224,6 +224,21 @@ class TicketDetailController extends Controller
             ? TicketApproval::where('ticket_id', $t->id)->latest('created_at')->first()
             : null;
 
+        $supportReturnAudit = $t->status === 'Returned' ? $this->latestSupportReturnAudit($t) : null;
+
+        // "Returned" is shared by two unrelated flows (Approver's
+        // revision-request decision, and Support's own return action) — only
+        // the most recent one gets to explain the current Returned state, or
+        // an older revision-request round could wrongly relabel a fresh
+        // Support return (or vice versa).
+        if ($t->status === 'Returned' && $lastApproval && $supportReturnAudit) {
+            if ($supportReturnAudit->created_at->greaterThan($lastApproval->created_at)) {
+                $lastApproval = null;
+            } else {
+                $supportReturnAudit = null;
+            }
+        }
+
         $elapsedPct = 0;
         if ($t->sla_minutes_remaining !== null && $t->resolution_time_minutes > 0) {
             $elapsedPct = (int) round((1 - max($t->sla_minutes_remaining, 0) / $t->resolution_time_minutes) * 100);
@@ -254,6 +269,11 @@ class TicketDetailController extends Controller
                 'at' => $t->reopen_at->format('M j, Y · H:i'),
             ] : null,
             'resolutionNote' => $this->latestResolutionNote($t),
+            'supportReturnNote' => $supportReturnAudit ? [
+                'note' => $supportReturnAudit->new_value['catatan'] ?? '',
+                'agentName' => $supportReturnAudit->actor?->name ?? 'Tim Support',
+                'at' => $supportReturnAudit->created_at->format('M j, Y · H:i'),
+            ] : null,
             'sla' => [
                 'label' => $t->sla_label,
                 'kind' => $t->sla_kind,
@@ -311,6 +331,21 @@ class TicketDetailController extends Controller
             'agentName' => $audit->actor?->name ?? 'Tim Support',
             'at' => $audit->created_at->format('M j, Y · H:i'),
         ];
+    }
+
+    /**
+     * The audit row behind "Dikembalikan oleh <agent>" — Support's return()
+     * action (SupportController/SupportBpoController), not stored on the
+     * ticket itself, only the latest one, mirroring latestResolutionNote().
+     */
+    private function latestSupportReturnAudit(Ticket $t): ?AuditTrail
+    {
+        return AuditTrail::where('module', 'ticket_support')
+            ->where('action', 'return')
+            ->where('target_name', $t->ticket_no)
+            ->with('actor')
+            ->latest('created_at')
+            ->first();
     }
 
     private function presentComment(TicketComment $c): array

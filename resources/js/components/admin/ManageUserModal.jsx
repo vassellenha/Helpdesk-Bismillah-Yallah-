@@ -7,7 +7,7 @@ const TABS = ['Detail Pengguna', 'Edit Pengguna', 'Role & Hak Akses'];
 
 const ROLE_DESCRIPTIONS = {
     Requester: 'Membuat & memantau tiket sendiri, mengakses Knowledge Base, memberi rating/feedback.',
-    Approver: 'Dikelola melalui Service Catalog',
+    Approver: 'Meninjau & memutuskan tiket yang membutuhkan persetujuan sebelum diteruskan ke Support.',
     'Support IT': 'Menangani tiket layanan/aplikasi yang berada di bawah kepemilikan Tim IT.',
     'Support BPO': 'Menangani tiket layanan/aplikasi yang berada di bawah kepemilikan Business Process Owner (unit bisnis).',
     'Team Lead': 'Mengawasi layanan dan memantau seluruh tiket pada layanan yang menjadi tanggung jawabnya.',

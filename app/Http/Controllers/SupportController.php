@@ -128,6 +128,7 @@ class SupportController extends Controller
             'dataUrl' => route('support.tickets.data', $ticket),
             'commentsUrl' => route('support.tickets.comments.store', $ticket),
             'resolveUrl' => route('support.tickets.resolve', $ticket),
+            'returnUrl' => route('support.tickets.return', $ticket),
             'ticketsUrl' => route('support.tickets'),
         ]);
     }
@@ -212,6 +213,51 @@ class SupportController extends Controller
                 'ticket_resolved',
                 'Tiket Diselesaikan',
                 "Tiket {$ticket->ticket_no} telah diselesaikan oleh Tim Support: {$data['note']}"
+            );
+        }
+
+        return response()->json(['status' => $ticket->fresh()->status]);
+    }
+
+    /**
+     * Sends a ticket back to the Requester for clarification/revision
+     * instead of resolving it — same "Returned" status the Approver's
+     * revision-request decision already uses, so the requester's Edit &
+     * Resubmit flow (NewTicketModal/TicketController::update()) picks it
+     * up unchanged. Unlike resolve(), the ticket leaves this queue (see
+     * Ticket::NOT_YET_RELEASED_STATUSES), so the caller must navigate away
+     * rather than re-fetch dataUrl — same reasoning as escalate().
+     */
+    public function returnTicket(Request $request, Ticket $ticket): JsonResponse
+    {
+        $supportUser = CurrentActor::support();
+        $agent = $this->agentFor($supportUser);
+        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
+
+        $data = $request->validate(['note' => 'required|string|max:3000']);
+        $oldStatus = $ticket->status;
+
+        $ticket->update(['status' => 'Returned']);
+
+        AuditTrail::record($supportUser, [
+            'module' => 'ticket_support',
+            'action' => 'return',
+            'target_type' => 'ticket',
+            'target_id' => $ticket->id,
+            'target_name' => $ticket->ticket_no,
+            'old_value' => ['status' => $oldStatus],
+            'new_value' => ['status' => 'Returned', 'catatan' => $data['note']],
+            'description' => "{$supportUser->name} mengembalikan tiket \"{$ticket->ticket_no}\" ke requester: {$data['note']}",
+        ]);
+
+        if ($ticket->requester) {
+            NotificationService::notify(
+                $ticket->requester,
+                $ticket,
+                'ticket_reopened',
+                'Tiket Dikembalikan',
+                "Tiket {$ticket->ticket_no} dikembalikan oleh Tim Support untuk direvisi: {$data['note']}"
             );
         }
 
