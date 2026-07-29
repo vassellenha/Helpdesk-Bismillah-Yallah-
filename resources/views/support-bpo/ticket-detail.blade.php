@@ -13,6 +13,7 @@
         'commentsUrl' => $commentsUrl,
         'resolveUrl' => $resolveUrl,
         'escalateUrl' => $escalateUrl,
+        'returnUrl' => $returnUrl,
         'ticketsUrl' => $ticketsUrl,
     ]) }}"
 ></div>

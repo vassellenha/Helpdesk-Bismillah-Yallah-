@@ -35,6 +35,42 @@ function sortValue(row, key) {
     return (row[key] ?? '').toString().toLowerCase();
 }
 
+function DeleteConfirmModal({ count, deleting, onCancel, onConfirm }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={() => !deleting && onCancel()}>
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 dark:bg-bad-soft text-red-600 dark:text-bad-text">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6 M14 11v6" /></svg>
+                    </span>
+                    <div>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Hapus {count} draft tiket?</h2>
+                        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">
+                            Tiket yang dipilih akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-5 flex justify-end gap-2.5">
+                    <button
+                        onClick={onCancel}
+                        disabled={deleting}
+                        className="rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Tidak
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={deleting}
+                        className="rounded-full bg-red-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {deleting ? 'Menghapus…' : 'Ya, Hapus'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl, approversUrl, submitUrl }) {
     const [tickets, setTickets] = useState(initialTickets);
     const [tab, setTab] = useState('All');
@@ -48,6 +84,8 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
     const [sortDir, setSortDir] = useState('desc');
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [deleting, setDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
 
     // Selecting drafts to delete is only meaningful while the Draft tab is
     // active — leaving it clears the checkboxes instead of letting a stale
@@ -128,9 +166,9 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
 
     async function deleteSelected() {
         if (selectedIds.size === 0) return;
-        if (!confirm(`Hapus ${selectedIds.size} draft tiket yang dipilih? Tindakan ini tidak bisa dibatalkan.`)) return;
 
         setDeleting(true);
+        setDeleteError('');
         const ids = [...selectedIds];
         const results = await Promise.allSettled(ids.map((id) => apiFetch(`/requester/tickets/${id}`, { method: 'DELETE' })));
         const deletedIds = ids.filter((_, i) => results[i].status === 'fulfilled');
@@ -138,10 +176,11 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
         setTickets((current) => current.filter((t) => !deletedIds.includes(t.id)));
         setSelectedIds(new Set());
         setDeleting(false);
+        setShowDeleteConfirm(false);
 
         const failedCount = results.length - deletedIds.length;
         if (failedCount > 0) {
-            alert(`${failedCount} tiket gagal dihapus. Coba lagi.`);
+            setDeleteError(`${failedCount} tiket gagal dihapus. Coba lagi.`);
         }
     }
 
@@ -196,13 +235,28 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                     <span className="text-[13px] font-semibold text-blue-800 dark:text-accent-text">{selectedIds.size} tiket dipilih</span>
                     <button
                         type="button"
-                        onClick={deleteSelected}
+                        onClick={() => setShowDeleteConfirm(true)}
                         disabled={deleting}
                         className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {deleting ? 'Menghapus…' : 'Hapus Terpilih'}
                     </button>
                 </div>
+            )}
+
+            {deleteError && (
+                <p className="rounded-xl border border-red-200 bg-red-50 dark:bg-bad-soft dark:border-transparent px-4 py-3 text-[13px] font-medium text-red-700 dark:text-bad-text">
+                    {deleteError}
+                </p>
+            )}
+
+            {showDeleteConfirm && (
+                <DeleteConfirmModal
+                    count={selectedIds.size}
+                    deleting={deleting}
+                    onCancel={() => setShowDeleteConfirm(false)}
+                    onConfirm={deleteSelected}
+                />
             )}
 
             <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
