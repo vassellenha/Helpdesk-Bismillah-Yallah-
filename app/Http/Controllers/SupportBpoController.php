@@ -185,6 +185,11 @@ class SupportBpoController extends Controller
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
 
+        // Any action Support takes on the ticket is a response, not just a
+        // comment — resolving/escalating/returning without ever replying in
+        // the discussion thread still answered within the SLA window.
+        $ticket->markFirstResponse();
+
         // Clears any "Belum" banner from a previous round — this resolution
         // is Support's answer to it, and a fresh reopen would set new note.
         $ticket->update(['status' => 'Resolved', 'resolved_at' => Carbon::now(), 'reopen_note' => null, 'reopen_at' => null]);
@@ -228,6 +233,9 @@ class SupportBpoController extends Controller
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
+
+        // Same reasoning as resolve(): deciding this needs IT is a response too.
+        $ticket->markFirstResponse();
 
         $itAgent = SupportAgent::find($ticket->catalogSubject?->it_agent_id)
             ?? $this->agentFor(CurrentActor::support());
@@ -306,6 +314,9 @@ class SupportBpoController extends Controller
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
+
+        // Same reasoning as resolve(): returning the ticket is a response too.
+        $ticket->markFirstResponse();
 
         $ticket->update(['status' => 'Returned']);
 

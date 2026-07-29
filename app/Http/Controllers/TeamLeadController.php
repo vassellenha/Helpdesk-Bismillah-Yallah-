@@ -704,6 +704,16 @@ class TeamLeadController extends Controller
                 ? round($resolvedWithTime->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->resolved_at)) / 60, 1)
                 : null;
 
+            // first_response_at (set the moment Support takes any action on a
+            // ticket, not just a discussion reply — see SupportController/
+            // SupportBpoController::resolve()/escalate()/returnTicket()) is
+            // what makes this measurable at all; before it existed there was
+            // no per-ticket timestamp for "when did Support actually engage".
+            $respondedWithTime = $mine->filter(fn (Ticket $t) => $t->first_response_at !== null);
+            $avgResponseMinutes = $respondedWithTime->isNotEmpty()
+                ? round($respondedWithTime->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->first_response_at)))
+                : null;
+
             $metSla = $resolvedWithTime->filter(fn (Ticket $t) => $t->resolved_at->lessThanOrEqualTo($t->resolution_due_at))->count();
             $productivity = $resolvedWithTime->isNotEmpty() ? (int) round($metSla / $resolvedWithTime->count() * 100) : null;
 
@@ -716,7 +726,7 @@ class TeamLeadController extends Controller
                 'initials' => $this->initials($agent->name),
                 'load' => $active->count(),
                 'resolved' => $done->count(),
-                'avgResponse' => '—',
+                'avgResponse' => $avgResponseMinutes !== null ? $this->formatDuration($avgResponseMinutes) : '—',
                 'avgResolution' => $avgResolutionHours !== null ? $avgResolutionHours.'h' : '—',
                 'productivity' => $productivity,
                 'rating' => $rated->isNotEmpty() ? round($rated->avg('satisfaction_rating'), 1) : null,
@@ -737,6 +747,16 @@ class TeamLeadController extends Controller
                     ->values(),
             ];
         })->sortByDesc('load')->values();
+    }
+
+    /**
+     * Response times are usually minutes, resolution times usually hours —
+     * showing "0.3h" for an 18-minute reply is technically correct but
+     * unreadable next to the resolution column's "Xh" figures.
+     */
+    private function formatDuration(int $minutes): string
+    {
+        return $minutes < 60 ? "{$minutes}m" : round($minutes / 60, 1).'h';
     }
 
     /**
