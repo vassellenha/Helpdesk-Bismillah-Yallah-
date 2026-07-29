@@ -10,12 +10,14 @@ use App\Models\Knowledge\Article;
 use App\Models\Knowledge\Conversation;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\Eva\AssistantWidget;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SubjectMatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\ActsAsEvaAdmin;
 use Tests\TestCase;
 
 /**
@@ -36,6 +38,7 @@ use Tests\TestCase;
  */
 final class AssistantWidgetTest extends TestCase
 {
+    use ActsAsEvaAdmin;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -62,6 +65,41 @@ final class AssistantWidgetTest extends TestCase
         // apiFetch membaca token dari meta ini. Tanpa baris itu setiap
         // pertanyaan dibalas 419 dengan pesan yang tidak menyebut CSRF.
         $response->assertSee('name="csrf-token"', false);
+    }
+
+    /**
+     * Angka keyakinan dan ambangnya tidak boleh sampai ke halaman karyawan.
+     *
+     * Keduanya alat kerja admin — gunanya membandingkan satu jawaban dengan
+     * jawaban lain untuk memutuskan materi mana yang perlu diperbaiki. Di
+     * widget ia cuma angka yang tak bisa ditindaklanjuti, dan mudah salah
+     * dibaca sebagai "jawabannya baru benar 97%".
+     *
+     * Diuji pada PROP-nya, bukan pada teks yang dirender: markup widget lahir
+     * di React, jadi kalimatnya memang tidak ada di HTML awal. Yang bisa bocor
+     * lewat HTML justru angkanya sendiri, dan itulah yang dijaga di sini.
+     */
+    public function test_ambang_keyakinan_tidak_dikirim_ke_widget(): void
+    {
+        $props = AssistantWidget::props();
+
+        $this->assertArrayNotHasKey('thresholds', $props);
+        $this->assertSame(['endpoints', 'offsetBottom'], array_keys($props));
+
+        $this->get(route('portal.index'))
+            ->assertOk()
+            ->assertDontSee('min_confidence')
+            ->assertDontSee('hedge_confidence');
+    }
+
+    /** EVA Preview — layar ADMIN — justru WAJIB tetap menampilkannya. */
+    public function test_eva_preview_tetap_menerima_ambang_keyakinan(): void
+    {
+        $this->actingAsEvaAdmin();
+
+        $this->get(route('eva.preview'))
+            ->assertOk()
+            ->assertSee('min_confidence');
     }
 
     public function test_tamu_tanpa_identitas_tetap_dilayani(): void

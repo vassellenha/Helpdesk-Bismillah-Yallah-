@@ -27,7 +27,7 @@ export function UserBubble({ text }) {
     return <div className="eva-w-bubble eva-w-bubble-user">{text}</div>;
 }
 
-export function EvaBubble({ message, thresholds, onClarifyPick, onRate, onNote, onTicketDraft }) {
+export function EvaBubble({ message, onClarifyPick, onRate, onNote, onTicketDraft }) {
     if (message.type === 'ticket_draft') {
         return <TicketDraftBubble message={message} />;
     }
@@ -47,7 +47,7 @@ export function EvaBubble({ message, thresholds, onClarifyPick, onRate, onNote, 
         );
     }
 
-    return <AnswerBubble message={message} thresholds={thresholds} onRate={onRate} onNote={onNote} />;
+    return <AnswerBubble message={message} onRate={onRate} onNote={onNote} />;
 }
 
 function TicketDraftBubble({ message }) {
@@ -85,12 +85,28 @@ function ClarifyBubble({ message, onPick }) {
     );
 }
 
-function AnswerBubble({ message, thresholds, onRate, onNote }) {
+/*
+ | Angka keyakinan dan ambang SENGAJA tidak ditampilkan di sini.
+ |
+ | Keduanya alat kerja admin: gunanya membandingkan satu jawaban dengan
+ | jawaban lain untuk memutuskan materi mana yang perlu diperbaiki. Bagi
+ | karyawan yang sedang mencari cara reset password, "keyakinan 97 (ambang
+ | 55)" tidak mengubah satu pun keputusannya — dan angka yang tidak bisa
+ | ditindaklanjuti justru mengundang salah tafsir, seolah jawabannya baru
+ | benar 97%.
+ |
+ | Yang TETAP ditampilkan: judul sumber, supaya karyawan tahu panduan ini
+ | berasal dari materi resmi yang mana, dan catatan ragu-ragu di bawah —
+ | itu peringatan yang bisa ditindaklanjuti ("periksa lagi"), bukan skor.
+ |
+ | Tempat melihat angkanya tetap ada: EVA Preview di konsol admin.
+*/
+function AnswerBubble({ message, onRate, onNote }) {
     return (
         <div className="eva-w-bubble eva-w-bubble-eva eva-pop">
             {message.is_hedged && (
                 <div className="eva-w-hedge">
-                    Jawaban berikut kemungkinan sesuai, namun tingkat keyakinannya belum penuh.
+                    Jawaban berikut kemungkinan sesuai, namun sebaiknya Anda periksa kembali.
                 </div>
             )}
 
@@ -98,9 +114,6 @@ function AnswerBubble({ message, thresholds, onRate, onNote }) {
 
             <div className="eva-w-source">
                 <span className="eva-w-source-tag">{message.hit.title}</span>
-                <span className="eva-w-muted">
-                    keyakinan {message.hit.confidence} (ambang {thresholds.min_confidence})
-                </span>
             </div>
 
             <RatingRow message={message} onRate={onRate} onNote={onNote} />

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Support\Eva;
 
-use App\Services\Knowledge\KnowledgeSearch;
-
 /**
  * Prop yang ditanam ke widget EVA di setiap halaman yang memasangnya.
  *
@@ -14,9 +12,10 @@ use App\Services\Knowledge\KnowledgeSearch;
  * konfigurasi akan menyeret seluruh dependensinya ke halaman yang bahkan tidak
  * memanggil aksi apa pun.
  *
- * Ambang keyakinan ikut dikirim supaya widget tidak mengetik ulang angka yang
- * sudah hidup di KnowledgeSearch — angka yang ditulis dua kali akan berselisih
- * begitu salah satunya digeser.
+ * Ambang keyakinan SENGAJA tidak dikirim. Widget tidak lagi menampilkan angka
+ * keyakinan maupun ambangnya — keduanya alat kerja admin, dan tempatnya di EVA
+ * Preview. Prop yang tidak dibaca siapa pun tetap ikut terkirim ke setiap
+ * halaman berwidget, lalu perlahan terbaca sebagai sesuatu yang masih dipakai.
  */
 final class AssistantWidget
 {
@@ -34,10 +33,6 @@ final class AssistantWidget
                 'rate' => route('eva.assistant.rate'),
                 'note' => route('eva.assistant.note'),
                 'ticketDraft' => route('eva.assistant.ticket-draft'),
-            ],
-            'thresholds' => [
-                'min_confidence' => KnowledgeSearch::MIN_CONFIDENCE,
-                'hedge_confidence' => KnowledgeSearch::HEDGE_CONFIDENCE,
             ],
             'offsetBottom' => $offsetBottom,
         ];

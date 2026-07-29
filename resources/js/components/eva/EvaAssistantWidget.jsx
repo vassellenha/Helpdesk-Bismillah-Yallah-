@@ -29,7 +29,7 @@ const QUICK_QUESTIONS = [
 
 const MAX_QUESTION_LENGTH = 500;
 
-export default function EvaAssistantWidget({ endpoints, thresholds, offsetBottom = 24 }) {
+export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -193,7 +193,6 @@ export default function EvaAssistantWidget({ endpoints, thresholds, offsetBottom
                                 <EvaBubble
                                     key={message.key}
                                     message={message}
-                                    thresholds={thresholds}
                                     onClarifyPick={(option) => ask(`${message.question} ${option}`)}
                                     onRate={(stars) => rate(message, stars)}
                                     onNote={(note) => attachNote(message, note)}
