@@ -94,7 +94,7 @@ class TeamLeadController extends Controller
         $since = match ($period) {
             'today' => Carbon::today(),
             '7d' => Carbon::now()->subDays(7),
-            'quarter' => Carbon::now()->subMonths(3),
+            'quarter' => Carbon::now()->subMonthsNoOverflow(3),
             default => Carbon::now()->subDays(30),
         };
 
@@ -908,7 +908,10 @@ class TeamLeadController extends Controller
     {
         $colors = ['#dc2626', '#2563eb', '#7c3aed', '#d97706', '#059669'];
         $topApps = collect($this->topApps($tickets))->pluck('name');
-        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->subMonths($m));
+        // startOfMonth() first — subtracting months from a late-month day can
+        // overflow into the wrong target month, repeating one label and
+        // silently dropping another from the chart.
+        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->startOfMonth()->subMonths($m));
 
         $pointsFor = fn (string $app) => $months->map(fn (Carbon $month) => $tickets->filter(fn (Ticket $t) => $t->service_name === $app && $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month))->count())->all();
 
@@ -1060,7 +1063,9 @@ class TeamLeadController extends Controller
 
     private function ticketTrend(Collection $tickets): array
     {
-        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->subMonths($m));
+        // startOfMonth() first — see appTrend() above for why subtracting
+        // months from a late-month day can overflow into the wrong month.
+        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->startOfMonth()->subMonths($m));
 
         return $months->map(function (Carbon $month) use ($tickets) {
             $created = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month))->count();

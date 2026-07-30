@@ -23,7 +23,7 @@ class DashboardController extends Controller
         $needsResponse = $tickets->where('status', 'Waiting for Response');
         $resolved = $tickets->where('status', 'Resolved');
         $closedLast6Months = $tickets->whereIn('status', ['Closed', 'Completed'])
-            ->where('created_at', '>=', Carbon::now()->subMonths(6));
+            ->where('created_at', '>=', Carbon::now()->subMonthsNoOverflow(6));
 
         $approvalBreakdown = $awaitingApproval
             ->groupBy(fn (Ticket $t) => $t->approver?->name ?? 'Unassigned')
@@ -149,7 +149,12 @@ class DashboardController extends Controller
 
     private function createdVsResolvedByMonth(Collection $tickets): array
     {
-        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->subMonths($m));
+        // startOfMonth() first — subtracting months from day 29-31 of the
+        // current month can overflow into the wrong target month (e.g. today
+        // the 30th, minus 5 months, lands on a nonexistent Feb 30 and rolls
+        // forward into March), producing a repeated month label and silently
+        // dropping a real month from the chart.
+        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->startOfMonth()->subMonths($m));
 
         return $months->map(function (Carbon $month) use ($tickets) {
             $created = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month));

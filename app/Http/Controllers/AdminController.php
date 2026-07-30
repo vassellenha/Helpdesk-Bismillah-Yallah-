@@ -123,7 +123,10 @@ class AdminController extends Controller
 
     private function lastSixMonths(): array
     {
-        return collect(range(5, 0))->map(fn (int $m) => Carbon::now()->subMonths($m))->all();
+        // startOfMonth() first — see DashboardController::createdVsResolvedByMonth()
+        // for why subtracting months from a late-month day can overflow into
+        // the wrong target month and repeat/skip a label.
+        return collect(range(5, 0))->map(fn (int $m) => Carbon::now()->startOfMonth()->subMonths($m))->all();
     }
 
     private function slaTrendByPriority(Collection $tickets): array
