@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiFetch } from '../../lib/api';
 import {
-    PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge,
-    EmptyState, Pagination, usePagination, inputStyle,
+    PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge, Button,
+    EmptyState, ErrorBanner, Modal, Pagination, usePagination, inputStyle,
 } from './ui';
 
 /*
@@ -58,10 +59,18 @@ const CLAMP_2 = {
     overflow: 'hidden',
 };
 
-export default function EvaConversationLog({ conversations, stats, showing }) {
+export default function EvaConversationLog({ conversations: initialConversations, stats: initialStats, showing }) {
     const [query, setQuery] = useState('');
     const [outcome, setOutcome] = useState(ALL);
     const [selectedId, setSelectedId] = useState(null);
+
+    // State, bukan langsung membaca prop: percakapan yang dihapus harus bisa
+    // lenyap dari daftar tanpa memuat ulang seluruh halaman.
+    const [conversations, setConversations] = useState(initialConversations);
+    const [stats, setStats] = useState(initialStats);
+    const [deleting, setDeleting] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(null);
 
     const visible = useMemo(() => {
         const needle = query.trim().toLowerCase();
@@ -101,18 +110,51 @@ export default function EvaConversationLog({ conversations, stats, showing }) {
         if (index >= 0) pager.setPage(Math.floor(index / PER_PAGE) + 1);
     }, [selectedId]);
 
+    /**
+     * Menghapus TRANSKRIP percakapan, bukan riwayat pertanyaannya.
+     *
+     * kb_answer_logs (sumber Analytics, Unanswered Questions, deflection rate)
+     * tidak disentuh — lihat ConversationController::destroy. Yang hilang dari
+     * layar ini murni kalimat yang pernah diucapkan, bukan angka apa pun.
+     */
+    async function confirmDelete() {
+        const target = deleting;
+
+        setBusy(true);
+        setError(null);
+        try {
+            await apiFetch(`/eva/api/conversations/${target.id}`, { method: 'DELETE' });
+
+            setConversations((rows) => rows.filter((c) => c.id !== target.id));
+            setStats((current) => ({
+                ...current,
+                total: current.total - 1,
+                [target.outcome]: (current[target.outcome] ?? 0) - 1,
+            }));
+
+            if (selectedId === target.id) setSelectedId(null);
+            setDeleting(null);
+        } catch (e) {
+            setError(`Gagal menghapus percakapan: ${e.message}`);
+        } finally {
+            setBusy(false);
+        }
+    }
+
     return (
         <div style={PAGE}>
             <PageHeader
                 title="Log Percakapan"
-                subtitle={`Menampilkan ${showing} percakapan terbaru dari ${stats.total} yang tercatat.`}
+                subtitle={`Menampilkan ${showing} percakapan terbaru dari ${stats.total} percakapan yang tercatat.`}
             />
+
+            <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
             <StatRow>
                 <StatTile label="TOTAL PERCAKAPAN" value={stats.total} />
                 <StatTile label="TERJAWAB" value={stats.answered} tone="var(--green-500)" />
-                <StatTile label="BERAKHIR TIKET" value={stats.ticket} hint="EVA tidak menemukan jawaban" tone="var(--amber-500)" />
-                <StatTile label="DITINGGALKAN" value={stats.abandoned} hint="tidak dilanjutkan pengguna" />
+                <StatTile label="BERLANJUT KE TIKET" value={stats.ticket} hint="EVA tidak menemukan jawaban" tone="var(--amber-500)" />
+                <StatTile label="DITINGGALKAN" value={stats.abandoned} hint="tidak dilanjutkan penanya" />
             </StatRow>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,0.9fr) minmax(0,1.1fr)', gap: '16px', alignItems: 'stretch' }}>
@@ -127,8 +169,45 @@ export default function EvaConversationLog({ conversations, stats, showing }) {
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                 />
-                <TranscriptPanel conversation={selected} onClear={() => setSelectedId(null)} />
+                <TranscriptPanel
+                    conversation={selected}
+                    onClear={() => setSelectedId(null)}
+                    onDelete={() => setDeleting(selected)}
+                />
             </div>
+
+            {/*
+                Dialognya menyebut jumlah giliran, bukan cuma "yakin?": itu satu
+                satunya cara membedakan percakapan tiga baris dari percakapan
+                lima belas giliran sebelum admin menekan Hapus.
+
+                Kalimat kedua ada supaya kekhawatiran yang wajar — "apa angka
+                Analytics ikut berubah?" — terjawab SEBELUM ditanyakan: tidak,
+                karena ini menghapus transkripnya, bukan kb_answer_logs.
+            */}
+            {deleting && (
+                <Modal title="Hapus percakapan ini?" onClose={() => (busy ? null : setDeleting(null))}>
+                    <div style={{ padding: '12px 20px 4px' }}>
+                        <p style={{
+                            margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-900)',
+                            padding: '10px 12px', background: 'var(--surface-tint)',
+                            borderRadius: '6px', borderLeft: '3px solid var(--border-soft)',
+                        }}>
+                            “{deleting.opening_question}” — {deleting.turn_count} giliran, {deleting.started_at}
+                        </p>
+                        <p style={{ margin: '12px 0 0', fontSize: '12.5px', lineHeight: 1.6, color: 'var(--ink-700)' }}>
+                            Transkripnya akan terhapus dan tidak bisa dikembalikan. Riwayat pertanyaan
+                            pada Analytics dan Unanswered Questions tidak ikut berubah.
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px 16px' }}>
+                        <Button variant="ghost" onClick={() => setDeleting(null)} disabled={busy}>Batal</Button>
+                        <Button variant="dangerPrimary" onClick={confirmDelete} disabled={busy}>
+                            {busy ? 'Menghapus…' : 'Hapus'}
+                        </Button>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 }
@@ -272,7 +351,7 @@ function ConversationRow({ conversation, active, onClick }) {
     );
 }
 
-function TranscriptPanel({ conversation, onClear }) {
+function TranscriptPanel({ conversation, onClear, onDelete }) {
     const bodyRef = useRef(null);
 
     // Percakapan baru selalu dibaca dari atas. Tanpa ini, pindah percakapan
@@ -287,8 +366,8 @@ function TranscriptPanel({ conversation, onClear }) {
                 <CardTitle>Isi percakapan</CardTitle>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
                     <EmptyState>
-                        Pilih percakapan di sebelah kiri untuk membacanya. Tombol panah ↑ ↓ dapat
-                        digunakan untuk berpindah.
+                        Pilih percakapan pada daftar di sebelah kiri untuk membacanya. Tombol panah
+                        ↑ ↓ dapat digunakan untuk berpindah.
                     </EmptyState>
                 </div>
             </Card>
@@ -299,7 +378,12 @@ function TranscriptPanel({ conversation, onClear }) {
         <Card style={{ display: 'flex', flexDirection: 'column', height: PANEL_HEIGHT, overflow: 'hidden' }}>
             <CardTitle
                 right={
-                    <button type="button" onClick={onClear} style={closeButtonStyle}>Tutup</button>
+                    <span style={{ display: 'flex', gap: '8px' }}>
+                        <button type="button" onClick={onDelete} style={{ ...closeButtonStyle, color: 'var(--red-600)' }}>
+                            Hapus
+                        </button>
+                        <button type="button" onClick={onClear} style={closeButtonStyle}>Tutup</button>
+                    </span>
                 }
             >
                 <span style={CLAMP_2}>{conversation.opening_question}</span>
@@ -358,7 +442,7 @@ function Turn({ turn }) {
 
             {!isUser && (turn.source_label || turn.is_clarifying) && (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
-                    {turn.is_clarifying && <Badge tone="blue">bertanya balik</Badge>}
+                    {turn.is_clarifying && <Badge tone="blue">Bertanya balik</Badge>}
                     {turn.source_label && (
                         <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>
                             {turn.source_label}

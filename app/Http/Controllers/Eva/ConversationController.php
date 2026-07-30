@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Eva;
 use App\Http\Controllers\Controller;
 use App\Models\Knowledge\Conversation;
 use App\Models\Knowledge\ConversationTurn;
+use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 /**
@@ -37,6 +38,23 @@ class ConversationController extends Controller
             ],
             'showing' => $conversations->count(),
         ]);
+    }
+
+    /**
+     * Menghapus TRANSKRIP percakapan — bukan riwayat pertanyaannya.
+     *
+     * kb_conversation_turns ikut terhapus (FK `cascadeOnDelete`), tapi
+     * kb_answer_logs TIDAK: kolom `conversation_id`-nya `nullOnDelete`, jadi
+     * barisnya tetap ada, hanya tautannya lepas. Itu satu-satunya cara
+     * "menghapus log percakapan" yang aman — kb_answer_logs adalah sumber
+     * tunggal Analytics, Unanswered Questions, dan deflection rate, dan
+     * menghapusnya berarti mengubah angka bulan lalu tanpa sadar.
+     */
+    public function destroy(Conversation $conversation): JsonResponse
+    {
+        $conversation->delete();
+
+        return response()->json(['deleted' => true]);
     }
 
     private function present(Conversation $conversation): array

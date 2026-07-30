@@ -175,6 +175,9 @@ Route::prefix('eva')->name('eva.')->middleware('eva.access')->group(function () 
     Route::get('/preview', [EvaPreviewController::class, 'index'])->name('preview');
     Route::get('/unanswered', [EvaUnansweredController::class, 'index'])->name('unanswered');
     Route::get('/conversations', [EvaConversationController::class, 'index'])->name('conversations');
+    // Menghapus TRANSKRIP percakapan. kb_answer_logs tidak ikut — lihat
+    // ConversationController::destroy.
+    Route::delete('/api/conversations/{conversation}', [EvaConversationController::class, 'destroy'])->name('conversations.destroy');
     Route::get('/ratings', [EvaRatingController::class, 'index'])->name('ratings');
     Route::get('/analytics', [EvaAnalyticsController::class, 'index'])->name('analytics');
     Route::get('/apps', [EvaAppsController::class, 'index'])->name('apps');

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Eva;
 
+use App\Models\Knowledge\AnswerLog;
 use App\Models\Knowledge\Conversation;
 use App\Models\Knowledge\ConversationTurn;
 use App\Models\User;
@@ -184,5 +185,53 @@ final class ConversationLogTest extends TestCase
         $this->conversation(['requester_name' => 'Baru', 'started_at' => now()->subMinutes(5)]);
 
         $this->assertSame(['Baru', 'Lama'], array_column($this->rows(), 'requester_name'));
+    }
+
+    // ---- hapus ---------------------------------------------------------------
+
+    /**
+     * Menghapus percakapan menghapus TRANSKRIPnya, bukan riwayat pertanyaannya.
+     *
+     * kb_answer_logs adalah sumber tunggal Analytics, Unanswered Questions, dan
+     * deflection rate — ikut terhapus di sini berarti mengubah angka bulan lalu
+     * tanpa sadar. Migrasinya sudah menjamin ini di level FK
+     * (`conversation_id` pada kb_answer_logs adalah `nullOnDelete`, BUKAN
+     * `cascadeOnDelete`); tes ini mengunci supaya perilakunya tidak diam-diam
+     * berubah kalau migrasinya suatu saat ditulis ulang.
+     */
+    public function test_menghapus_percakapan_tidak_menghapus_log_jawaban(): void
+    {
+        $conversation = $this->conversation();
+        $this->turn($conversation, 1, ConversationTurn::ROLE_USER, 'cara reset password sap');
+
+        $log = AnswerLog::create([
+            'conversation_id' => $conversation->id,
+            'question' => 'cara reset password sap',
+            'outcome' => AnswerLog::OUTCOME_ANSWERED,
+            'confidence' => 90,
+        ]);
+
+        $this->delete("/eva/api/conversations/{$conversation->id}")->assertOk();
+
+        $this->assertSame(0, Conversation::count());
+        $this->assertSame(0, ConversationTurn::count(), 'transkripnya ikut terhapus');
+        $this->assertSame(1, AnswerLog::count(), 'riwayat pertanyaan tetap ada');
+        $this->assertNull($log->fresh()->conversation_id, 'tautannya lepas, bukan barisnya hilang');
+    }
+
+    public function test_percakapan_yang_terhapus_hilang_dari_daftar(): void
+    {
+        $conversation = $this->conversation();
+
+        $this->assertCount(1, $this->rows());
+
+        $this->delete("/eva/api/conversations/{$conversation->id}")->assertOk();
+
+        $this->assertCount(0, $this->rows());
+    }
+
+    public function test_menghapus_percakapan_yang_tidak_ada_mengembalikan_404(): void
+    {
+        $this->delete('/eva/api/conversations/999')->assertNotFound();
     }
 }
