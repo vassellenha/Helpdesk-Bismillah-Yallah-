@@ -30,6 +30,11 @@ export default function EvaUnansweredQuestions({
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
 
+    // Daftar "Telah terjawab" jadi state, bukan prop yang dibaca langsung:
+    // barisnya harus bisa hilang tanpa memuat ulang halaman.
+    const [closedRows, setClosedRows] = useState(closed);
+    const [closedAsking, setClosedAsking] = useState(null);
+
     const visible = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return gaps;
@@ -74,6 +79,39 @@ export default function EvaUnansweredQuestions({
         setAsking(null);
     }
 
+    /**
+     * Hapus dari daftar "Telah terjawab" — satu baris atau seluruhnya.
+     *
+     * Memakai jalur yang SAMA dengan daftar kerja di atas (mencatat keputusan
+     * menyingkirkan), karena daftar ini tidak punya status tersimpan: isinya
+     * dihitung ulang tiap halaman dibuka. Tidak ada baris yang bisa "dihapus"
+     * selain dengan menyingkirkan pertanyaannya.
+     *
+     * Seluruh baris dikirim dalam satu permintaan. Mengirim satu per satu
+     * membuat kegagalan di tengah meninggalkan separuh terhapus, dan layar
+     * tidak punya cara jujur melaporkan baris mana yang gagal.
+     */
+    async function dismissClosed() {
+        const target = closedAsking.mode === 'all'
+            ? closedRows.map((row) => row.question)
+            : [closedAsking.gap.question];
+
+        setBusy(true);
+        setError(null);
+        try {
+            await apiFetch(endpoints.dismissMany, {
+                method: 'POST',
+                body: JSON.stringify({ questions: target }),
+            });
+            setClosedRows((rows) => rows.filter((row) => !target.includes(row.question)));
+            setClosedAsking(null);
+        } catch (e) {
+            setError(`Gagal menghapus pertanyaan: ${e.message}`);
+        } finally {
+            setBusy(false);
+        }
+    }
+
     return (
         <div style={PAGE}>
             <PageHeader
@@ -85,16 +123,16 @@ export default function EvaUnansweredQuestions({
 
             <StatRow columns={3}>
                 <StatTile
-                    label="CELAH TERBUKA"
+                    label="BELUM TERJAWAB"
                     value={gaps.length}
                     hint="pertanyaan berbeda"
                     tone={gaps.length ? 'var(--red-600)' : 'var(--green-500)'}
                 />
                 <StatTile label="VOLUME PERTANYAAN" value={totalAsks} hint="total kali ditanyakan" />
                 <StatTile
-                    label="SUDAH TERTUTUP"
+                    label="TELAH TERJAWAB"
                     value={closed.length}
-                    hint="dulu gagal, kini terjawab"
+                    hint="sebelumnya gagal, kini terjawab"
                     tone={closed.length ? 'var(--green-500)' : undefined}
                 />
             </StatRow>
@@ -110,7 +148,7 @@ export default function EvaUnansweredQuestions({
 
             <Card style={{ marginBottom: '16px' }}>
                 <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>ambang keyakinan {threshold}</span>}>
-                    Belum ada jawabannya
+                    Belum ada jawaban
                 </CardTitle>
 
                 <div style={{ overflowX: 'auto' }}>
@@ -149,7 +187,7 @@ export default function EvaUnansweredQuestions({
                                                 </div>
                                             </>
                                         ) : (
-                                            <Badge tone="red">tidak ada kandidat</Badge>
+                                            <Badge tone="red">Tidak ada kandidat</Badge>
                                         )}
                                     </td>
                                     <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
@@ -170,7 +208,7 @@ export default function EvaUnansweredQuestions({
                 {visible.length === 0 && (
                     <EmptyState>
                         {gaps.length === 0
-                            ? 'Tidak ada celah materi. Seluruh pertanyaan yang pernah gagal kini sudah ada jawabannya.'
+                            ? 'Tidak ada celah materi. Seluruh pertanyaan yang sebelumnya gagal kini telah memiliki jawaban.'
                             : 'Tidak ada pertanyaan yang cocok dengan pencarian ini.'}
                     </EmptyState>
                 )}
@@ -202,11 +240,26 @@ export default function EvaUnansweredQuestions({
                 </Modal>
             )}
 
-            {closed.length > 0 && (
+            {closedRows.length > 0 && (
                 <Card>
-                    <CardTitle>Sudah tertutup</CardTitle>
+                    <CardTitle
+                        right={
+                            <button
+                                type="button"
+                                onClick={() => setClosedAsking({ mode: 'all' })}
+                                style={{
+                                    border: 'none', background: 'none', padding: 0, cursor: 'pointer',
+                                    fontSize: '11.5px', fontWeight: 600, color: 'var(--red-600)',
+                                }}
+                            >
+                                Hapus semua
+                            </button>
+                        }
+                    >
+                        Telah terjawab
+                    </CardTitle>
                     <ul style={{ listStyle: 'none', margin: 0, padding: '4px 0 6px' }}>
-                        {closed.map((gap) => (
+                        {closedRows.map((gap) => (
                             <li
                                 key={gap.question}
                                 style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 18px', borderBottom: '1px solid var(--border-soft)' }}
@@ -214,13 +267,72 @@ export default function EvaUnansweredQuestions({
                                 <span style={{ flex: 1, fontSize: '12.5px', color: 'var(--ink-700)' }}>{gap.question}</span>
                                 <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{gap.best_match_title}</span>
                                 <Badge tone="green">{gap.best_match_confidence}</Badge>
+                                <button
+                                    type="button"
+                                    onClick={() => setClosedAsking({ mode: 'one', gap })}
+                                    style={{
+                                        border: 'none', background: 'none', padding: 0, cursor: 'pointer',
+                                        fontSize: '11.5px', fontWeight: 600, color: 'var(--red-600)',
+                                    }}
+                                >
+                                    Hapus
+                                </button>
                             </li>
                         ))}
                     </ul>
                     <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '12px 18px' }}>
-                        Riwayatnya tetap tercatat di log jawaban. Yang berubah hanya kondisi saat ini.
+                        Riwayatnya tetap tercatat pada log jawaban. Yang berubah hanya kondisi saat ini.
                     </p>
                 </Card>
+            )}
+
+            {/*
+                Dialog terpisah dari dialog daftar kerja di atas, bukan
+                digabung: kalimatnya berbeda karena akibatnya berbeda. Yang di
+                atas menyingkirkan satu pekerjaan, yang di sini bisa menghapus
+                seluruh daftar sekaligus, dan jumlahnya wajib terbaca sebelum
+                ditekan.
+
+                Kalimat kedua menyebut kemunculan kembali karena itu memang
+                yang terjadi: keputusan menyingkirkan kedaluwarsa begitu
+                pertanyaannya ditanyakan lagi. Tanpa disebut di sini,
+                kemunculannya nanti terbaca sebagai kerusakan.
+            */}
+            {closedAsking && (
+                <Modal
+                    title={closedAsking.mode === 'all'
+                        ? 'Hapus seluruh pertanyaan yang telah terjawab?'
+                        : 'Hapus pertanyaan ini dari daftar?'}
+                    onClose={() => (busy ? null : setClosedAsking(null))}
+                >
+                    <div style={{ padding: '12px 20px 4px' }}>
+                        <p style={{
+                            margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-900)',
+                            padding: '10px 12px', background: 'var(--surface-muted)',
+                            borderRadius: '6px', borderLeft: '3px solid var(--border-soft)',
+                        }}>
+                            {closedAsking.mode === 'all'
+                                ? `${closedRows.length} pertanyaan akan dihapus dari daftar ini.`
+                                : `“${closedAsking.gap.question}”`}
+                        </p>
+                        <p style={{ margin: '12px 0 0', fontSize: '12.5px', lineHeight: 1.6, color: 'var(--ink-700)' }}>
+                            Log jawaban tidak ikut terhapus, sehingga angka pada Analytics tidak berubah.
+                            Pertanyaan akan muncul kembali apabila karyawan menanyakannya lagi.
+                        </p>
+                    </div>
+
+                    <div style={{
+                        display: 'flex', justifyContent: 'flex-end', gap: '8px',
+                        padding: '14px 20px 16px', marginTop: '4px',
+                    }}>
+                        <Button variant="ghost" onClick={() => setClosedAsking(null)} disabled={busy}>Batal</Button>
+                        <Button variant="dangerPrimary" onClick={dismissClosed} disabled={busy}>
+                            {busy
+                                ? 'Menghapus…'
+                                : closedAsking.mode === 'all' ? 'Hapus semua' : 'Hapus'}
+                        </Button>
+                    </div>
+                </Modal>
             )}
         </div>
     );

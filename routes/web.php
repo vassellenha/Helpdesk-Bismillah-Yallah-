@@ -188,6 +188,7 @@ Route::prefix('eva')->name('eva.')->middleware('eva.access')->group(function () 
     // Menyingkirkan pertanyaan dari DAFTAR KERJA — bukan menghapusnya dari
     // kb_answer_logs. Riwayat dan angka Analytics tidak tersentuh.
     Route::post('/api/unanswered/dismiss', [EvaUnansweredController::class, 'dismiss'])->name('unanswered.dismiss');
+    Route::post('/api/unanswered/dismiss-many', [EvaUnansweredController::class, 'dismissMany'])->name('unanswered.dismiss-many');
     Route::post('/api/unanswered/restore', [EvaUnansweredController::class, 'restore'])->name('unanswered.restore');
     Route::post('/api/training/toggle', [EvaTrainingController::class, 'toggle'])->name('training.toggle');
 

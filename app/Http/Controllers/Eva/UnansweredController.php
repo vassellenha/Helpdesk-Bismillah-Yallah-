@@ -9,6 +9,7 @@ use App\Services\Knowledge\KnowledgeStats;
 use App\Support\CurrentActor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -57,6 +58,7 @@ class UnansweredController extends Controller
             'threshold' => KnowledgeSearch::MIN_CONFIDENCE,
             'endpoints' => [
                 'dismiss' => route('eva.unanswered.dismiss'),
+                'dismissMany' => route('eva.unanswered.dismiss-many'),
             ],
             'links' => [
                 'faq' => route('eva.faq'),
@@ -82,6 +84,40 @@ class UnansweredController extends Controller
         );
 
         return response()->json($this->present($dismissal));
+    }
+
+    /**
+     * Menyingkirkan beberapa pertanyaan dalam SATU permintaan.
+     *
+     * Dipakai tombol "Hapus semua" pada daftar "Telah terjawab". Sengaja bukan
+     * pemanggilan `dismiss()` berulang dari klien: kegagalan di tengah 20
+     * permintaan meninggalkan separuh terhapus tanpa ada yang tahu baris mana,
+     * dan layar tidak punya cara jujur melaporkannya.
+     *
+     * Batas 200 bukan hiasan: daftar kerja hanya memeriksa 40 kandidat, jadi
+     * muatan yang jauh lebih besar dari itu pasti bukan datang dari layar.
+     */
+    public function dismissMany(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'questions' => 'required|array|min:1|max:200',
+            'questions.*' => 'required|string|max:500',
+        ]);
+
+        $adminId = CurrentActor::admin()->id;
+
+        // Satu transaksi: sebagian terhapus lebih buruk daripada tidak terhapus
+        // sama sekali, karena admin membaca "Hapus semua" sebagai tuntas.
+        DB::transaction(function () use ($data, $adminId) {
+            foreach (array_unique($data['questions']) as $question) {
+                DismissedQuestion::updateOrCreate(
+                    ['question' => $question],
+                    ['dismissed_at' => now(), 'dismissed_by' => $adminId],
+                );
+            }
+        });
+
+        return response()->json(['dismissed' => count(array_unique($data['questions']))]);
     }
 
     /**
