@@ -35,7 +35,12 @@ class SyncEmployees extends Command
             ['Dinonaktifkan', $summary['deactivated']],
             ['Dilewati', count($summary['skipped'])],
             ['Field dipertahankan (API kosong)', $summary['kept_empty']],
+            ['Tidak ada di sumber', count($summary['not_in_source'])],
         ]);
+
+        foreach ($summary['not_in_source'] as $name) {
+            $this->line("  <fg=yellow>di luar sumber</> {$name} — tidak ada di respons API, dibiarkan apa adanya");
+        }
 
         foreach ($summary['changes'] as $change) {
             $this->line("  <fg=cyan>diubah</> {$change['name']} — ".implode(', ', $change['fields']));

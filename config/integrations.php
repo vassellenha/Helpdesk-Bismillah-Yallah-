@@ -91,4 +91,55 @@ return [
         */
         'overwrite_with_empty' => (bool) env('EMPLOYEE_DIRECTORY_OVERWRITE_WITH_EMPTY', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SINTA — Portal SSO
+    |--------------------------------------------------------------------------
+    |
+    | Single sign-on against ADHI's SINTA portal, wired the same way as the
+    | employee directory above: a driver interface with a "mock" implementation
+    | that completes the whole login round trip offline, so the flow is testable
+    | before any credential exists. Switch the driver to "oidc" and fill in the
+    | endpoints once SINTA's spec is in hand — no application code changes.
+    |
+    | SSO authenticates people; it never creates them. An identity that has no
+    | matching users row is refused, because provisioning belongs to the
+    | employee-directory sync — one owner per concern.
+    |
+    */
+    'sso' => [
+
+        'driver' => env('SSO_DRIVER', 'mock'),
+
+        'oidc' => [
+            'client_id' => env('SSO_CLIENT_ID'),
+            'client_secret' => env('SSO_CLIENT_SECRET'),
+            'authorize_url' => env('SSO_AUTHORIZE_URL'),
+            'token_url' => env('SSO_TOKEN_URL'),
+            'userinfo_url' => env('SSO_USERINFO_URL'),
+            'logout_url' => env('SSO_LOGOUT_URL'),
+            'scopes' => env('SSO_SCOPES', 'openid profile email'),
+            'timeout' => (int) env('SSO_TIMEOUT', 15),
+        ],
+
+        /*
+        | PLACEHOLDER CLAIM NAMES — guessed ahead of SINTA's spec, exactly like
+        | employee_directory.field_map. Left side is the claim SINTA returns,
+        | right side is the users column it identifies. When the real spec
+        | arrives this array is the only thing that changes.
+        */
+        'claim_map' => [
+            'nip' => 'nip',
+            'email' => 'email',
+            'name' => 'name',
+        ],
+
+        // Which mapped claim identifies the local account. NIP is the stable
+        // payroll key; email changes when someone marries or transfers.
+        'match_by' => 'nip',
+
+        // Fallback used when the primary claim is absent from the token.
+        'fallback_match_by' => 'email',
+    ],
 ];

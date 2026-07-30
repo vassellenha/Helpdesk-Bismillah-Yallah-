@@ -107,6 +107,7 @@ return [
     'admin_nav' => [
         ['label' => 'Dashboard', 'route' => 'admin.dashboard'],
         ['label' => 'User & Role Management', 'route' => 'admin.users'],
+        ['label' => 'Integrasi', 'route' => 'admin.integrations'],
         ['label' => 'Konfigurasi SLA', 'route' => 'admin.sla'],
         ['label' => 'Audit Trail Viewer', 'route' => 'admin.audit-trail'],
         ['label' => 'Service Catalog & Kategori Tiket', 'route' => 'admin.service-catalog'],

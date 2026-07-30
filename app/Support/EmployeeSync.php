@@ -52,6 +52,11 @@ class EmployeeSync
             // the local value was kept. Without this, an Admin edit that the sync
             // declines to overwrite looks identical to "nothing to do".
             'kept_empty' => 0,
+            // Local accounts the API never mentioned — hand-made by an Admin, or
+            // an employee the feed no longer returns. They are left completely
+            // alone (unless deactivate_missing is on), which is indistinguishable
+            // from "nothing to do" unless it is counted.
+            'not_in_source' => [],
             'changes' => [],
             'skipped' => [],
             'dry_run' => $dryRun,
@@ -121,8 +126,12 @@ class EmployeeSync
             }
         }
 
-        if (($config['deactivate_missing'] ?? false) && $summary['fetched'] > 0) {
-            $summary['deactivated'] = self::deactivateMissing($matchBy, $seen, $dryRun);
+        if ($summary['fetched'] > 0) {
+            $summary['not_in_source'] = self::localOnly($matchBy, $seen);
+
+            if ($config['deactivate_missing'] ?? false) {
+                $summary['deactivated'] = self::deactivateMissing($matchBy, $seen, $dryRun);
+            }
         }
 
         if (! $dryRun) {
@@ -256,6 +265,26 @@ class EmployeeSync
     }
 
     /**
+     * Accounts that exist here but were absent from the API response. Reported
+     * so an Admin-created account (or an employee the feed dropped) is never
+     * silently passed over — the sync leaving them untouched is correct, but it
+     * must be visible.
+     *
+     * @param  array<int,mixed>  $seen
+     * @return array<int,string>
+     */
+    private static function localOnly(string $matchBy, array $seen): array
+    {
+        return User::whereNotNull($matchBy)
+            ->where($matchBy, '!=', '')
+            ->whereNotIn($matchBy, $seen)
+            ->orderBy('name')
+            ->pluck('name')
+            ->take(self::MAX_REPORTED_CHANGES)
+            ->all();
+    }
+
+    /**
      * @param  array<int,mixed>  $seen
      */
     private static function deactivateMissing(string $matchBy, array $seen, bool $dryRun): int
@@ -285,13 +314,14 @@ class EmployeeSync
         $description = $summary['fetched'] === 0
             ? 'Sinkronisasi data pegawai GAGAL: tidak ada data diterima dari sumber.'
             : sprintf(
-                'Sinkronisasi data pegawai: %d diterima, %d dibuat, %d diperbarui, %d tetap, %d dilewati, %d field dipertahankan.',
+                'Sinkronisasi data pegawai: %d diterima, %d dibuat, %d diperbarui, %d tetap, %d dilewati, %d field dipertahankan, %d di luar sumber.',
                 $summary['fetched'],
                 $summary['created'],
                 $summary['updated'],
                 $summary['unchanged'],
                 $skipped,
                 $summary['kept_empty'],
+                count($summary['not_in_source']),
             );
 
         AuditTrail::record($actor, [

@@ -17,6 +17,7 @@ import NewTicketModal from './NewTicketModal';
 import ServiceCatalogConsole from './admin/ServiceCatalogConsole';
 import AuditTrailConsole from './admin/AuditTrailConsole';
 import TicketManagementConsole from './admin/TicketManagementConsole';
+import IntegrationConsole from './admin/IntegrationConsole';
 import RequesterTopNav from './requester/RequesterTopNav';
 import RequesterDashboard from './requester/RequesterDashboard';
 import MyTicketsPage from './requester/MyTicketsPage';
@@ -55,6 +56,7 @@ export const registry = {
     ServiceCatalogConsole,
     AuditTrailConsole,
     TicketManagementConsole,
+    IntegrationConsole,
     RequesterTopNav,
     RequesterDashboard,
     MyTicketsPage,

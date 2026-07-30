@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\TicketManagementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ApprovalController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\SlaPolicyController;
+use App\Http\Controllers\SsoController;
 use App\Http\Controllers\SupportBpoController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TeamLeadController;
@@ -20,6 +22,15 @@ use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PortalController::class, 'index'])->name('portal.index');
+
+// SINTA portal SSO. The helpdesk still works without signing in (see
+// CurrentActor's fixed personas); logging in narrows it to the real person.
+Route::prefix('auth/sso')->name('sso.')->group(function () {
+    Route::get('/login', [SsoController::class, 'login'])->name('login');
+    Route::get('/redirect', [SsoController::class, 'redirect'])->name('redirect');
+    Route::get('/callback', [SsoController::class, 'callback'])->name('callback');
+    Route::post('/logout', [SsoController::class, 'logout'])->name('logout');
+});
 
 Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/requester', [DashboardController::class, 'requester'])->name('requester');
@@ -109,6 +120,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/users', [UserRoleController::class, 'index'])->name('users');
     Route::get('/sla', [SlaPolicyController::class, 'index'])->name('sla');
     Route::get('/audit-trail', [AuditTrailController::class, 'index'])->name('audit-trail');
+
+    Route::prefix('integrations')->name('integrations.')->group(function () {
+        Route::post('/test', [IntegrationController::class, 'test'])->name('test');
+        Route::post('/sync', [IntegrationController::class, 'sync'])->name('sync');
+    });
+    Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations');
     Route::get('/service-catalog', [ServiceCatalogController::class, 'index'])->name('service-catalog');
     Route::get('/ticket-management', [TicketManagementController::class, 'index'])->name('ticket-management');
     Route::get('/ticket-management/export', [TicketManagementController::class, 'export'])->name('ticket-management.export');

@@ -198,6 +198,13 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                             tidak dikembalikan oleh sync, jadi perubahan manualmu di sana tetap bertahan.
                         </p>
                     )}
+                    {(syncResult.not_in_source ?? []).length > 0 && (
+                        <p className="mt-2 text-xs opacity-80">
+                            Tidak ada di data API, jadi dibiarkan apa adanya:{' '}
+                            <span className="font-medium">{syncResult.not_in_source.join(', ')}</span>.
+                            Akun yang dibuat manual lewat Admin tidak ikut disinkronkan.
+                        </p>
+                    )}
                     <p className="mt-2 text-xs opacity-80">Tercatat di Audit Trail — modul “Integrasi”.</p>
                 </div>
             )}
