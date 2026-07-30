@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import {
     PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge, Button,
-    EmptyState, ErrorBanner, inputStyle, coverageTone,
+    EmptyState, ErrorBanner, Modal, inputStyle, coverageTone,
 } from './ui';
 
 /*
@@ -40,6 +40,11 @@ export default function EvaTaxonomy({ tree, tags: initialTags, duplicates: initi
         }
     }
 
+    /**
+     * Mengembalikan berhasil/tidak, bukan void: dialog konfirmasinya hanya
+     * boleh tertutup kalau tagnya benar-benar terhapus. Tertutup saat gagal
+     * membuat layar terlihat seperti sudah selesai padahal tag masih ada.
+     */
     async function remove(tag) {
         setError(null);
         try {
@@ -47,8 +52,12 @@ export default function EvaTaxonomy({ tree, tags: initialTags, duplicates: initi
                 method: 'POST',
                 body: JSON.stringify({ tag }),
             }));
+
+            return true;
         } catch (e) {
             setError(`Gagal menghapus tag "${tag}": ${e.message}`);
+
+            return false;
         }
     }
 
@@ -66,7 +75,7 @@ export default function EvaTaxonomy({ tree, tags: initialTags, duplicates: initi
                 <StatTile label="LAYANAN" value={stats.services} />
                 <StatTile label="SUB CATEGORY" value={stats.subcategories} />
                 <StatTile label="SUBJECT" value={stats.subjects} />
-                <StatTile label="TAG DIPAKAI" value={stats.tags} />
+                <StatTile label="TAG DIGUNAKAN" value={stats.tags} />
             </StatRow>
 
             <TaxonomyTree tree={tree} catalogUrl={catalogUrl} />
@@ -223,6 +232,19 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
     const [editing, setEditing] = useState(null);
     const [opened, setOpened] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [deleting, setDeleting] = useState(null);
+    const [busy, setBusy] = useState(false);
+
+    async function confirmRemove() {
+        setBusy(true);
+        try {
+            if (await onRemove(deleting.tag)) {
+                setDeleting(null);
+            }
+        } finally {
+            setBusy(false);
+        }
+    }
 
     async function openTag(tag) {
         if (opened?.tag === tag) {
@@ -244,14 +266,14 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
 
     return (
         <Card>
-            <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{tags.length} tag dipakai</span>}>
+            <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{tags.length} tag digunakan</span>}>
                 Tag
             </CardTitle>
 
             {duplicates.length > 0 && (
                 <div style={{ padding: '13px 18px', borderBottom: '1px solid var(--border-soft)', background: 'var(--amber-soft-weak)' }}>
                     <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--amber-ink)', marginBottom: '7px' }}>
-                        {duplicates.length} kelompok tag nyaris kembar
+                        {duplicates.length} kelompok tag yang nyaris serupa
                     </div>
                     {/*
                         Deteksinya konservatif — hanya beda spasi, tanda hubung, atau
@@ -265,7 +287,7 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
                                 <Badge key={t.tag} tone="amber">{t.tag} ({t.total})</Badge>
                             ))}
                             <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>
-                                — gabungkan lewat “Ganti nama” ke salah satu bentuk
+                                Gabungkan melalui “Ganti nama” ke salah satu bentuk.
                             </span>
                         </div>
                     ))}
@@ -274,8 +296,8 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
 
             {tags.length === 0 ? (
                 <EmptyState>
-                    Belum ada tag yang digunakan. Tag diisi saat mengedit artikel, FAQ, atau dokumen.
-                    gunanya untuk hal yang tidak punya tempat di katalog, seperti “forticlient” atau “windows 11”.
+                    Belum ada tag yang digunakan. Tag diisi saat menyunting artikel, FAQ, atau dokumen,
+                    untuk hal yang tidak memiliki tempat pada katalog, misalnya “forticlient” atau “windows 11”.
                 </EmptyState>
             ) : (
                 <div style={{ padding: '15px 18px', display: 'flex', flexWrap: 'wrap', gap: '9px' }}>
@@ -308,11 +330,11 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
                                 onClick={() => setEditing({ from: tag.tag, to: tag.tag })}
                                 style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '11.5px', color: 'var(--blue-500)', fontWeight: 600 }}
                             >
-                                ganti nama
+                                Ganti nama
                             </button>
                             <button
                                 type="button"
-                                onClick={() => onRemove(tag.tag)}
+                                onClick={() => setDeleting(tag)}
                                 style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '11.5px', color: 'var(--red-600)', fontWeight: 600 }}
                             >
                                 hapus
@@ -361,7 +383,7 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
                             }}
                         />
                         <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '5px 0 0' }}>
-                            Ketik nama tag yang sudah ada untuk menggabungkan keduanya.
+                            Ketik nama tag yang telah ada untuk menggabungkan keduanya.
                         </p>
                     </div>
                     <Button
@@ -372,6 +394,43 @@ function TagManager({ tags, duplicates, onRename, onRemove }) {
                     </Button>
                     <Button variant="ghost" onClick={() => setEditing(null)}>Batal</Button>
                 </div>
+            )}
+
+            {/*
+                Menghapus tag adalah satu-satunya tindakan di layar ini yang
+                tidak bisa dibatalkan: setelah tag dilepas dari 40 materi, tidak
+                ada catatan materi mana saja yang dulu memakainya, jadi
+                memasangnya kembali berarti menelusuri satu per satu.
+
+                Karena itu dialognya menyebut angkanya, bukan cuma bertanya
+                "yakin?" — jumlah materi yang terpengaruh adalah satu-satunya
+                hal yang membedakan salah klik yang sepele dari yang mahal.
+            */}
+            {deleting && (
+                <Modal title="Hapus tag ini?" onClose={() => (busy ? null : setDeleting(null))}>
+                    <div style={{ padding: '12px 20px 4px' }}>
+                        <p style={{
+                            margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-900)',
+                            padding: '10px 12px', background: 'var(--surface-tint)',
+                            borderRadius: '6px', borderLeft: '3px solid var(--border-soft)',
+                        }}>
+                            “{deleting.tag}”
+                        </p>
+                        <p style={{ margin: '12px 0 0', fontSize: '12.5px', lineHeight: 1.6, color: 'var(--ink-700)' }}>
+                            Tag ini akan dilepas dari <strong>{deleting.total} materi</strong>
+                            {Object.keys(deleting.by_type).length > 0 && (
+                                <> ({Object.entries(deleting.by_type).map(([jenis, jumlah]) => `${jumlah} ${jenis}`).join(', ')})</>
+                            )}
+                            {' '}dan tidak bisa dikembalikan.
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px 16px' }}>
+                        <Button variant="ghost" onClick={() => setDeleting(null)} disabled={busy}>Batal</Button>
+                        <Button variant="dangerPrimary" onClick={confirmRemove} disabled={busy}>
+                            {busy ? 'Menghapus…' : 'Hapus tag'}
+                        </Button>
+                    </div>
+                </Modal>
             )}
         </Card>
     );
