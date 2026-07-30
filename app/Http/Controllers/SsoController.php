@@ -39,14 +39,24 @@ class SsoController extends Controller
 
     public function redirect()
     {
+        $provider = SsoAuthenticator::provider();
+
+        // A misconfigured provider (e.g. SSO_DRIVER=oidc with no
+        // SSO_AUTHORIZE_URL/SSO_CLIENT_ID yet) must not reach authorizeUrl():
+        // it would build a URL with no host, and redirect()->away() sending
+        // the browser to that relative target re-triggers this very route —
+        // an infinite redirect loop instead of a readable error.
+        if (! $provider->isConfigured()) {
+            return redirect()->route('sso.login')
+                ->with('sso_error', 'Konfigurasi SSO belum lengkap (SSO_CLIENT_ID / SSO_AUTHORIZE_URL kosong). Hubungi Administrator.');
+        }
+
         // One-time nonce, checked in callback(): without it anyone could replay a
         // ?code they captured and have us accept it as a fresh login.
         $state = Str::random(40);
         session([self::STATE_KEY => $state]);
 
-        return redirect()->away(
-            SsoAuthenticator::provider()->authorizeUrl($state, route('sso.callback'))
-        );
+        return redirect()->away($provider->authorizeUrl($state, route('sso.callback')));
     }
 
     public function callback(Request $request)

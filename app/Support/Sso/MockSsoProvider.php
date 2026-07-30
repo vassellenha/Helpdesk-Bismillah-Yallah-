@@ -19,6 +19,11 @@ class MockSsoProvider implements SsoProvider
 {
     public const CODE_PREFIX = 'mock:';
 
+    public function isConfigured(): bool
+    {
+        return true;
+    }
+
     public function authorizeUrl(string $state, string $redirectUri): string
     {
         // No external portal to visit — hand the browser straight back to the

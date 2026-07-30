@@ -10,6 +10,15 @@ namespace App\Support\Sso;
 interface SsoProvider
 {
     /**
+     * Whether this provider has enough config to actually attempt a login.
+     * Checked before authorizeUrl() is ever called: a provider missing its
+     * base URL/credentials must refuse here rather than hand back a
+     * malformed relative URL, which redirect()->away() would send the
+     * browser to as a same-page redirect — an infinite loop, not an error.
+     */
+    public function isConfigured(): bool;
+
+    /**
      * Where to send the browser to start the login. `$state` is the CSRF nonce
      * the caller stored in the session and will verify on the way back.
      */

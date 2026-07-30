@@ -19,6 +19,11 @@ class OidcSsoProvider implements SsoProvider
     /** @param array<string,mixed> $config */
     public function __construct(private array $config) {}
 
+    public function isConfigured(): bool
+    {
+        return filled($this->config['authorize_url'] ?? null) && filled($this->config['client_id'] ?? null);
+    }
+
     public function authorizeUrl(string $state, string $redirectUri): string
     {
         return rtrim((string) $this->config['authorize_url'], '?').'?'.http_build_query([
