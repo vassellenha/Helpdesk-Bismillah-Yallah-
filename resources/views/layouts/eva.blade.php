@@ -46,5 +46,15 @@
             @yield('content')
         </main>
     </div>
+
+    {{--
+        Di layout, bukan di tiap view: konsol ini 13 layar dan bukan SPA, jadi
+        tombol yang ditempel per halaman pasti ada yang terlewat.
+
+        Aman di pojok kanan bawah karena widget EVA (yang menempati pojok yang
+        sama, lihat `.eva-widget` di eva.css) hanya dipasang di halaman
+        karyawan, tidak di konsol.
+    --}}
+    @include('eva._role-switcher')
 </body>
 </html>
