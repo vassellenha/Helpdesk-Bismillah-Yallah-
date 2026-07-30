@@ -21,13 +21,13 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
         <div style={PAGE}>
             <PageHeader
                 title="Analytics"
-                subtitle="Ringkasan seluruh pertanyaan yang masuk ke EVA."
+                subtitle="Ringkasan seluruh pertanyaan yang diterima EVA."
             />
 
             <StatRow>
                 <StatTile label="TOTAL PERTANYAAN" value={summary.total} />
                 <StatTile
-                    label="SELESAI DI EVA"
+                    label="TERSELESAIKAN EVA"
                     value={`${summary.deflection_percent}%`}
                     hint={`${summary.answered} dari ${summary.total}`}
                     tone={summary.deflection_percent >= 50 ? 'var(--green-500)' : 'var(--amber-500)'}
@@ -35,13 +35,13 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                 <StatTile
                     label="TIDAK TERJAWAB"
                     value={summary.unanswered}
-                    hint="berujung draf tiket"
+                    hint="berlanjut menjadi draf tiket"
                     tone={summary.unanswered ? 'var(--red-600)' : undefined}
                 />
                 <StatTile
                     label="RATA-RATA KEYAKINAN"
                     value={summary.avg_confidence || '—'}
-                    hint="pada jawaban yang keluar"
+                    hint="pada jawaban yang diberikan"
                 />
             </StatRow>
 
@@ -51,8 +51,8 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                 paling mudah dibuat bagus dengan diam-diam mempersempit penyebutnya.
             */}
             <Card style={{ marginBottom: '16px' }}>
-                <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{summary.clarify}× EVA bertanya balik</span>}>
-                    Pertanyaan masuk vs terjawab, per minggu
+                <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>EVA bertanya balik {summary.clarify} kali</span>}>
+                    Pertanyaan masuk dan terjawab per minggu
                 </CardTitle>
                 <div style={{ padding: '14px 12px 8px', height: CHART_HEIGHT }}>
                     <ResponsiveContainer width="100%" height="100%">
@@ -98,7 +98,7 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                                                     kadang ketemu, kadang tidak.
                                                 */}
                                                 {row.answered_percent === 0 ? (
-                                                    <Badge tone="red">tidak pernah</Badge>
+                                                    <Badge tone="red">Tidak pernah</Badge>
                                                 ) : row.answered_percent < FRAGILE_THRESHOLD ? (
                                                     <Badge tone="amber">{row.answered_percent}% terjawab</Badge>
                                                 ) : (
@@ -118,14 +118,14 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                         Materi paling sering dikutip
                     </CardTitle>
                     {topMaterials.length === 0 ? (
-                        <EmptyState>Belum ada materi yang pernah digunakan EVA.</EmptyState>
+                        <EmptyState>Belum ada materi yang digunakan EVA.</EmptyState>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr>
                                         <th style={thStyle}>MATERI</th>
-                                        <th style={thStyle}>DIPAKAI</th>
+                                        <th style={thStyle}>DIKUTIP</th>
                                         <th style={thStyle}>RATING</th>
                                     </tr>
                                 </thead>
@@ -142,7 +142,7 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                                             <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                                                 {row.rating_count > 0
                                                     ? `${row.rating_avg} ★ (${row.rating_count})`
-                                                    : <span style={{ color: 'var(--slate-500)' }}>belum dinilai</span>}
+                                                    : <span style={{ color: 'var(--slate-500)' }}>Belum dinilai</span>}
                                             </td>
                                         </tr>
                                     ))}

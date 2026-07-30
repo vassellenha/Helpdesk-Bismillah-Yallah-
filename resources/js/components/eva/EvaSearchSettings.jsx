@@ -9,7 +9,7 @@ import {
  | Search Settings.
  |
  | Daftar sinonim di sini benar-benar dipakai pencarian EVA — saat menyaring
- | kandidat maupun saat memberi skor. Uji langsung disediakan di layar yang
+ | kandidat maupun saat memberi skor. Pengujian langsung disediakan di layar yang
  | sama supaya efeknya bisa DILIHAT detik itu juga, bukan dipercaya begitu saja.
  */
 
@@ -92,7 +92,7 @@ export default function EvaSearchSettings({ synonyms: initial, threshold, endpoi
                                     />
                                     <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '5px 0 0', lineHeight: 1.55 }}>
                                         Pisahkan dengan koma, minimal dua kata. Seluruh kata dianggap setara.
-                                        Imbuhan tidak perlu ditulis, misalnya “sandinya” sudah tercakup
+                                        Imbuhan tidak perlu ditulis, misalnya “sandinya” telah tercakup
                                         oleh “sandi”.
                                     </p>
                                 </div>
@@ -166,8 +166,8 @@ export default function EvaSearchSettings({ synonyms: initial, threshold, endpoi
 
                         {synonyms.length === 0 && (
                             <EmptyState>
-                                Belum ada kelompok sinonim. Contoh yang langsung berguna:
-                                “password, sandi”. Karyawan menulis “sandi”, dokumen menulis “password”.
+                                Belum ada kelompok sinonim. Contoh penggunaan: “password, sandi”,
+                                untuk kondisi karyawan menulis “sandi” sedangkan dokumen menulis “password”.
                             </EmptyState>
                         )}
                     </Card>
@@ -214,7 +214,7 @@ function LiveTest({ endpoint, threshold }) {
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') run(); }}
-                    placeholder="Tulis pertanyaan seperti karyawan…"
+                    placeholder="Tulis pertanyaan sebagaimana karyawan menuliskannya…"
                 />
                 <Button onClick={run} disabled={busy || !question.trim()}>
                     {busy ? 'Mencari…' : 'Uji'}
@@ -238,7 +238,7 @@ function LiveTest({ endpoint, threshold }) {
                         </div>
 
                         {result.hits.length === 0 ? (
-                            <div style={{ fontSize: '12.5px', color: 'var(--slate-500)' }}>Tidak ada kandidat sama sekali.</div>
+                            <div style={{ fontSize: '12.5px', color: 'var(--slate-500)' }}>Tidak ada kandidat yang ditemukan.</div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {result.hits.map((hit) => (
@@ -265,7 +265,7 @@ function LiveTest({ endpoint, threshold }) {
                 )}
 
                 <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', lineHeight: 1.6, margin: 0 }}>
-                    Pengujian pada halaman ini tidak dicatat ke log jawaban.
+                    Pengujian pada halaman ini tidak dicatat pada log jawaban.
                 </p>
             </div>
         </Card>

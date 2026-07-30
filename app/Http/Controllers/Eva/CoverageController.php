@@ -54,7 +54,7 @@ class CoverageController extends Controller
         $notIndexed = Document::where('status', '!=', Document::STATUS_INDEXED)->count();
         if ($notIndexed > 0) {
             $blockers[] = [
-                'text' => "{$notIndexed} dokumen belum terindeks — isinya belum bisa dipakai EVA",
+                'text' => "{$notIndexed} dokumen belum terindeks sehingga isinya belum dapat digunakan EVA.",
                 'action' => 'Buka Documents',
                 'url' => route('eva.documents'),
             ];
@@ -63,7 +63,7 @@ class CoverageController extends Controller
         $hiddenArticles = Article::where('is_eva_visible', false)->count();
         if ($hiddenArticles > 0) {
             $blockers[] = [
-                'text' => "{$hiddenArticles} artikel nonaktif di EVA — ada tetapi tidak pernah dikutip",
+                'text' => "{$hiddenArticles} artikel nonaktif di EVA sehingga tidak pernah dikutip pada jawaban.",
                 'action' => 'Buka Article Library',
                 'url' => route('eva.articles'),
             ];
@@ -72,7 +72,7 @@ class CoverageController extends Controller
         $draftArticles = Article::where('status', Article::STATUS_DRAFT)->count();
         if ($draftArticles > 0) {
             $blockers[] = [
-                'text' => "{$draftArticles} artikel masih draf — belum dihitung dalam kesiapan",
+                'text' => "{$draftArticles} artikel masih berstatus draf sehingga belum dihitung dalam kesiapan.",
                 'action' => 'Buka Article Library',
                 'url' => route('eva.articles'),
             ];
@@ -82,7 +82,7 @@ class CoverageController extends Controller
             + Faq::whereNull('catalog_subject_id')->count();
         if ($unlinked > 0) {
             $blockers[] = [
-                'text' => "{$unlinked} materi belum ditautkan ke subject katalog — tidak terhitung dalam kesiapan",
+                'text' => "{$unlinked} materi belum ditautkan ke subject katalog sehingga tidak dihitung dalam kesiapan.",
                 'action' => 'Buka Article Library',
                 'url' => route('eva.articles'),
             ];

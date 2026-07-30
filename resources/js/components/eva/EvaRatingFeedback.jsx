@@ -90,11 +90,11 @@ export default function EvaRatingFeedback({ summary, distribution, sources, comm
         <div style={PAGE}>
             <PageHeader
                 title="Rating & Feedback"
-                subtitle={`Penilaian karyawan atas jawaban EVA. Dinilai membantu bila ${helpfulThreshold} bintang ke atas.`}
+                subtitle={`Penilaian karyawan atas jawaban EVA. Dinyatakan membantu apabila memperoleh ${helpfulThreshold} bintang atau lebih.`}
             />
 
             <StatRow columns={3}>
-                <StatTile label="TOTAL PENILAIAN" value={summary.total} hint="bintang yang masuk" />
+                <StatTile label="TOTAL PENILAIAN" value={summary.total} hint="penilaian yang diterima" />
                 <StatTile
                     label="RATA-RATA"
                     value={summary.total ? `${summary.avg} ★` : '—'}
@@ -270,7 +270,7 @@ function DetailPanel({ source, recentComments, onClear, helpfulThreshold }) {
                 <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
                     {recentComments.length === 0 ? (
                         <EmptyState>
-                            Belum ada catatan tertulis dari karyawan.
+                            Belum ada tanggapan tertulis dari karyawan.
                         </EmptyState>
                     ) : (
                         recentComments.map((comment) => <CommentItem key={comment.id} comment={comment} showQuestion />)
@@ -300,14 +300,14 @@ function DetailPanel({ source, recentComments, onClear, helpfulThreshold }) {
             <div style={{ padding: '13px 18px', borderBottom: '1px solid var(--border-soft)', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: '12px' }}>
                 <Metric label="RATA-RATA" value={`${source.avg} ★`} tone={isPoor(source) ? 'var(--red-600)' : 'var(--ink-900)'} />
                 <Metric label="PENILAI" value={source.rating_count} />
-                <Metric label="MEMBANTU" value={`${source.helpful_percent}%`} hint={`${helpfulThreshold}★ ke atas`} />
-                <Metric label="DIPAKAI EVA" value={`${source.eva_uses}×`} />
+                <Metric label="MEMBANTU" value={`${source.helpful_percent}%`} hint={`${helpfulThreshold}★ atau lebih`} />
+                <Metric label="DIKUTIP EVA" value={`${source.eva_uses}×`} />
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
                 {source.comments.length === 0 ? (
                     <EmptyState>
-                        Belum ada catatan tertulis untuk materi ini. Yang tersedia baru nilai bintangnya.
+                        Belum ada tanggapan tertulis untuk materi ini. Yang tersedia baru nilai bintangnya.
                     </EmptyState>
                 ) : (
                     source.comments.map((comment) => <CommentItem key={comment.id} comment={comment} showQuestion />)

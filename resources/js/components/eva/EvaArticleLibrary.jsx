@@ -142,8 +142,8 @@ export default function EvaArticleLibrary({ articles: initial, subjects, service
 
             <StatRow>
                 <StatTile label="TOTAL ARTIKEL" value={stats.total} />
-                <StatTile label="TAYANG" value={stats.published} hint="status published" />
-                <StatTile label="AKTIF DI EVA" value={stats.eva_visible} hint="ikut dijadikan jawaban" />
+                <StatTile label="TERBIT" value={stats.published} hint="berstatus published" />
+                <StatTile label="AKTIF DI EVA" value={stats.eva_visible} hint="digunakan sebagai jawaban" />
                 <StatTile label="BELUM TERTAUT" value={stats.unlinked} hint="tanpa subject katalog" tone={stats.unlinked ? 'var(--red-600)' : undefined} />
             </StatRow>
 
@@ -482,7 +482,7 @@ function ExtraSubjectPicker({ subjects, primaryId, selectedIds, onChange }) {
 
             <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '5px 0 0' }}>
                 Subject lain yang juga dijawab artikel ini. Seluruhnya ikut dihitung sebagai
-                subject yang sudah tertutup.
+                subject yang telah tercakup.
             </p>
         </div>
     );

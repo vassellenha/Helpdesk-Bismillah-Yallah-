@@ -15,8 +15,8 @@ import {
  */
 
 const SOURCE_LABELS = {
-    articles: { title: 'Artikel', desc: 'Panduan lengkap yang lahir dari dokumen.' },
-    faqs: { title: 'FAQ', desc: 'Tanya-jawab singkat, langsung terbit tanpa review.' },
+    articles: { title: 'Artikel', desc: 'Panduan lengkap yang berasal dari dokumen.' },
+    faqs: { title: 'FAQ', desc: 'Tanya-jawab singkat yang langsung terbit tanpa peninjauan.' },
 };
 
 export default function EvaTrainingOverview({ sources: initialSources, readiness, endpoints, links }) {
@@ -52,7 +52,7 @@ export default function EvaTrainingOverview({ sources: initialSources, readiness
         <div style={PAGE}>
             <PageHeader
                 title="Training Overview"
-                subtitle="Ringkasan kesiapan EVA dan pengaturan sumber jawabannya."
+                subtitle="Ringkasan tingkat kesiapan EVA dan pengaturan sumber jawaban."
             />
 
             <ErrorBanner message={error} onDismiss={() => setError(null)} />
@@ -64,12 +64,12 @@ export default function EvaTrainingOverview({ sources: initialSources, readiness
                     hint={`${readiness.covered_subjects}/${readiness.total_subjects} subject`}
                     tone={coverageTone(readiness.coverage_percent)}
                 />
-                <StatTile label="SUBJECT BELUM TERTUTUP" value={readiness.uncovered_subjects} hint="belum ada materi" />
-                <StatTile label="DOKUMEN TERINDEKS" value={readiness.documents_indexed} hint="sudah jadi artikel" />
+                <StatTile label="SUBJECT BELUM TERCAKUP" value={readiness.uncovered_subjects} hint="belum memiliki materi" />
+                <StatTile label="DOKUMEN TERINDEKS" value={readiness.documents_indexed} hint="telah menjadi artikel" />
                 <StatTile
-                    label="PERTANYAAN GAGAL"
+                    label="PERTANYAAN TIDAK TERJAWAB"
                     value={readiness.open_gaps}
-                    hint="tercatat di log"
+                    hint="tercatat pada log"
                     tone={readiness.open_gaps ? 'var(--amber-600)' : 'var(--green-500)'}
                 />
             </StatRow>
@@ -104,8 +104,8 @@ export default function EvaTrainingOverview({ sources: initialSources, readiness
                 </div>
 
                 <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '0 18px 16px', lineHeight: 1.6 }}>
-                    EVA menjawab dari artikel dan FAQ saja. Dokumen tidak menjadi sumber langsung
-                    karena isinya sudah menjadi artikel. Perubahan dapat diuji pada <a href="/eva/preview">EVA Preview</a>.
+                    EVA hanya menjawab dari artikel dan FAQ. Dokumen tidak menjadi sumber langsung
+                    karena isinya telah menjadi artikel. Perubahan dapat diuji pada <a href="/eva/preview">EVA Preview</a>.
                 </p>
             </Card>
         </div>
@@ -132,11 +132,11 @@ function SourceRow({ source, state, busy, onToggle, manageHref }) {
             <div style={{ flex: '1 1 240px', minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
                     <span style={{ fontSize: '13.5px', fontWeight: 700 }}>{label.title}</span>
-                    <Badge tone={state.enabled ? 'green' : 'neutral'}>{state.enabled ? 'dipakai' : 'dimatikan'}</Badge>
-                    <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{state.count} aktif</span>
+                    <Badge tone={state.enabled ? 'green' : 'neutral'}>{state.enabled ? 'Aktif' : 'Nonaktif'}</Badge>
+                    <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{state.count} materi aktif</span>
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--slate-500)', marginTop: '3px' }}>
-                    {label.desc} · <a href={manageHref}>kelola →</a>
+                    {label.desc} · <a href={manageHref}>Kelola →</a>
                 </div>
             </div>
 
@@ -145,7 +145,7 @@ function SourceRow({ source, state, busy, onToggle, manageHref }) {
                 disabled={busy}
                 onClick={() => onToggle(source, next)}
             >
-                {busy ? '…' : state.enabled ? 'Matikan sebagai sumber' : 'Nyalakan'}
+                {busy ? 'Memproses…' : state.enabled ? 'Nonaktifkan' : 'Aktifkan'}
             </Button>
         </div>
     );

@@ -101,7 +101,7 @@ export default function EvaPreview({ endpoints, thresholds }) {
         <div style={PAGE}>
             <PageHeader
                 title="EVA Preview"
-                subtitle={`Uji jawaban EVA. Di bawah keyakinan ${thresholds.min_confidence}, EVA menyatakan belum memiliki jawabannya.`}
+                subtitle={`Pengujian jawaban EVA. Di bawah keyakinan ${thresholds.min_confidence}, EVA menyatakan belum memiliki jawaban.`}
             />
 
             <ErrorBanner message={error} onDismiss={() => setError(null)} />
@@ -178,8 +178,8 @@ export default function EvaPreview({ endpoints, thresholds }) {
                         ))}
                     </div>
                     <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', lineHeight: 1.6, margin: '14px 0 0' }}>
-                        Pertanyaan pada halaman ini ikut tercatat di log jawaban, termasuk yang belum
-                        terjawab. Pertanyaan yang belum terjawab akan muncul di Coverage Dashboard.
+                        Pertanyaan pada halaman ini ikut tercatat pada log jawaban, termasuk yang belum
+                        terjawab. Pertanyaan yang belum terjawab akan muncul pada Coverage Dashboard.
                     </p>
                 </Card>
             </div>

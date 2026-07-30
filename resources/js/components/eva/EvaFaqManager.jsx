@@ -112,7 +112,7 @@ export default function EvaFaqManager({
         <div style={PAGE}>
             <PageHeader
                 title="Manage FAQ"
-                subtitle="FAQ yang disimpan langsung dapat digunakan EVA untuk menjawab."
+                subtitle="FAQ yang disimpan langsung dapat digunakan EVA sebagai jawaban."
                 right={<Button onClick={() => setDraft({ ...emptyDraft })}>FAQ Baru</Button>}
             />
 
@@ -122,7 +122,7 @@ export default function EvaFaqManager({
 
             <StatRow columns={3}>
                 <StatTile label="TOTAL FAQ" value={stats.total} />
-                <StatTile label="AKTIF DI EVA" value={stats.eva_visible} hint="ikut dijadikan jawaban" />
+                <StatTile label="AKTIF DI EVA" value={stats.eva_visible} hint="digunakan sebagai jawaban" />
                 <StatTile label="BELUM TERTAUT" value={stats.unlinked} hint="tanpa subject katalog" tone={stats.unlinked ? 'var(--red-600)' : undefined} />
             </StatRow>
 
@@ -230,7 +230,7 @@ export default function EvaFaqManager({
                                             {faq.author_name} · {faq.updated_at}
                                         </div>
                                     </td>
-                                    <td style={tdStyle}>{faq.subject_name ?? <Badge tone="red">belum tertaut</Badge>}</td>
+                                    <td style={tdStyle}>{faq.subject_name ?? <Badge tone="red">Belum tertaut</Badge>}</td>
                                     <td style={tdStyle}>{faq.eva_uses}×</td>
                                     <td style={tdStyle}>
                                         {faq.rating_count > 0

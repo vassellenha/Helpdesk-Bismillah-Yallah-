@@ -196,10 +196,10 @@ export default function EvaDocuments({ documents: initial, subjects, extensions,
 
             <StatRow>
                 <StatTile label="TOTAL DOKUMEN" value={stats.total} />
-                <StatTile label="TERINDEKS" value={stats.indexed} hint="isinya bisa dipakai EVA" />
-                <StatTile label="DIPROSES" value={stats.processing} hint="sedang dibaca di antrean" />
+                <StatTile label="TERINDEKS" value={stats.indexed} hint="isinya dapat digunakan EVA" />
+                <StatTile label="DIPROSES" value={stats.processing} hint="sedang dibaca pada antrean" />
                 <StatTile label="GAGAL" value={stats.failed} hint="perlu diindeks ulang" tone={stats.failed ? 'var(--red-600)' : undefined} />
-                <StatTile label="POTONGAN TEKS" value={stats.chunks} hint="chunks siap dicari" />
+                <StatTile label="POTONGAN TEKS" value={stats.chunks} hint="potongan siap dicari" />
             </StatRow>
 
             {draft && (
@@ -329,7 +329,7 @@ export default function EvaDocuments({ documents: initial, subjects, extensions,
                                             {document.size_kb} KB · {document.page_count} hal · {document.uploaded_by_name} · {document.updated_at}
                                         </div>
                                     </td>
-                                    <td style={tdStyle}>{document.subject_name ?? <Badge tone="red">belum tertaut</Badge>}</td>
+                                    <td style={tdStyle}>{document.subject_name ?? <Badge tone="red">Belum tertaut</Badge>}</td>
                                     <td style={{ ...tdStyle, maxWidth: '320px' }}>
                                         <Badge tone={STATUS_TONE[document.status] ?? 'neutral'}>{document.status}</Badge>
                                         {/*

@@ -38,7 +38,7 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
         <div style={PAGE}>
             <PageHeader
                 title="Coverage Dashboard"
-                subtitle={`Kesiapan EVA menjawab ${summary.total_subjects} subject di Service Catalog.`}
+                subtitle={`Tingkat kesiapan EVA terhadap ${summary.total_subjects} subject pada Service Catalog.`}
             />
 
             {/*
@@ -55,12 +55,12 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
             */}
             <StatRow columns={2}>
                 <StatTile
-                    label="KESIAPAN EVA"
+                    label="TINGKAT KESIAPAN"
                     value={`${summary.percent}%`}
                     hint={`${summary.covered_subjects} dari ${summary.total_subjects} subject`}
                     tone={coverageTone(summary.percent)}
                 />
-                <StatTile label="BELUM TERTUTUP" value={summary.uncovered_subjects} hint="subject tanpa artikel & FAQ" />
+                <StatTile label="SUBJECT TANPA MATERI" value={summary.uncovered_subjects} hint="tanpa artikel maupun FAQ" />
             </StatRow>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: '16px', marginBottom: '16px' }}>
@@ -69,13 +69,13 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
                         ? <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{delta >= 0 ? '+' : ''}{delta} poin sejak {trend[0]?.label}</span>
                         : null}
                     >
-                        Tren kesiapan
+                        Tren tingkat kesiapan
                     </CardTitle>
                     {!hasHistory ? (
                         <div style={{ height: CHART_HEIGHT, display: 'flex', alignItems: 'center' }}>
                             <EmptyState>
-                                Riwayat kesiapan belum tersedia. Kesiapan hari ini <strong>{summary.percent}%</strong>.
-                                Grafik mulai terbentuk setelah data harian terkumpul.
+                                Riwayat kesiapan belum tersedia. Tingkat kesiapan hari ini <strong>{summary.percent}%</strong>.
+                                Grafik ditampilkan setelah data harian tersedia.
                             </EmptyState>
                         </div>
                     ) : (
@@ -103,17 +103,17 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
                     </div>
                     )}
                     <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '0 18px 14px' }}>
-                        Angka hari ini dihitung ulang setiap halaman dibuka.
+                        Angka hari ini dihitung ulang setiap halaman dimuat.
                     </p>
                 </Card>
 
                 <Card>
-                    <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{todoVolume}× ditanyakan</span>}>
-                        Sering ditanya, belum terjawab
+                    <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{todoVolume} kali ditanyakan</span>}>
+                        Pertanyaan belum terjawab
                     </CardTitle>
                     {todo.length === 0 ? (
                         <EmptyState>
-                            Belum ada pertanyaan yang gagal dijawab.
+                            Belum ada pertanyaan yang tidak terjawab.
                         </EmptyState>
                     ) : (
                         <ul style={{ listStyle: 'none', margin: 0, padding: '6px 0' }}>
@@ -131,7 +131,7 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
                         </ul>
                     )}
                     <div style={{ padding: '12px 18px', fontSize: '11.5px', color: 'var(--slate-500)' }}>
-                        Tutup celah ini melalui <a href={links.documents}>Documents</a> atau{' '}
+                        Tambahkan materi melalui <a href={links.documents}>Documents</a> atau{' '}
                         <a href={links.faq}>Manage FAQ</a>.
                     </div>
                 </Card>
@@ -141,14 +141,14 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
                 <CardTitle
                     right={
                         <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>
-                            kesiapan tertinggi lebih dulu
+                            Diurutkan dari kesiapan tertinggi
                         </span>
                     }
                 >
-                    Kesiapan per sub category
+                    Tingkat kesiapan per sub category
                 </CardTitle>
                 {bySubcategory.rows.length === 0 ? (
-                    <EmptyState>Service Catalog belum berisi data.</EmptyState>
+                    <EmptyState>Data Service Catalog belum tersedia.</EmptyState>
                 ) : (
                     <div style={{ padding: '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: '13px' }}>
                         {subcategoryPager.slice.map((row) => (
@@ -160,7 +160,7 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
                                         {row.percent}%
                                     </span>
                                 </div>
-                                {/* Bar bertumpuk: biru = ditutup artikel, hijau = tambahan dari FAQ saja. */}
+                                {/* Bar bertumpuk: biru = tercakup artikel, hijau = tercakup FAQ saja. */}
                                 <div style={{ display: 'flex', height: '8px', borderRadius: '999px', overflow: 'hidden', background: 'var(--surface-tint)' }}>
                                     <span style={{ width: `${row.article_percent}%`, background: 'var(--blue-500)' }} />
                                     <span style={{ width: `${row.faq_percent}%`, background: 'var(--green-solid)' }} />
@@ -168,8 +168,8 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
                             </div>
                         ))}
                         <div style={{ display: 'flex', gap: '16px', fontSize: '11.5px', color: 'var(--slate-500)', paddingTop: '4px' }}>
-                            <LegendDot color="var(--blue-500)" label="ditutup artikel" />
-                            <LegendDot color="var(--green-500)" label="tambahan dari FAQ" />
+                            <LegendDot color="var(--blue-500)" label="Tercakup artikel" />
+                            <LegendDot color="var(--green-500)" label="Tercakup FAQ" />
                         </div>
                     </div>
                 )}
@@ -178,9 +178,9 @@ export default function EvaCoverageDashboard({ summary, bySubcategory, trend, to
             </Card>
 
             <Card>
-                <CardTitle>Yang menghambat</CardTitle>
+                <CardTitle>Hambatan kesiapan</CardTitle>
                 {blockers.length === 0 ? (
-                    <EmptyState>Tidak ada hambatan. Seluruh dokumen sudah terindeks dan materi sudah tertaut ke subject.</EmptyState>
+                    <EmptyState>Tidak ada hambatan. Seluruh dokumen telah terindeks dan seluruh materi telah ditautkan ke subject.</EmptyState>
                 ) : (
                     <ul style={{ listStyle: 'none', margin: 0, padding: '4px 0 6px' }}>
                         {blockers.map((blocker) => (

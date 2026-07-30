@@ -37,17 +37,17 @@ export default function EvaAppsSystems({ services, stats, catalogUrl }) {
         <div style={PAGE}>
             <PageHeader
                 title="Apps & Systems"
-                subtitle="Kesiapan EVA untuk setiap layanan di Service Catalog."
+                subtitle="Tingkat kesiapan EVA untuk setiap layanan pada Service Catalog."
             />
 
             <StatRow>
-                <StatTile label="LAYANAN" value={stats.services} hint="punya subject aktif" />
+                <StatTile label="LAYANAN" value={stats.services} hint="memiliki subject aktif" />
                 <StatTile label="TOTAL SUBJECT" value={stats.subjects} />
-                <StatTile label="SUBJECT TERTUTUP" value={stats.covered} hint="punya artikel atau FAQ" tone="var(--green-500)" />
+                <StatTile label="SUBJECT TERCAKUP" value={stats.covered} hint="memiliki artikel atau FAQ" tone="var(--green-500)" />
                 <StatTile
-                    label="LAYANAN KOSONG"
+                    label="LAYANAN TANPA MATERI"
                     value={stats.untouched}
-                    hint="belum punya materi sama sekali"
+                    hint="belum memiliki artikel maupun FAQ"
                     tone={stats.untouched ? 'var(--red-600)' : 'var(--green-500)'}
                 />
             </StatRow>
@@ -69,7 +69,7 @@ export default function EvaAppsSystems({ services, stats, catalogUrl }) {
                                 <th style={thStyle}>LAYANAN</th>
                                 <th style={thStyle}>SUB CATEGORY</th>
                                 <th style={thStyle}>SUBJECT</th>
-                                <th style={thStyle}>TERTUTUP</th>
+                                <th style={thStyle}>TERCAKUP</th>
                                 <th style={thStyle}>KESIAPAN</th>
                             </tr>
                         </thead>
@@ -91,7 +91,7 @@ export default function EvaAppsSystems({ services, stats, catalogUrl }) {
                                         </div>
                                         {service.covered === 0 && (
                                             <div style={{ marginTop: '5px' }}>
-                                                <Badge tone="red">belum tersentuh</Badge>
+                                                <Badge tone="red">Tanpa materi</Badge>
                                             </div>
                                         )}
                                     </td>
@@ -104,7 +104,7 @@ export default function EvaAppsSystems({ services, stats, catalogUrl }) {
                 {visible.length === 0 && (
                     <EmptyState>
                         {services.length === 0
-                            ? 'Service Catalog belum berisi data.'
+                            ? 'Data Service Catalog belum tersedia.'
                             : 'Tidak ada layanan yang cocok dengan pencarian ini.'}
                     </EmptyState>
                 )}
@@ -114,7 +114,7 @@ export default function EvaAppsSystems({ services, stats, catalogUrl }) {
 
             <p style={{ fontSize: '12px', color: 'var(--slate-500)', margin: '14px 2px 0', lineHeight: 1.6 }}>
                 Penambahan dan perubahan layanan dilakukan pada{' '}
-                <a href={catalogUrl}>Service Catalog</a> milik Admin. EVA hanya membacanya.
+                <a href={catalogUrl}>Service Catalog</a> milik Admin. EVA hanya membaca data tersebut.
             </p>
         </div>
     );
