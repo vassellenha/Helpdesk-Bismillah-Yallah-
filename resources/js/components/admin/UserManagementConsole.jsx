@@ -198,6 +198,12 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                             tidak dikembalikan oleh sync, jadi perubahan manualmu di sana tetap bertahan.
                         </p>
                     )}
+                    {syncResult.kept_admin_override > 0 && (
+                        <p className="mt-2 text-xs opacity-80">
+                            {syncResult.kept_admin_override} field dipertahankan karena pernah diedit manual lewat Edit
+                            Pengguna — sync tidak akan menimpanya lagi selama field itu masih ditandai sebagai perubahan Admin.
+                        </p>
+                    )}
                     {(syncResult.not_in_source ?? []).length > 0 && (
                         <p className="mt-2 text-xs opacity-80">
                             Tidak ada di data API, jadi dibiarkan apa adanya:{' '}

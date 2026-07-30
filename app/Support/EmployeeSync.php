@@ -32,7 +32,7 @@ class EmployeeSync
     private const MAX_REPORTED_CHANGES = 25;
 
     /**
-     * @return array{fetched:int,created:int,updated:int,unchanged:int,deactivated:int,kept_empty:int,changes:array<int,array{name:string,fields:array<int,string>}>,skipped:array<int,string>,dry_run:bool}
+     * @return array{fetched:int,created:int,updated:int,unchanged:int,deactivated:int,kept_empty:int,kept_admin_override:int,changes:array<int,array{name:string,fields:array<int,string>}>,skipped:array<int,string>,dry_run:bool}
      */
     public static function run(bool $dryRun = false): array
     {
@@ -52,6 +52,10 @@ class EmployeeSync
             // the local value was kept. Without this, an Admin edit that the sync
             // declines to overwrite looks identical to "nothing to do".
             'kept_empty' => 0,
+            // Mapped fields an Admin manually edited (admin_overridden_fields) —
+            // held back even though the API sent a real, different value, same
+            // visibility reasoning as kept_empty above.
+            'kept_admin_override' => 0,
             // Local accounts the API never mentioned — hand-made by an Admin, or
             // an employee the feed no longer returns. They are left completely
             // alone (unless deactivate_missing is on), which is indistinguishable
@@ -109,8 +113,9 @@ class EmployeeSync
                 continue;
             }
 
-            [$changed, $keptEmpty] = self::diffRow($user, $attrs, $overwriteWithEmpty);
+            [$changed, $keptEmpty, $keptOverride] = self::diffRow($user, $attrs, $overwriteWithEmpty);
             $summary['kept_empty'] += count($keptEmpty);
+            $summary['kept_admin_override'] += count($keptOverride);
 
             if ($changed === []) {
                 $summary['unchanged']++;
@@ -214,15 +219,30 @@ class EmployeeSync
      * makes such a field non-authoritative for this row, which is invisible
      * unless reported, so it is counted separately instead of silently skipped.
      *
+     * A field an Admin has manually edited (users.admin_overridden_fields) is
+     * held back the same way, even when the API sends a real, different
+     * value — an Admin correction must survive the next sync, not just the
+     * next payload that happens to omit the field.
+     *
      * @param  array<string,mixed>  $attrs
-     * @return array{0:array<string,mixed>,1:array<int,string>} [changed, keptEmpty]
+     * @return array{0:array<string,mixed>,1:array<int,string>,2:array<int,string>} [changed, keptEmpty, keptOverride]
      */
     private static function diffRow(User $user, array $attrs, bool $overwriteWithEmpty): array
     {
         $changed = [];
         $keptEmpty = [];
+        $keptOverride = [];
+        $overridden = $user->admin_overridden_fields ?? [];
 
         foreach ($attrs as $column => $value) {
+            if (in_array($column, $overridden, true)) {
+                if ((string) $user->{$column} !== (string) $value) {
+                    $keptOverride[] = $column;
+                }
+
+                continue;
+            }
+
             if (($value === null || $value === '') && ! $overwriteWithEmpty) {
                 // Only worth reporting when we actually held something back.
                 if (! blank($user->{$column})) {
@@ -237,7 +257,7 @@ class EmployeeSync
             }
         }
 
-        return [$changed, $keptEmpty];
+        return [$changed, $keptEmpty, $keptOverride];
     }
 
     /**
@@ -314,13 +334,14 @@ class EmployeeSync
         $description = $summary['fetched'] === 0
             ? 'Sinkronisasi data pegawai GAGAL: tidak ada data diterima dari sumber.'
             : sprintf(
-                'Sinkronisasi data pegawai: %d diterima, %d dibuat, %d diperbarui, %d tetap, %d dilewati, %d field dipertahankan, %d di luar sumber.',
+                'Sinkronisasi data pegawai: %d diterima, %d dibuat, %d diperbarui, %d tetap, %d dilewati, %d field dipertahankan (API kosong), %d field dipertahankan (override Admin), %d di luar sumber.',
                 $summary['fetched'],
                 $summary['created'],
                 $summary['updated'],
                 $summary['unchanged'],
                 $skipped,
                 $summary['kept_empty'],
+                $summary['kept_admin_override'],
                 count($summary['not_in_source']),
             );
 

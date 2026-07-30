@@ -24,6 +24,7 @@ use Illuminate\Notifications\Notifiable;
  * @property string|null $kode_divisi
  * @property string|null $kode_proyek
  * @property string|null $nama_proyek
+ * @property array<int, string>|null $admin_overridden_fields
  * @property string $status
  * @property string $helpdesk_access
  * @property \Illuminate\Support\Carbon|null $last_login_at
@@ -36,6 +37,7 @@ use Illuminate\Notifications\Notifiable;
     'name', 'email', 'username', 'password', 'nip', 'phone', 'address',
     'unit', 'jabatan', 'kode_departemen', 'kode_divisi', 'kode_proyek',
     'nama_proyek', 'status', 'helpdesk_access', 'last_login_at',
+    'admin_overridden_fields',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -54,6 +56,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'admin_overridden_fields' => 'array',
         ];
     }
 

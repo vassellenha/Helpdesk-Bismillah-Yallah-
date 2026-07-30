@@ -160,6 +160,8 @@ class UserRoleController extends Controller
                 'helpdesk_access' => fn ($v) => $v === 'enabled' ? 'Aktif' : 'Nonaktif',
             ]);
 
+            $this->lockAdminOverrides($user, $before, $after);
+
             if ($changes !== []) {
                 AuditTrail::record($actor, [
                     'module' => 'user_role_management',
@@ -176,6 +178,35 @@ class UserRoleController extends Controller
         });
 
         return response()->json($this->presentUser($user->fresh('roles')));
+    }
+
+    /**
+     * Marks every synced column an Admin just hand-edited so EmployeeSync
+     * skips it on every future run — the same protection the sync already
+     * gives a column the API sends empty, extended to one the API sends a
+     * (different) real value for. `status` is deliberately excluded: it is
+     * the one column meant to always track the company API, with
+     * `helpdesk_access` as the Admin's own independent override for access.
+     *
+     * @param  array<string,mixed>  $before
+     * @param  array<string,mixed>  $after
+     */
+    private function lockAdminOverrides(User $user, array $before, array $after): void
+    {
+        $syncedColumns = array_values(config('integrations.employee_directory.field_map', []));
+        $lockable = array_diff($syncedColumns, ['status']);
+
+        $justChanged = array_values(array_filter(
+            $lockable,
+            fn ($column) => array_key_exists($column, $after) && ($before[$column] ?? null) !== $after[$column]
+        ));
+
+        if ($justChanged === []) {
+            return;
+        }
+
+        $locked = collect($user->admin_overridden_fields ?? [])->merge($justChanged)->unique()->sort()->values()->all();
+        $user->update(['admin_overridden_fields' => $locked]);
     }
 
     /**

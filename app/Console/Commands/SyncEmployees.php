@@ -35,6 +35,7 @@ class SyncEmployees extends Command
             ['Dinonaktifkan', $summary['deactivated']],
             ['Dilewati', count($summary['skipped'])],
             ['Field dipertahankan (API kosong)', $summary['kept_empty']],
+            ['Field dipertahankan (override Admin)', $summary['kept_admin_override']],
             ['Tidak ada di sumber', count($summary['not_in_source'])],
         ]);
 
@@ -55,6 +56,14 @@ class SyncEmployees extends Command
             $this->comment(
                 "{$summary['kept_empty']} field dipertahankan karena API tidak mengirim nilainya — ".
                 'field itu tidak dikembalikan sync. Setel EMPLOYEE_DIRECTORY_OVERWRITE_WITH_EMPTY=true agar API selalu menang.'
+            );
+        }
+
+        if ($summary['kept_admin_override'] > 0) {
+            $this->newLine();
+            $this->comment(
+                "{$summary['kept_admin_override']} field dipertahankan karena pernah diedit manual oleh Admin — ".
+                'perubahan Admin tidak akan ditimpa sync selama field itu masih ditandai sebagai override.'
             );
         }
 
