@@ -4,8 +4,8 @@
 
 @section('content')
 <div data-react="EvaTicketRecommendation" data-props="{{ json_encode([
-    'rows' => $rows,
-    'gaps' => $gaps,
+    'targets' => $targets,
+    'unrouted' => $unrouted,
     'stats' => $stats,
     'thresholds' => $thresholds,
     'endpoints' => $endpoints,

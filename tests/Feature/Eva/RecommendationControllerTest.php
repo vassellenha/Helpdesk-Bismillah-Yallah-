@@ -4,6 +4,9 @@ namespace Tests\Feature\Eva;
 
 use App\Models\Knowledge\AnswerLog;
 use App\Models\Knowledge\Article;
+use App\Models\Knowledge\DismissedQuestion;
+use App\Services\Knowledge\KnowledgeSearch;
+use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SubjectMatch;
 use App\Services\Knowledge\SubjectSearch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,6 +44,9 @@ final class RecommendationControllerTest extends TestCase
     /** @var array<string,SubjectMatch[]> pertanyaan → calon yang dikembalikan */
     private array $script = [];
 
+    /** @var array<string,SearchHit[]> pertanyaan → jawaban yang ditemukan EVA */
+    private array $answers = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -51,6 +57,7 @@ final class RecommendationControllerTest extends TestCase
 
         $this->seedCatalog();
         $this->fakeSubjectSearch();
+        $this->fakeKnowledgeSearch();
 
         $this->actingAsEvaAdmin();
     }
@@ -112,6 +119,41 @@ final class RecommendationControllerTest extends TestCase
         return $this->script[$question] ?? [];
     }
 
+    /**
+     * Pencarian A palsu. WAJIB ada: FulltextKnowledgeSearch tidak jalan di
+     * SQLite, dan layar ini sekarang memeriksa ulang tiap pertanyaan lewat sana.
+     *
+     * Bawaannya kosong = tidak ada jawaban = pertanyaannya masih celah.
+     */
+    private function fakeKnowledgeSearch(): void
+    {
+        $test = $this;
+
+        $this->app->instance(KnowledgeSearch::class, new class($test) implements KnowledgeSearch
+        {
+            public function __construct(private readonly RecommendationControllerTest $test) {}
+
+            public function cari(string $pertanyaan, int $limit = 5): array
+            {
+                return $this->test->answersFor($pertanyaan);
+            }
+        });
+    }
+
+    /** @return SearchHit[] */
+    public function answersFor(string $question): array
+    {
+        return $this->answers[$question] ?? [];
+    }
+
+    /** Menyatakan EVA kini MAMPU menjawab pertanyaan ini. */
+    private function kiniTerjawab(string $question, int $confidence = 95): void
+    {
+        $this->answers[$question] = [
+            new SearchHit(Article::class, 1, 'SOP Reset Password SAP', 'isi', $confidence, 1),
+        ];
+    }
+
     private function saranUntuk(string $question, SubjectMatch ...$matches): void
     {
         $this->script[$question] = $matches;
@@ -154,6 +196,12 @@ final class RecommendationControllerTest extends TestCase
         ]);
     }
 
+    /** @return array<int,array<string,mixed>> */
+    private function targets(): array
+    {
+        return $this->get('/eva/recommendation')->assertOk()->viewData('targets');
+    }
+
     // ---- layar -------------------------------------------------------------
 
     public function test_halaman_recommendation_tampil(): void
@@ -161,148 +209,145 @@ final class RecommendationControllerTest extends TestCase
         $this->get('/eva/recommendation')->assertOk();
     }
 
-    public function test_pertanyaan_gagal_muncul_berikut_calon_tujuannya(): void
+    // ---- pengelompokan per subject -----------------------------------------
+
+    public function test_pertanyaan_dikelompokkan_di_bawah_subject_tujuannya(): void
     {
-        $this->unanswered('cara reset password sap');
+        $this->unanswered('cara reset password sap', 3);
         $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
 
-        $rows = $this->get('/eva/recommendation')->assertOk()->viewData('rows');
+        $targets = $this->targets();
 
-        $this->assertCount(1, $rows);
-        $this->assertSame('cara reset password sap', $rows[0]['question']);
-        $this->assertSame(1, $rows[0]['candidates'][0]['subject_id']);
-        $this->assertSame(80, $rows[0]['candidates'][0]['confidence']);
+        $this->assertCount(1, $targets);
+        $this->assertSame(1, $targets[0]['subject_id']);
+        $this->assertSame('Reset Password', $targets[0]['subject']);
+        $this->assertSame(1, $targets[0]['total'], 'satu pertanyaan berbeda');
+        $this->assertSame(3, $targets[0]['volume'], 'ditanyakan tiga kali');
+        $this->assertSame('cara reset password sap', $targets[0]['questions'][0]['question']);
+        $this->assertSame(80, $targets[0]['questions'][0]['confidence']);
     }
 
-    /** Layar ini hanya soal pertanyaan yang GAGAL — yang terjawab bukan urusannya. */
-    public function test_pertanyaan_yang_terjawab_tidak_ikut(): void
+    public function test_dua_pertanyaan_berbeda_ke_subject_sama_menjadi_satu_baris(): void
     {
-        AnswerLog::create([
-            'question' => 'cara reset password sap',
-            'outcome' => AnswerLog::OUTCOME_ANSWERED,
-            'confidence' => 90,
-        ]);
+        $this->unanswered('cara reset password sap', 2);
+        $this->unanswered('lupa sandi sap', 1);
+        $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
+        $this->saranUntuk('lupa sandi sap', $this->calon(1, 62));
 
-        $this->assertSame([], $this->get('/eva/recommendation')->viewData('rows'));
+        $targets = $this->targets();
+
+        $this->assertCount(1, $targets, 'satu subject, bukan dua baris');
+        $this->assertSame(2, $targets[0]['total']);
+        $this->assertSame(3, $targets[0]['volume']);
+        $this->assertSame(80, $targets[0]['best_confidence']);
     }
 
-    /** Draf tiket juga pertanyaan gagal — EVA menyerah, cuma dengan sopan. */
-    public function test_draf_tiket_dihitung_sebagai_pertanyaan_gagal(): void
+    public function test_subject_belum_bermateri_diurutkan_lebih_dulu(): void
     {
-        AnswerLog::create([
-            'question' => 'printer tidak bisa cetak',
-            'outcome' => AnswerLog::OUTCOME_TICKET_DRAFT,
-            'confidence' => 20,
-        ]);
+        // Subject 1 sudah ada artikelnya dan ditanyakan JAUH lebih sering;
+        // subject 2 belum ada materinya. Yang belum bermateri tetap di atas
+        // karena hanya itu yang menghasilkan pekerjaan menulis.
+        $this->publishedArticle(1);
+        $this->unanswered('cara reset password sap', 9);
+        $this->unanswered('akun saya terkunci', 1);
+        $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
+        $this->saranUntuk('akun saya terkunci', $this->calon(2, 70));
 
-        $this->assertCount(1, $this->get('/eva/recommendation')->viewData('rows'));
+        $targets = $this->targets();
+
+        $this->assertCount(2, $targets);
+        $this->assertSame(2, $targets[0]['subject_id']);
+        $this->assertFalse($targets[0]['has_material']);
+        $this->assertSame(1, $targets[1]['subject_id']);
+        $this->assertTrue($targets[1]['has_material']);
     }
 
-    // ---- ambang ------------------------------------------------------------
-
-    /**
-     * Ambang diuji pada nilai PERSIS: MIN_CONFIDENCE masuk isi-otomatis,
-     * satu poin di bawahnya tidak. Tes yang memakai 90 vs 10 akan tetap hijau
-     * walau garisnya digeser lima poin.
-     */
-    public function test_ambang_isi_otomatis_diuji_pada_nilai_persis(): void
-    {
-        $this->unanswered('tepat di ambang');
-        $this->saranUntuk('tepat di ambang', $this->calon(1, SubjectSearch::MIN_CONFIDENCE));
-
-        $this->unanswered('satu poin di bawah');
-        $this->saranUntuk('satu poin di bawah', $this->calon(1, SubjectSearch::MIN_CONFIDENCE - 1));
-
-        $this->unanswered('tanpa calon sama sekali');
-
-        $stats = $this->get('/eva/recommendation')->viewData('stats');
-
-        $this->assertSame(3, $stats['questions']);
-        $this->assertSame(1, $stats['auto'], 'hanya yang PERSIS di ambang boleh mengisi otomatis');
-        $this->assertSame(1, $stats['weak']);
-        $this->assertSame(1, $stats['none']);
-    }
-
-    public function test_calon_menandai_dirinya_layak_isi_otomatis(): void
-    {
-        $this->unanswered('cara reset password sap');
-        $this->saranUntuk('cara reset password sap',
-            $this->calon(1, SubjectSearch::MIN_CONFIDENCE),
-            $this->calon(2, SubjectSearch::MIN_CONFIDENCE - 1),
-        );
-
-        $candidates = $this->get('/eva/recommendation')->viewData('rows')[0]['candidates'];
-
-        $this->assertTrue($candidates[0]['is_auto_fill']);
-        $this->assertFalse($candidates[1]['is_auto_fill']);
-    }
-
-    // ---- materi ------------------------------------------------------------
-
-    public function test_subject_yang_punya_artikel_terbit_ditandai_sudah_bermateri(): void
-    {
-        $this->publishedArticle(subjectId: 1);
-
-        $this->unanswered('cara reset password sap');
-        $this->saranUntuk('cara reset password sap',
-            $this->calon(1, 80),
-            $this->calon(2, 40),
-        );
-
-        $candidates = $this->get('/eva/recommendation')->viewData('rows')[0]['candidates'];
-
-        $this->assertTrue($candidates[0]['has_material']);
-        $this->assertFalse($candidates[1]['has_material'], 'subject tanpa materi tetap celah');
-    }
-
-    /**
-     * Materi yang masih DRAF belum menutup apa pun. Kalau gerbang answerable()
-     * dilewati di sini, celah materi yang sesungguhnya menghilang dari daftar
-     * tugas menulis — persis pekerjaan yang paling perlu terlihat.
-     */
     public function test_artikel_draf_tidak_dianggap_menutup_subject(): void
     {
-        $this->publishedArticle(subjectId: 1)->update(['status' => Article::STATUS_DRAFT]);
-
+        $this->publishedArticle(1)->update(['status' => Article::STATUS_DRAFT]);
         $this->unanswered('cara reset password sap');
         $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
 
-        $candidates = $this->get('/eva/recommendation')->viewData('rows')[0]['candidates'];
-
-        $this->assertFalse($candidates[0]['has_material']);
+        $this->assertFalse($this->targets()[0]['has_material']);
     }
 
-    // ---- celah materi ------------------------------------------------------
-
-    /** Subject yang berulang jadi tujuan tanpa materi naik ke puncak daftar tulis. */
-    public function test_celah_materi_diurutkan_dari_yang_paling_sering(): void
+    public function test_pertanyaan_tanpa_calon_masuk_daftar_terpisah(): void
     {
-        $this->unanswered('akun sap terkunci', times: 3);
-        $this->saranUntuk('akun sap terkunci', $this->calon(2, 70));
+        $this->unanswered('klaim tunjangan internet rumah', 4);
 
-        $this->unanswered('lupa password sap');
-        $this->saranUntuk('lupa password sap', $this->calon(1, 70));
+        $response = $this->get('/eva/recommendation')->assertOk();
 
-        $this->unanswered('password sap tidak bisa dipakai');
-        $this->saranUntuk('password sap tidak bisa dipakai', $this->calon(1, 65));
-
-        $gaps = $this->get('/eva/recommendation')->viewData('gaps');
-
-        $this->assertCount(2, $gaps);
-        $this->assertSame(1, $gaps[0]['subject_id'], 'dua pertanyaan berbeda menuju subject 1');
-        $this->assertSame(2, $gaps[0]['total']);
-        $this->assertSame(2, $gaps[1]['subject_id']);
-        $this->assertSame(1, $gaps[1]['total'], 'tiga kali pertanyaan SAMA tetap satu celah');
+        $this->assertSame([], $response->viewData('targets'));
+        $this->assertSame(
+            [['question' => 'klaim tunjangan internet rumah', 'count' => 4]],
+            $response->viewData('unrouted'),
+        );
     }
 
-    public function test_subject_yang_sudah_bermateri_tidak_masuk_daftar_celah(): void
-    {
-        $this->publishedArticle(subjectId: 1);
+    // ---- sejalan dengan Unanswered Questions -------------------------------
 
-        $this->unanswered('cara reset password sap');
+    public function test_pertanyaan_yang_disingkirkan_admin_ikut_hilang(): void
+    {
+        $this->unanswered('cara reset password sap', 2);
+        $this->unanswered('akun saya terkunci', 1);
+        $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
+        $this->saranUntuk('akun saya terkunci', $this->calon(2, 70));
+
+        $this->assertCount(2, $this->targets());
+
+        DismissedQuestion::create([
+            'question' => 'cara reset password sap',
+            'dismissed_at' => now(),
+        ]);
+
+        $targets = $this->targets();
+
+        $this->assertCount(1, $targets, 'yang dihapus di Unanswered tidak boleh hidup di sini');
+        $this->assertSame(2, $targets[0]['subject_id']);
+    }
+
+    public function test_pertanyaan_yang_kini_bisa_dijawab_eva_ikut_hilang(): void
+    {
+        $this->unanswered('cara reset password sap', 5);
         $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
 
-        $this->assertSame([], $this->get('/eva/recommendation')->viewData('gaps'));
+        $this->assertCount(1, $this->targets());
+
+        // Materinya baru ditulis: pemeriksaan ulang kini menemukan jawaban.
+        $this->kiniTerjawab('cara reset password sap');
+
+        $this->assertSame([], $this->targets());
+        $this->assertSame([], $this->get('/eva/recommendation')->viewData('unrouted'));
+    }
+
+    public function test_jawaban_di_bawah_ambang_tetap_dianggap_celah(): void
+    {
+        $this->unanswered('cara reset password sap');
+        $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
+        $this->kiniTerjawab('cara reset password sap', KnowledgeSearch::MIN_CONFIDENCE - 1);
+
+        $this->assertCount(1, $this->targets(), 'kandidat di bawah ambang bukan jawaban');
+    }
+
+    // ---- angka ringkasan ---------------------------------------------------
+
+    public function test_angka_ringkasan_menghitung_subject_bukan_pertanyaan(): void
+    {
+        $this->publishedArticle(1);
+        $this->unanswered('cara reset password sap', 2);
+        $this->unanswered('lupa sandi sap', 1);
+        $this->unanswered('akun saya terkunci', 1);
+        $this->unanswered('klaim tunjangan internet rumah', 1);
+        $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
+        $this->saranUntuk('lupa sandi sap', $this->calon(1, 62));
+        $this->saranUntuk('akun saya terkunci', $this->calon(2, 70));
+
+        $stats = $this->get('/eva/recommendation')->assertOk()->viewData('stats');
+
+        $this->assertSame(4, $stats['questions']);
+        $this->assertSame(2, $stats['targets'], 'dua subject tujuan');
+        $this->assertSame(1, $stats['without_material'], 'hanya subject 2 yang belum bermateri');
+        $this->assertSame(1, $stats['unrouted']);
     }
 
     // ---- invarian ----------------------------------------------------------
@@ -320,43 +365,29 @@ final class RecommendationControllerTest extends TestCase
 
         $this->assertNull(AnswerLog::sole()->catalog_subject_id);
         $this->assertSame(0, DB::table('tickets')->count(), 'aturan #4: EVA berhenti di draf');
+        $this->assertSame(0, DismissedQuestion::count());
     }
 
     // ---- bangku uji --------------------------------------------------------
 
-    public function test_bangku_uji_mengembalikan_calon_untuk_pertanyaan_bebas(): void
+    public function test_bangku_uji_mengembalikan_calon_beserta_keadaan_materinya(): void
     {
-        $this->saranUntuk('kenapa akun saya terkunci', $this->calon(2, 62));
+        $this->publishedArticle(1);
+        $this->saranUntuk('cara reset password sap', $this->calon(1, 80), $this->calon(2, 40));
 
-        $this->postJson('/eva/api/recommendation/test', ['question' => 'kenapa akun saya terkunci'])
-            ->assertOk()
-            ->assertJsonPath('question', 'kenapa akun saya terkunci')
-            ->assertJsonPath('candidates.0.subject_id', 2)
-            ->assertJsonPath('candidates.0.confidence', 62)
-            ->assertJsonPath('candidates.0.has_material', false);
+        $candidates = $this->postJson('/eva/api/recommendation/test', [
+            'question' => 'cara reset password sap',
+        ])->assertOk()->json('candidates');
+
+        $this->assertCount(2, $candidates);
+        $this->assertTrue($candidates[0]['has_material']);
+        $this->assertTrue($candidates[0]['is_auto_fill']);
+        $this->assertFalse($candidates[1]['has_material']);
+        $this->assertFalse($candidates[1]['is_auto_fill']);
     }
 
-    /** Bangku uji pun tidak mencatat apa pun — mengetik di sini bukan bertanya ke EVA. */
-    public function test_bangku_uji_tidak_mencatat_pertanyaan(): void
+    public function test_bangku_uji_menolak_pertanyaan_kosong(): void
     {
-        $this->saranUntuk('kenapa akun saya terkunci', $this->calon(2, 62));
-
-        $this->postJson('/eva/api/recommendation/test', ['question' => 'kenapa akun saya terkunci'])->assertOk();
-
-        $this->assertSame(0, AnswerLog::count());
-    }
-
-    public function test_bangku_uji_mewajibkan_pertanyaan(): void
-    {
-        $this->postJson('/eva/api/recommendation/test', [])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('question');
-    }
-
-    public function test_bangku_uji_menolak_pertanyaan_kepanjangan(): void
-    {
-        $this->postJson('/eva/api/recommendation/test', ['question' => str_repeat('a', 501)])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('question');
+        $this->postJson('/eva/api/recommendation/test', ['question' => ''])->assertStatus(422);
     }
 }

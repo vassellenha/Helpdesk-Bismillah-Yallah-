@@ -1,209 +1,244 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import {
     PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge, Button,
-    EmptyState, ErrorBanner, Pagination, usePagination, inputStyle, coverageTone,
+    EmptyState, ErrorBanner, Pagination, usePagination, inputStyle,
 } from './ui';
 
-/**
- * Pertanyaan per halaman.
- *
- * Tiap baris di sini memuat daftar calon subject-nya sendiri, jadi satu baris
- * jauh lebih tinggi daripada baris tabel biasa — halamannya dibuat lebih pendek.
+/*
+ | Ticket Recommendation — daftar kerja menulis, disusun PER SUBJECT.
+ |
+ | Bentuk lamanya satu baris per pertanyaan. Pada 40 pertanyaan layar itu jadi
+ | tumpukan yang tidak menghasilkan keputusan: admin harus menyimpulkan sendiri
+ | bahwa tujuh pertanyaan berbeda sebetulnya menuju satu artikel yang sama, dan
+ | kesimpulan itu tidak pernah benar-benar diambil.
+ |
+ | Sekarang SUBJECT yang jadi baris. Pertanyaannya tetap ada, tapi tertutup di
+ | balik baris subjectnya dan hanya terbuka kalau diminta — itu satu-satunya
+ | cara membuat 40 pertanyaan tetap terbaca dalam satu layar.
+ |
+ | Dua daftar dipisah tegas karena pekerjaannya berbeda:
+ |   SUBJECT TUJUAN  → tulis artikel.
+ |   TANPA SARAN     → kosakatanya belum dikenali, perbaiki di Search Settings.
  */
+
 const PER_PAGE = 8;
 
-/*
- | Ticket Recommendation.
- |
- | Menjawab satu pertanyaan: kalau EVA menyerah, tiketnya akan diarahkan ke
- | mana? Sumbernya Pencarian B (SubjectMatcher) atas service_catalog_subjects —
- | BUKAN pencarian jawaban. Katalog tidak berisi solusi, hanya label masalah.
- |
- | Tidak ada tombol "kirim tiket" di sini. EVA berhenti di draf (aturan #4);
- | penomoran dan SLA milik sistem Helpdesk.
- */
-
-export default function EvaTicketRecommendation({ rows, gaps, stats, thresholds, endpoints, links }) {
+export default function EvaTicketRecommendation({ targets, unrouted, stats, thresholds, endpoints, links }) {
     return (
         <div style={PAGE}>
             <PageHeader
                 title="Ticket Recommendation"
-                subtitle="Saran subject katalog untuk pertanyaan yang belum dapat dijawab EVA."
+                subtitle="Subject katalog yang akan menjadi tujuan tiket, diurutkan dari yang paling mendesak untuk ditulisi artikel."
             />
 
-            <StatRow>
-                <StatTile label="PERTANYAAN GAGAL" value={stats.questions} hint="diperiksa ulang sekarang" />
+            <StatRow columns={4}>
+                <StatTile label="SUBJECT TUJUAN" value={stats.targets} hint="menampung pertanyaan tak terjawab" />
                 <StatTile
-                    label="SARAN KUAT"
-                    value={stats.auto}
-                    hint={`≥ ${thresholds.auto_fill}, cukup untuk isi otomatis`}
-                    tone="var(--green-500)"
+                    label="BELUM BERMATERI"
+                    value={stats.without_material}
+                    hint="perlu artikel baru"
+                    tone={stats.without_material ? 'var(--red-600)' : undefined}
                 />
-                <StatTile label="SARAN LEMAH" value={stats.weak} hint="perlu dipilih manusia" />
-                <StatTile
-                    label="TANPA SARAN"
-                    value={stats.none}
-                    hint="tidak ada subject yang mendekati"
-                    tone={stats.none ? 'var(--red-600)' : 'var(--green-500)'}
-                />
+                <StatTile label="PERTANYAAN" value={stats.questions} hint="masih tidak terjawab saat ini" />
+                <StatTile label="TANPA SARAN" value={stats.unrouted} hint="tidak ada subject yang mendekati" />
             </StatRow>
 
-            <TestBench endpoint={endpoints.test} />
+            <SubjectTargets targets={targets} thresholds={thresholds} links={links} />
 
-            <MaterialGaps gaps={gaps} links={links} />
+            <UnroutedQuestions rows={unrouted} links={links} />
 
-            <RoutingTable rows={rows} />
+            <Bench endpoint={endpoints.test} thresholds={thresholds} />
+
+            <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '14px 2px 0', lineHeight: 1.6 }}>
+                Data pada halaman ini bersumber dari <a href={links.unanswered}>Unanswered Questions</a>.
+                Pertanyaan yang telah terjawab atau telah dihapus dari daftar kerja pada halaman tersebut
+                tidak lagi ditampilkan di sini.
+            </p>
         </div>
     );
 }
 
-/** Bangku uji — mengetik pertanyaan apa pun dan melihat tujuannya seketika. */
-function TestBench({ endpoint }) {
-    const [question, setQuestion] = useState('');
-    const [result, setResult] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+/**
+ * Daftar utama. Satu baris = satu subject, dan pertanyaannya tertutup.
+ *
+ * Saringan bekerja pada nama subject MAUPUN teks pertanyaan di dalamnya: admin
+ * yang mengingat keluhan karyawan belum tentu tahu nama resmi subjectnya, dan
+ * saringan yang hanya mencari nama subject akan menjawab "tidak ada" untuk
+ * pertanyaan yang jelas-jelas ada di halaman itu.
+ */
+function SubjectTargets({ targets, thresholds, links }) {
+    const [query, setQuery] = useState('');
+    const [opened, setOpened] = useState(null);
 
-    async function run() {
-        if (!question.trim()) return;
+    const visible = useMemo(() => {
+        const needle = query.trim().toLowerCase();
+        if (!needle) return targets;
 
-        setLoading(true);
-        setError(null);
-        try {
-            setResult(await apiFetch(endpoint, {
-                method: 'POST',
-                body: JSON.stringify({ question: question.trim() }),
-            }));
-        } catch (e) {
-            setError(`Gagal menguji pertanyaan: ${e.message}`);
-        } finally {
-            setLoading(false);
-        }
-    }
+        return targets.filter((target) =>
+            target.subject.toLowerCase().includes(needle)
+            || target.path.toLowerCase().includes(needle)
+            || target.questions.some((q) => q.question.toLowerCase().includes(needle)));
+    }, [targets, query]);
+
+    const pager = usePagination(visible, PER_PAGE, query);
 
     return (
         <Card style={{ marginBottom: '16px' }}>
-            <CardTitle>Uji pengarahan</CardTitle>
+            <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>Belum bermateri lebih dulu</span>}>
+                Subject tujuan
+            </CardTitle>
 
-            <div style={{ padding: '14px 18px' }}>
-                <ErrorBanner message={error} onDismiss={() => setError(null)} />
+            <div style={{ padding: '13px 18px 0' }}>
+                <input
+                    style={inputStyle}
+                    placeholder="Cari subject atau pertanyaan…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
+            </div>
 
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <input
-                        style={{ ...inputStyle, flex: '1 1 320px' }}
-                        placeholder="Ketik pertanyaan karyawan, misalnya “mailbox saya penuh”…"
-                        value={question}
-                        onChange={(e) => setQuestion(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && run()}
-                    />
-                    <Button onClick={run} disabled={loading || !question.trim()}>
-                        {loading ? 'Menguji…' : 'Uji'}
-                    </Button>
+            {visible.length === 0 ? (
+                <EmptyState>
+                    {targets.length === 0
+                        ? 'Tidak ada pertanyaan tak terjawab yang mengarah ke subject katalog.'
+                        : 'Tidak ada subject yang cocok dengan pencarian ini.'}
+                </EmptyState>
+            ) : (
+                <div style={{ padding: '14px 18px 4px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                    {pager.slice.map((target) => (
+                        <TargetRow
+                            key={target.subject_id}
+                            target={target}
+                            thresholds={thresholds}
+                            links={links}
+                            isOpen={opened === target.subject_id}
+                            onToggle={() => setOpened(opened === target.subject_id ? null : target.subject_id)}
+                        />
+                    ))}
                 </div>
+            )}
 
-                {result && (
-                    <div style={{ marginTop: '14px' }}>
-                        {result.candidates.length === 0 ? (
-                            <p style={{ fontSize: '12.5px', color: 'var(--slate-500)', margin: 0, lineHeight: 1.6 }}>
-                                Tidak ada subject yang mendekati, sehingga karyawan harus memilih sendiri dari
-                                katalog. Tambahkan sinonim kata kuncinya pada menu Search Settings.
-                            </p>
-                        ) : (
-                            <CandidateList candidates={result.candidates} />
-                        )}
-                    </div>
+            <Pagination {...pager} onPage={pager.setPage} unit="subject" />
+        </Card>
+    );
+}
+
+function TargetRow({ target, thresholds, links, isOpen, onToggle }) {
+    return (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+            <div
+                onClick={onToggle}
+                style={{
+                    display: 'flex', alignItems: 'center', gap: '11px', flexWrap: 'wrap',
+                    padding: '12px 14px', cursor: 'pointer',
+                    background: target.has_material ? 'var(--white)' : 'var(--surface-tint)',
+                }}
+            >
+                <span style={{ fontSize: '10px', color: 'var(--slate-500)', width: '10px', flex: 'none' }}>
+                    {isOpen ? '▼' : '▶'}
+                </span>
+
+                <span style={{ flex: '1 1 240px', minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: '13px', fontWeight: 700 }}>{target.subject}</span>
+                    <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--slate-500)', marginTop: '2px' }}>
+                        {target.path}
+                    </span>
+                </span>
+
+                {/*
+                    Dua angka yang berbeda dan keduanya perlu: VOLUME adalah
+                    berapa kali karyawan bertanya (seberapa mendesak), TOTAL
+                    adalah berapa pertanyaan berbeda (seberapa lebar). Satu
+                    artikel menutup keduanya sekaligus, dan tanpa dipisah "3×"
+                    selalu terbaca sebagai yang satunya.
+                */}
+                <span style={{ fontSize: '11.5px', color: 'var(--slate-500)', whiteSpace: 'nowrap' }}>
+                    {target.volume}× ditanyakan · {target.total} pertanyaan
+                </span>
+
+                <Badge tone={target.has_material ? 'neutral' : 'red'}>
+                    {target.has_material ? 'Sudah ada materi' : 'Belum ada materi'}
+                </Badge>
+
+                {target.has_material && (
+                    <a
+                        href={links.faq}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ fontSize: '11.5px', fontWeight: 600, whiteSpace: 'nowrap' }}
+                    >
+                        Perbaiki materi →
+                    </a>
                 )}
             </div>
-        </Card>
+
+            {isOpen && (
+                <div style={{ borderTop: '1px solid var(--border-soft)', padding: '4px 0' }}>
+                    {target.questions.map((q) => (
+                        <div
+                            key={q.question}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '11px',
+                                padding: '9px 14px 9px 35px', fontSize: '12.5px',
+                            }}
+                        >
+                            <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--clay-600)', flex: 'none', width: '30px' }}>
+                                {q.count}×
+                            </span>
+                            <span style={{ flex: 1, lineHeight: 1.5 }}>{q.question}</span>
+                            <Badge tone={q.is_auto_fill ? 'green' : 'amber'}>{q.confidence}</Badge>
+                        </div>
+                    ))}
+
+                    <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '6px 14px 10px 35px', lineHeight: 1.6 }}>
+                        Angka di kanan adalah keyakinan pengarahan. Mulai {thresholds.auto_fill}, subject
+                        terisi otomatis pada draf tiket; di bawahnya karyawan masih diminta memastikan.
+                    </p>
+                </div>
+            )}
+        </div>
     );
 }
 
 /**
- * Subject tujuan yang belum punya materi.
+ * Pertanyaan yang tak punya calon subject sama sekali.
  *
- * Ini bagian paling berguna di layar ini: bukan sekadar "EVA tidak tahu",
- * melainkan "EVA tidak tahu, dan inilah nama resmi masalahnya di katalog".
- * Daftar tugas menulis artikel yang paling terarah yang bisa dihasilkan.
+ * Kartu sendiri, bukan baris "—" di daftar atas: pekerjaannya bukan menulis
+ * artikel melainkan mengajari kosakatanya, dan mencampur dua jenis pekerjaan
+ * dalam satu daftar membuat keduanya sama-sama tertunda.
  */
-function MaterialGaps({ gaps, links }) {
-    if (gaps.length === 0) return null;
+function UnroutedQuestions({ rows, links }) {
+    const pager = usePagination(rows, PER_PAGE);
+
+    if (rows.length === 0) return null;
 
     return (
         <Card style={{ marginBottom: '16px' }}>
-            <CardTitle right={<a href={links.articles} style={{ fontSize: '11.5px', fontWeight: 600 }}>Tulis artikel →</a>}>
-                Subject tujuan yang belum punya materi
+            <CardTitle right={<a href={links.searchSettings} style={{ fontSize: '11.5px', fontWeight: 600 }}>Search Settings →</a>}>
+                Pertanyaan tanpa saran
             </CardTitle>
 
-            <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '11px' }}>
-                {gaps.map((gap) => (
-                    <div
-                        key={gap.subject_id}
-                        style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '12px 14px' }}
+            <ul style={{ listStyle: 'none', margin: 0, padding: '4px 0' }}>
+                {pager.slice.map((row) => (
+                    <li
+                        key={row.question}
+                        style={{
+                            display: 'flex', gap: '11px', alignItems: 'center',
+                            padding: '10px 18px', borderBottom: '1px solid var(--border-soft)',
+                        }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 700 }}>{gap.subject}</span>
-                            <Badge tone="red">{gap.total}× jadi tujuan</Badge>
-                        </div>
-                        <div style={{ fontSize: '11.5px', color: 'var(--slate-500)', marginTop: '4px' }}>{gap.path}</div>
-                        <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '12px', lineHeight: 1.6 }}>
-                            {gap.questions.map((q, i) => <li key={i}>{q}</li>)}
-                        </ul>
-                    </div>
+                        <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--clay-600)', flex: 'none', width: '30px' }}>
+                            {row.count}×
+                        </span>
+                        <span style={{ flex: 1, fontSize: '12.5px', lineHeight: 1.5 }}>{row.question}</span>
+                    </li>
                 ))}
-            </div>
+            </ul>
 
-            <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '0 18px 16px', lineHeight: 1.6 }}>
-                Subject di atas adalah nama resmi masalahnya pada Service Catalog. Artikel yang
-                ditautkan ke subject ini sekaligus menutup celah pada Coverage Dashboard.
+            <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '12px 18px', lineHeight: 1.6 }}>
+                Tidak ada subject katalog yang mendekati pertanyaan ini, sehingga karyawan harus memilih
+                sendiri dari katalog. Tambahkan sinonim kata kuncinya pada Search Settings.
             </p>
-        </Card>
-    );
-}
-
-function RoutingTable({ rows }) {
-    if (rows.length === 0) {
-        return (
-            <Card>
-                <EmptyState>
-                    Belum ada pertanyaan yang gagal dijawab. Tidak ada yang perlu diarahkan.
-                </EmptyState>
-            </Card>
-        );
-    }
-
-    const pager = usePagination(rows, PER_PAGE);
-
-    return (
-        <Card>
-            <CardTitle right={<span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{rows.length} pertanyaan</span>}>
-                Pengarahan per pertanyaan
-            </CardTitle>
-
-            <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '13px' }}>
-                {pager.slice.map((row, index) => (
-                    <div
-                        key={index}
-                        style={{ borderBottom: index === pager.slice.length - 1 ? 'none' : '1px solid var(--border-soft)', paddingBottom: '13px' }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '9px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '12.5px', fontWeight: 600 }}>“{row.question}”</span>
-                            {row.total > 1 && <Badge tone="neutral">{row.total}× ditanya</Badge>}
-                            {row.last_asked_at && (
-                                <span style={{ fontSize: '11.5px', color: 'var(--slate-500)' }}>{row.last_asked_at}</span>
-                            )}
-                        </div>
-
-                        {row.candidates.length === 0 ? (
-                            <div style={{ fontSize: '11.5px', color: 'var(--red-600)' }}>
-                                Tidak ada subject yang mendekati. Kosakatanya belum dikenali.
-                            </div>
-                        ) : (
-                            <CandidateList candidates={row.candidates} />
-                        )}
-                    </div>
-                ))}
-            </div>
 
             <Pagination {...pager} onPage={pager.setPage} unit="pertanyaan" />
         </Card>
@@ -211,47 +246,100 @@ function RoutingTable({ rows }) {
 }
 
 /**
- * Calon selalu ditampilkan sebagai DAFTAR, tidak pernah sebagai satu jawaban.
- *
- * Katalog ini penuh subject bernama mirip di layanan berbeda ("Reset Password"
- * ada di bawah SAP maupun SILO). Menampilkan satu saja menyembunyikan justru
- * bagian yang perlu diputuskan manusia.
+ * Bangku uji. Tetap ada karena inilah satu-satunya tempat calon ALTERNATIF
+ * berguna: membandingkan calon kedua dan ketiga hanya bermakna untuk satu
+ * pertanyaan, bukan untuk satu daftar.
  */
-function CandidateList({ candidates }) {
+function Bench({ endpoint, thresholds }) {
+    const [question, setQuestion] = useState('');
+    const [result, setResult] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(null);
+
+    async function run() {
+        if (!question.trim()) return;
+
+        setBusy(true);
+        setError(null);
+        try {
+            setResult(await apiFetch(endpoint, {
+                method: 'POST',
+                body: JSON.stringify({ question }),
+            }));
+        } catch (e) {
+            setError(`Pengujian gagal: ${e.message}`);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    function reset() {
+        setQuestion('');
+        setResult(null);
+        setError(null);
+    }
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-            {candidates.map((candidate, index) => (
-                <div
-                    key={candidate.subject_id}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '11px', flexWrap: 'wrap',
-                        padding: '9px 11px', borderRadius: 'var(--r-md)',
-                        background: index === 0 ? 'var(--surface-tint)' : 'transparent',
-                        border: index === 0 ? '1px solid var(--border)' : '1px solid transparent',
-                    }}
-                >
-                    <span
-                        style={{
-                            width: '38px', textAlign: 'right', fontWeight: 700, fontSize: '12.5px',
-                            color: coverageTone(candidate.confidence), flex: 'none',
-                        }}
-                    >
-                        {candidate.confidence}
-                    </span>
+        <Card>
+            <CardTitle>Uji pengarahan</CardTitle>
 
-                    <span style={{ flex: '1 1 200px', minWidth: 0 }}>
-                        <span style={{ fontSize: '12.5px', fontWeight: 600 }}>{candidate.subject}</span>
-                        <span style={{ display: 'block', fontSize: '11px', color: 'var(--slate-500)' }}>{candidate.path}</span>
-                    </span>
+            <div style={{ padding: '13px 18px 0' }}>
+                <ErrorBanner message={error} onDismiss={() => setError(null)} />
+            </div>
 
-                    {candidate.is_auto_fill
-                        ? <Badge tone="green">terisi otomatis</Badge>
-                        : <Badge tone="neutral">perlu dipilih manual</Badge>}
+            <div style={{ padding: '0 18px 13px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <input
+                    style={{ ...inputStyle, flex: '1 1 280px' }}
+                    placeholder="Ketik pertanyaan karyawan, misalnya “mailbox saya penuh”…"
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && run()}
+                />
+                <Button onClick={run} disabled={busy || !question.trim()}>
+                    {busy ? 'Memeriksa…' : 'Periksa'}
+                </Button>
+                <Button variant="ghost" onClick={reset} disabled={busy || (!question && !result)}>
+                    Reset
+                </Button>
+            </div>
 
-                    {!candidate.has_material && <Badge tone="red">belum ada materi</Badge>}
-                    {candidate.requires_approval && <Badge tone="amber">perlu approval</Badge>}
-                </div>
-            ))}
-        </div>
+            {result && (
+                result.candidates.length === 0 ? (
+                    <EmptyState>Tidak ada subject yang mendekati. Kosakatanya belum dikenali.</EmptyState>
+                ) : (
+                    <div style={{ padding: '0 18px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {result.candidates.map((candidate, index) => (
+                            <div
+                                key={candidate.subject_id}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '11px', flexWrap: 'wrap',
+                                    padding: '11px 13px', borderRadius: 'var(--r-md)',
+                                    border: '1px solid var(--border)',
+                                    background: index === 0 ? 'var(--surface-tint)' : 'var(--white)',
+                                }}
+                            >
+                                <span style={{ flex: '1 1 220px', minWidth: 0 }}>
+                                    <span style={{ display: 'block', fontSize: '12.5px', fontWeight: 700 }}>
+                                        {candidate.subject}
+                                    </span>
+                                    <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--slate-500)', marginTop: '2px' }}>
+                                        {candidate.path}
+                                    </span>
+                                </span>
+
+                                <Badge tone={candidate.is_auto_fill ? 'green' : 'amber'}>{candidate.confidence}</Badge>
+
+                                {!candidate.has_material && <Badge tone="red">Belum ada materi</Badge>}
+                            </div>
+                        ))}
+
+                        <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '2px 0 0', lineHeight: 1.6 }}>
+                            Calon teratas yang mencapai {thresholds.auto_fill} akan terisi otomatis pada draf
+                            tiket. Pengujian pada kartu ini tidak dicatat pada log jawaban.
+                        </p>
+                    </div>
+                )
+            )}
+        </Card>
     );
 }

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Eva;
 
 use App\Http\Controllers\Controller;
+use App\Models\Knowledge\DismissedQuestion;
 use App\Services\Knowledge\CoverageCalculator;
+use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\KnowledgeStats;
 use App\Services\Knowledge\SubjectMatch;
 use App\Services\Knowledge\SubjectSearch;
@@ -16,60 +18,74 @@ use Illuminate\View\View;
  * Ticket Recommendation — ke mana tiket akan diarahkan saat EVA menyerah.
  *
  * EVA berhenti di DRAF (aturan #4). Layar ini tidak menulis satu baris pun ke
- * tabel tiket; ia hanya memperlihatkan subject katalog mana yang akan
- * disarankan untuk tiap pertanyaan yang gagal dijawab.
+ * tabel tiket; ia memperlihatkan subject katalog mana yang akan disarankan
+ * untuk pertanyaan yang gagal dijawab, dan karena itu subject mana yang paling
+ * mendesak untuk ditulisi artikel.
  *
- * Saran TIDAK PERNAH DISIMPAN. Semuanya dihitung ulang tiap kali layar dibuka,
- * dengan alasan yang sama seperti Unanswered Questions: begitu admin
- * memperbaiki sinonim atau katalog bertambah, seluruh riwayat ikut membaik
- * tanpa migrasi apa pun. Menyimpannya di kb_answer_logs.catalog_subject_id juga
- * akan membuat kolom itu berarti dua hal sekaligus — "subject artikel yang
- * menjawab" untuk log terjawab, dan "subject tebakan" untuk log gagal.
+ * Saran TIDAK PERNAH DISIMPAN. Semuanya dihitung ulang tiap layar dibuka:
+ * begitu admin memperbaiki sinonim atau katalog bertambah, seluruh riwayat ikut
+ * membaik tanpa migrasi apa pun.
+ *
+ * SATU SUMBER DENGAN UNANSWERED QUESTIONS. Layar ini dulu memakai 40 kandidat
+ * mentah, sehingga pertanyaan yang sudah dihapus admin maupun yang sudah
+ * terjawab tetap tampil di sini — admin menghapus di satu menu lalu
+ * menemukannya lagi di menu sebelah. Sekarang dua saringan yang sama dengan
+ * UnansweredController berlaku:
+ *
+ *   1. `DismissedQuestion::hiddenQuestions()` — yang disingkirkan admin hilang.
+ *   2. Pemeriksaan ulang lewat KnowledgeSearch — yang kini bisa dijawab EVA
+ *      hilang, tanpa perlu ada yang menandainya selesai.
+ *
+ * Keduanya biaya nyata (satu pencarian per pertanyaan), dan itu harga yang sama
+ * yang sudah dibayar Unanswered Questions. Dua layar yang mengaku membaca hal
+ * yang sama tetapi menampilkan isi berbeda lebih mahal daripada itu.
  */
 class RecommendationController extends Controller
 {
     /** Pertanyaan gagal yang diperiksa ulang. Sejajar dengan Unanswered. */
     private const CANDIDATE_LIMIT = 40;
 
-    /** Calon yang ditampilkan per pertanyaan di daftar. */
-    private const ALTERNATIVES = 3;
+    /** Calon yang ditampilkan bangku uji. Daftar utama hanya butuh yang teratas. */
+    private const BENCH_ALTERNATIVES = 5;
 
     public function __construct(
         private readonly KnowledgeStats $stats,
         private readonly SubjectSearch $matcher,
         private readonly CoverageCalculator $coverage,
+        private readonly KnowledgeSearch $search,
     ) {}
 
     public function index(): View
     {
         $covered = $this->coverage->coveredSubjectIds()->flip();
 
-        $rows = $this->stats->topUnansweredQuestions(self::CANDIDATE_LIMIT)
-            ->map(fn (array $row) => [
-                ...$row,
-                'candidates' => $this->candidates($row['question'], $covered),
-            ])
+        $rows = $this->stats->topUnansweredQuestions(self::CANDIDATE_LIMIT, DismissedQuestion::hiddenQuestions())
+            ->filter(fn (array $row) => $this->stillUnanswered($row['question']))
+            ->map(fn (array $row) => [...$row, 'candidates' => $this->candidates($row['question'], $covered, 1)])
             ->values();
 
+        $targets = $this->targets($rows);
+        $unrouted = $this->unrouted($rows);
+
         return view('eva.recommendation', [
-            'rows' => $rows->all(),
-            'gaps' => $this->materialGaps($rows)->all(),
+            'targets' => $targets->all(),
+            'unrouted' => $unrouted->all(),
             'thresholds' => [
                 'auto_fill' => SubjectSearch::MIN_CONFIDENCE,
                 'suggest' => SubjectSearch::SUGGEST_FLOOR,
             ],
             'stats' => [
                 'questions' => $rows->count(),
-                'auto' => $rows->filter(fn (array $r) => $this->topConfidence($r) >= SubjectSearch::MIN_CONFIDENCE)->count(),
-                'weak' => $rows->filter(function (array $r) {
-                    $top = $this->topConfidence($r);
-
-                    return $top > 0 && $top < SubjectSearch::MIN_CONFIDENCE;
-                })->count(),
-                'none' => $rows->filter(fn (array $r) => $r['candidates'] === [])->count(),
+                'targets' => $targets->count(),
+                'without_material' => $targets->where('has_material', false)->count(),
+                'unrouted' => $unrouted->count(),
             ],
             'endpoints' => ['test' => route('eva.recommendation.test')],
-            'links' => ['articles' => route('eva.articles'), 'faq' => route('eva.faq')],
+            'links' => [
+                'faq' => route('eva.faq'),
+                'unanswered' => route('eva.unanswered'),
+                'searchSettings' => route('eva.search-settings'),
+            ],
         ]);
     }
 
@@ -82,43 +98,48 @@ class RecommendationController extends Controller
 
         return response()->json([
             'question' => $data['question'],
-            'candidates' => $this->candidates($data['question'], $covered, 5),
+            'candidates' => $this->candidates($data['question'], $covered, self::BENCH_ALTERNATIVES),
         ]);
     }
 
     /**
-     * @param  Collection<int,int>  $covered  id subject → posisi (hasil flip)
+     * Pertanyaan yang DITANYAKAN ULANG SEKARANG pun tetap tidak terjawab.
+     *
+     * Aturannya sengaja identik dengan UnansweredController::recheck() —
+     * kandidat terbaik di bawah ambang berarti celahnya belum tertutup. Kalau
+     * kedua layar memakai ambang berbeda, keduanya akan saling menyalahkan.
      */
-    private function candidates(string $question, Collection $covered, int $limit = self::ALTERNATIVES): array
+    private function stillUnanswered(string $question): bool
     {
-        return array_map(
-            fn (SubjectMatch $match) => [
-                ...$match->toArray(),
-                // Subject tujuan yang belum punya materi adalah alasan
-                // pertanyaan ini gagal dijawab — sekaligus daftar tugas menulis
-                // yang paling terarah yang bisa diberikan layar mana pun.
-                'has_material' => $covered->has($match->subjectId),
-                'is_auto_fill' => $match->confidence >= SubjectSearch::MIN_CONFIDENCE,
-            ],
-            $this->matcher->cocokkan($question, $limit),
-        );
+        $best = $this->search->cari($question, 1)[0] ?? null;
+
+        return $best === null || $best->confidence < KnowledgeSearch::MIN_CONFIDENCE;
     }
 
     /**
-     * Subject yang berulang kali jadi tujuan tetapi belum punya materi,
-     * diurutkan dari yang paling sering.
+     * Daftar kerja layar ini: SUBJECT, bukan pertanyaan.
+     *
+     * Dibalik dari sebelumnya karena keluaran layar ini adalah satu keputusan —
+     * "artikel mana yang saya tulis berikutnya" — dan keputusan itu diambil per
+     * subject. Daftar per pertanyaan memaksa admin menyimpulkan sendiri bahwa
+     * tujuh pertanyaan berbeda sebetulnya menuju satu artikel yang sama, dan
+     * pada 40 pertanyaan kesimpulan itu tidak pernah benar-benar diambil.
+     *
+     * Satu subject = calon TERATAS dari tiap pertanyaan. Calon kedua dan ketiga
+     * tidak dikelompokkan di sini; tempatnya di bangku uji, karena yang menarik
+     * dari calon alternatif adalah membandingkannya untuk SATU pertanyaan.
      *
      * @param  Collection<int,array<string,mixed>>  $rows
      * @return Collection<int,array<string,mixed>>
      */
-    private function materialGaps(Collection $rows): Collection
+    private function targets(Collection $rows): Collection
     {
         $tally = [];
 
         foreach ($rows as $row) {
             $top = $row['candidates'][0] ?? null;
 
-            if ($top === null || $top['has_material']) {
+            if ($top === null) {
                 continue;
             }
 
@@ -127,20 +148,65 @@ class RecommendationController extends Controller
                 'subject_id' => $key,
                 'subject' => $top['subject'],
                 'path' => $top['path'],
+                'has_material' => $top['has_material'],
+                'best_confidence' => 0,
+                'volume' => 0,
                 'questions' => [],
             ];
-            $tally[$key]['questions'][] = $row['question'];
+
+            $tally[$key]['questions'][] = [
+                'question' => $row['question'],
+                'count' => $row['count'],
+                'confidence' => $top['confidence'],
+                'is_auto_fill' => $top['is_auto_fill'],
+            ];
+            $tally[$key]['volume'] += $row['count'];
+            $tally[$key]['best_confidence'] = max($tally[$key]['best_confidence'], $top['confidence']);
         }
 
         return collect($tally)
             ->map(fn (array $row) => [...$row, 'total' => count($row['questions'])])
-            ->sortByDesc('total')
+            // Belum bermateri lebih dulu: subject yang artikelnya sudah ada
+            // tidak menghasilkan pekerjaan menulis, hanya perlu diperbaiki kata
+            // kuncinya. Sesudah itu barulah yang paling sering ditanyakan.
+            ->sortBy([
+                ['has_material', 'asc'],
+                ['volume', 'desc'],
+            ])
             ->values();
     }
 
-    /** @param array<string,mixed> $row */
-    private function topConfidence(array $row): int
+    /**
+     * Pertanyaan yang tidak punya calon subject sama sekali.
+     *
+     * Dipisah dari daftar subject karena pekerjaannya berbeda: ini bukan soal
+     * menulis artikel, melainkan kosakatanya belum dikenali — yang diperbaiki
+     * lewat Search Settings.
+     *
+     * @param  Collection<int,array<string,mixed>>  $rows
+     * @return Collection<int,array<string,mixed>>
+     */
+    private function unrouted(Collection $rows): Collection
     {
-        return $row['candidates'][0]['confidence'] ?? 0;
+        return $rows
+            ->filter(fn (array $row) => $row['candidates'] === [])
+            ->map(fn (array $row) => ['question' => $row['question'], 'count' => $row['count']])
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int,int>  $covered  id subject → posisi (hasil flip)
+     * @return array<int,array<string,mixed>>
+     */
+    private function candidates(string $question, Collection $covered, int $limit): array
+    {
+        return array_map(
+            fn (SubjectMatch $match) => [
+                ...$match->toArray(),
+                'has_material' => $covered->has($match->subjectId),
+                'is_auto_fill' => $match->confidence >= SubjectSearch::MIN_CONFIDENCE,
+            ],
+            $this->matcher->cocokkan($question, $limit),
+        );
     }
 }
