@@ -40,7 +40,7 @@ final class PreviewControllerTest extends TestCase
 
         // CurrentActor mencari persona ini lewat email — tanpa barisnya, setiap
         // endpoint Preview gagal keras sebelum sampai ke logikanya.
-        User::factory()->create(['name' => 'Andi Pratama', 'email' => 'andi.pratama@adhi.co.id']);
+        User::factory()->create(['name' => 'Andi Pratama', 'email' => 'andi.pratama@adhi.co.id', 'nip' => '19950418102']);
 
         $this->seedCatalog();
         $this->searchReturns();

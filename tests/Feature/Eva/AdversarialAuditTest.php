@@ -57,8 +57,8 @@ final class AdversarialAuditTest extends TestCase
         // CurrentActor mencari dua persona ini lewat email. Tanpa barisnya
         // setiap endpoint tulis EVA meledak 404 sebelum sampai ke logikanya —
         // itu sendiri satu temuan, diuji di bawah.
-        $admin = User::factory()->create(['name' => 'Marcell', 'email' => 'marcell.laforteza@adhi.co.id']);
-        User::factory()->create(['name' => 'Andi', 'email' => 'andi.pratama@adhi.co.id']);
+        $admin = User::factory()->create(['name' => 'Marcell', 'email' => 'marcell.laforteza@adhi.co.id', 'nip' => '19870114001']);
+        User::factory()->create(['name' => 'Andi', 'email' => 'andi.pratama@adhi.co.id', 'nip' => '19950418102']);
 
         // Konsol EVA kini dijaga `eva.access`. Mayoritas tes di berkas ini
         // menguji jalur ADMIN TERAUTENTIKASI, jadi identitasnya dipasang di

@@ -34,7 +34,7 @@ final class FaqCrudTest extends TestCase
         parent::setUp();
 
         Cache::flush();
-        User::factory()->create(['name' => 'Marcell Laforteza', 'email' => 'marcell.laforteza@adhi.co.id']);
+        User::factory()->create(['name' => 'Marcell Laforteza', 'email' => 'marcell.laforteza@adhi.co.id', 'nip' => '19870114001']);
         $this->seedCatalog();
 
         $this->actingAsEvaAdmin();

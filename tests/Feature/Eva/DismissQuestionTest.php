@@ -42,7 +42,7 @@ final class DismissQuestionTest extends TestCase
         parent::setUp();
 
         Cache::flush();
-        User::factory()->create(['name' => 'Marcell Laforteza', 'email' => 'marcell.laforteza@adhi.co.id']);
+        User::factory()->create(['name' => 'Marcell Laforteza', 'email' => 'marcell.laforteza@adhi.co.id', 'nip' => '19870114001']);
 
         // Pencarian A dipalsukan supaya tes jalan di SQLite dan setiap
         // pertanyaan pasti dianggap "masih celah" — yang diuji di sini

@@ -43,7 +43,7 @@ final class DismissManyQuestionsTest extends TestCase
         parent::setUp();
 
         Cache::flush();
-        User::factory()->create(['name' => 'Marcell Laforteza', 'email' => 'marcell.laforteza@adhi.co.id']);
+        User::factory()->create(['name' => 'Marcell Laforteza', 'email' => 'marcell.laforteza@adhi.co.id', 'nip' => '19870114001']);
 
         // Pencarian dipalsukan supaya SETIAP pertanyaan lulus pemeriksaan ulang
         // — itulah yang membuatnya mendarat di daftar "Telah terjawab", yang

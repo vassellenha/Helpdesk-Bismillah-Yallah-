@@ -43,30 +43,53 @@ class CurrentActor
         return $user->roles->contains('name', $role) ? $user : null;
     }
 
+    /*
+     | Tujuh persona tetap di bawah ini dicari lewat NIP, BUKAN email.
+     |
+     | Sampai 31 Juli 2026 dicari lewat email, dan itu pecah begitu fitur
+     | admin-overridden-fields masuk: seorang admin mengubah nama & email
+     | "Karina Putri" jadi "Karina AESPA" lewat konsol User Management, dan
+     | approver() langsung firstOrFail() — approver() melempar
+     | ModelNotFoundException yang Laravel ubah jadi halaman 404 polos, bukan
+     | error yang jelas mengarah ke penyebabnya.
+     |
+     | NIP dipilih bukan asal beda kolom: itu KUNCI PENCOCOKAN EmployeeSync
+     | sendiri (`$matchBy = 'nip'` bawaan di config/integrations.php).
+     | Mengubah NIP seseorang berarti memutus pencocokan sinkronisasi
+     | karyawannya sendiri — jauh lebih jarang disentuh iseng dibanding nama
+     | tampilan atau email yang memang dirancang bisa admin ubah bebas.
+     |
+     | Ini bukan jaminan mutlak (NIP secara teknis tetap kolom yang bisa
+     | diedit lewat form yang sama), tapi memindahkan risikonya dari "kolom
+     | yang orang ubah untuk iseng/uji coba" ke "kolom yang mengubahnya
+     | berarti sengaja mematahkan identitas sinkronisasi karyawan itu
+     | sendiri".
+    */
+
     public static function admin(): User
     {
         return self::ssoUserWithRole('Administrator')
-            ?? User::where('email', 'marcell.laforteza@adhi.co.id')->firstOrFail();
+            ?? User::where('nip', '19870114001')->firstOrFail();
     }
 
     public static function requester(): User
     {
         return self::ssoUserWithRole('Requester')
-            ?? User::where('email', 'andi.pratama@adhi.co.id')->firstOrFail();
+            ?? User::where('nip', '19950418102')->firstOrFail();
     }
 
     public static function approver(): User
     {
         return self::ssoUserWithRole('Approver')
             ?? self::actingApproverUser()
-            ?? User::where('email', 'karina.putri@adhi.co.id')->firstOrFail();
+            ?? User::where('nip', '19900322014')->firstOrFail();
     }
 
     public static function support(): User
     {
         return self::ssoUserWithRole('Support IT')
             ?? self::actingAgentUser('it', 'acting_support_agent_id')
-            ?? User::where('email', 'aditya.nugraha@adhi.co.id')->firstOrFail();
+            ?? User::where('nip', '10027761')->firstOrFail();
     }
 
     /**
@@ -77,20 +100,20 @@ class CurrentActor
     public static function teamLead(): User
     {
         return self::ssoUserWithRole('Team Lead')
-            ?? User::where('email', 'raka.mahendra@adhi.co.id')->firstOrFail();
+            ?? User::where('nip', '19891117033')->firstOrFail();
     }
 
     public static function supportBpo(): User
     {
         return self::ssoUserWithRole('Support BPO')
             ?? self::actingAgentUser('bpo', 'acting_support_bpo_agent_id')
-            ?? User::where('email', 'denny.firmansyah@adhi.co.id')->firstOrFail();
+            ?? User::where('nip', '19960130096')->firstOrFail();
     }
 
     public static function knowledgeAdmin(): User
     {
         return self::ssoUserWithRole('Knowledge Administrator')
-            ?? User::where('email', 'nina.amelia@adhi.co.id')->firstOrFail();
+            ?? User::where('nip', '19920504052')->firstOrFail();
     }
 
     private static function actingAgentUser(string $type, string $sessionKey): ?User
