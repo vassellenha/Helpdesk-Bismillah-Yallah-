@@ -120,10 +120,27 @@ final class CoverageTrendTest extends TestCase
         ]);
     }
 
+    /**
+     * Awal bulan, $n bulan sebelum hari ini — BUKAN `today()->subMonths($n)`.
+     *
+     * `subMonths()` biasa meluap di tanggal akhir bulan panjang: dijalankan
+     * tanggal 31 Juli, `subMonth()` mendarat di 1 Juli (Juni cuma 30 hari),
+     * bukan di Juni sama sekali. Tes yang memakainya lolos 11 bulan lalu gagal
+     * tepat di ujung bulan — dan kambuh lagi tiap 31 Agustus/Oktober/Desember
+     * atau akhir Februari.
+     *
+     * Anchor ke tanggal 1 DULU baru dikurangi: tanggal 1 selalu ada di setiap
+     * bulan, jadi tidak pernah ada yang meluap.
+     */
+    private function monthsAgo(int $n): CarbonInterface
+    {
+        return today()->startOfMonth()->subMonths($n);
+    }
+
     /** Riwayat bulan lalu + titik nyata hari ini. */
     public function test_riwayat_digabung_dengan_titik_hari_ini(): void
     {
-        $this->snapshotOn(today()->subMonth(), 25);
+        $this->snapshotOn($this->monthsAgo(1), 25);
 
         $this->coverSubject(1);
         $this->coverSubject(2);
@@ -145,7 +162,7 @@ final class CoverageTrendTest extends TestCase
      */
     public function test_satu_bulan_diwakili_rekaman_terakhirnya(): void
     {
-        $bulanLalu = today()->subMonth();
+        $bulanLalu = $this->monthsAgo(1);
 
         $this->snapshotOn($bulanLalu->copy()->startOfMonth(), 10);
         $this->snapshotOn($bulanLalu->copy()->startOfMonth()->addDays(9), 20);
@@ -198,7 +215,7 @@ final class CoverageTrendTest extends TestCase
     public function test_hanya_bulan_terakhir_yang_ditampilkan(): void
     {
         foreach (range(1, 10) as $monthsAgo) {
-            $this->snapshotOn(today()->subMonths($monthsAgo), 25);
+            $this->snapshotOn($this->monthsAgo($monthsAgo), 25);
         }
 
         $this->assertLessThanOrEqual(6, count($this->trend()));
