@@ -94,7 +94,7 @@ class TeamLeadController extends Controller
         $since = match ($period) {
             'today' => Carbon::today(),
             '7d' => Carbon::now()->subDays(7),
-            'quarter' => Carbon::now()->subMonths(3),
+            'quarter' => Carbon::now()->subMonthsNoOverflow(3),
             default => Carbon::now()->subDays(30),
         };
 
@@ -315,7 +315,11 @@ class TeamLeadController extends Controller
                 'createdAt' => $ticket->created_at->format('d M Y · H:i'),
                 'sla' => $ticket->sla_label,
                 'slaKind' => $ticket->sla_kind,
+                'slaPanel' => $ticket->slaPayload(),
                 'resolutionDue' => optional($ticket->resolution_due_at)->format('d M Y · H:i'),
+                'satisfactionRating' => $ticket->satisfaction_rating,
+                'feedbackNote' => $ticket->feedback_note,
+                'ratingActive' => (bool) $ticket->rating_active,
                 'agent' => $ticket->assignedAgent?->name ?? 'Belum ada PIC',
                 'agentId' => $ticket->assigned_agent_id,
                 'requester' => $ticket->requester ? [
@@ -700,6 +704,16 @@ class TeamLeadController extends Controller
                 ? round($resolvedWithTime->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->resolved_at)) / 60, 1)
                 : null;
 
+            // first_response_at (set the moment Support takes any action on a
+            // ticket, not just a discussion reply — see SupportController/
+            // SupportBpoController::resolve()/escalate()/returnTicket()) is
+            // what makes this measurable at all; before it existed there was
+            // no per-ticket timestamp for "when did Support actually engage".
+            $respondedWithTime = $mine->filter(fn (Ticket $t) => $t->first_response_at !== null);
+            $avgResponseMinutes = $respondedWithTime->isNotEmpty()
+                ? round($respondedWithTime->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->first_response_at)))
+                : null;
+
             $metSla = $resolvedWithTime->filter(fn (Ticket $t) => $t->resolved_at->lessThanOrEqualTo($t->resolution_due_at))->count();
             $productivity = $resolvedWithTime->isNotEmpty() ? (int) round($metSla / $resolvedWithTime->count() * 100) : null;
 
@@ -712,7 +726,7 @@ class TeamLeadController extends Controller
                 'initials' => $this->initials($agent->name),
                 'load' => $active->count(),
                 'resolved' => $done->count(),
-                'avgResponse' => '—',
+                'avgResponse' => $avgResponseMinutes !== null ? $this->formatDuration($avgResponseMinutes) : '—',
                 'avgResolution' => $avgResolutionHours !== null ? $avgResolutionHours.'h' : '—',
                 'productivity' => $productivity,
                 'rating' => $rated->isNotEmpty() ? round($rated->avg('satisfaction_rating'), 1) : null,
@@ -733,6 +747,16 @@ class TeamLeadController extends Controller
                     ->values(),
             ];
         })->sortByDesc('load')->values();
+    }
+
+    /**
+     * Response times are usually minutes, resolution times usually hours —
+     * showing "0.3h" for an 18-minute reply is technically correct but
+     * unreadable next to the resolution column's "Xh" figures.
+     */
+    private function formatDuration(int $minutes): string
+    {
+        return $minutes < 60 ? "{$minutes}m" : round($minutes / 60, 1).'h';
     }
 
     /**
@@ -884,7 +908,10 @@ class TeamLeadController extends Controller
     {
         $colors = ['#dc2626', '#2563eb', '#7c3aed', '#d97706', '#059669'];
         $topApps = collect($this->topApps($tickets))->pluck('name');
-        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->subMonths($m));
+        // startOfMonth() first — subtracting months from a late-month day can
+        // overflow into the wrong target month, repeating one label and
+        // silently dropping another from the chart.
+        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->startOfMonth()->subMonths($m));
 
         $pointsFor = fn (string $app) => $months->map(fn (Carbon $month) => $tickets->filter(fn (Ticket $t) => $t->service_name === $app && $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month))->count())->all();
 
@@ -1036,7 +1063,9 @@ class TeamLeadController extends Controller
 
     private function ticketTrend(Collection $tickets): array
     {
-        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->subMonths($m));
+        // startOfMonth() first — see appTrend() above for why subtracting
+        // months from a late-month day can overflow into the wrong month.
+        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->startOfMonth()->subMonths($m));
 
         return $months->map(function (Carbon $month) use ($tickets) {
             $created = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month))->count();

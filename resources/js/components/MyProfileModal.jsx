@@ -46,7 +46,7 @@ export default function MyProfileModal({ profileUrl, onClose }) {
                                 <SkeletonBar className="ml-auto h-6 w-20 rounded-full" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                {Array.from({ length: 8 }).map((_, i) => (
+                                {Array.from({ length: 12 }).map((_, i) => (
                                     <div key={i} className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3">
                                         <SkeletonBar className="h-2.5 w-20" />
                                         <SkeletonBar className="mt-2 h-3.5 w-28" />
@@ -78,12 +78,16 @@ export default function MyProfileModal({ profileUrl, onClose }) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <Detail label="Nama Lengkap" value={profile.name} />
-                                <Detail label="Unit Kerja" value={profile.unit} />
-                                <Detail label="NIP" value={profile.nip} />
                                 <Detail label="Email Korporat" value={profile.email} />
-                                <Detail label="Status Akun" value={profile.status} />
-                                <Detail label="Nomor WhatsApp" value={profile.whatsapp} />
-                                <Detail label="Bergabung" value={profile.joinedAt} />
+                                <Detail label="Username" value={profile.username} />
+                                <Detail label="NIP" value={profile.nip} />
+                                <Detail label="Alamat" value={profile.address} span />
+                                <Detail label="Nomor Telepon" value={profile.phone} />
+                                <Detail label="Status Akun" value={profile.status} hint={profile.statusReason} />
+                                <Detail label="Jabatan" value={profile.jabatan} span />
+                                <Detail label="Kode Departemen" value={profile.kodeDepartemen} />
+                                <Detail label="Kode Divisi" value={profile.kodeDivisi} />
+                                <Detail label="Kode Proyek" value={profile.kodeProyek} />
                                 <Detail label="Terakhir Login" value={profile.lastLogin} />
                             </div>
 
@@ -110,11 +114,12 @@ export default function MyProfileModal({ profileUrl, onClose }) {
     );
 }
 
-function Detail({ label, value }) {
+function Detail({ label, value, span, hint }) {
     return (
-        <div className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3">
+        <div className={`rounded-lg bg-gray-50 dark:bg-panel-3 p-3 ${span ? 'col-span-2' : ''}`}>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>
             <p className="mt-1 text-sm font-medium text-gray-900 dark:text-ink-1">{value}</p>
+            {hint && <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{hint}</p>}
         </div>
     );
 }

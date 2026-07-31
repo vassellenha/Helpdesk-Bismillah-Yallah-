@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
-import FeedbackDisplay from '../FeedbackDisplay';
+import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
@@ -334,18 +334,12 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                     </Card>
 
                     <Card title="SLA">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[13px] font-semibold text-gray-700 dark:text-ink-2">Target Penyelesaian</span>
-                            <span className={`text-[13px] font-bold ${ticket.sla?.kind === 'breach' ? 'text-red-600 dark:text-bad-text' : ticket.sla?.kind === 'ontrack' ? 'text-emerald-600 dark:text-ok-text' : 'text-gray-700 dark:text-ink-2'}`}>
-                                {ticket.sla?.label}
-                            </span>
-                        </div>
-                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
-                            <div
-                                className={`h-full rounded-full ${ticket.sla?.kind === 'breach' ? 'bg-red-500' : ticket.sla?.kind === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                style={{ width: `${ticket.sla?.pct ?? 0}%` }}
-                            />
-                        </div>
+                        <SlaPanel
+                            sla={ticket.sla}
+                            rating={ticket.satisfactionRating}
+                            feedbackNote={ticket.feedbackNote}
+                            ratingActive={ticket.ratingActive ?? true}
+                        />
                     </Card>
 
                     <Card title="People">
@@ -364,12 +358,6 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                             ))}
                         </div>
                     </Card>
-
-                    {ticket.status === 'Closed' && ticket.satisfactionRating && (
-                        <Card title="Feedback">
-                            <FeedbackDisplay rating={ticket.satisfactionRating} note={ticket.feedbackNote} />
-                        </Card>
-                    )}
 
                     <Card title="Riwayat Status">
                         <div className="flex flex-col">

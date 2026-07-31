@@ -11,7 +11,6 @@ use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -33,7 +32,7 @@ class TicketManagementController extends Controller
 {
     public function index(): View
     {
-        $tickets = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
+        $tickets = Ticket::with(['requester', 'approver', 'attachments', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
             ->whereNotNull('requester_id')
             ->latest('created_at')
             ->get();
@@ -178,8 +177,10 @@ class TicketManagementController extends Controller
             'createdAt' => $t->created_at->format('d M Y, H:i'),
             'createdAtIso' => $t->created_at->toIso8601String(),
             'description' => $t->description,
-            'attachmentName' => $t->attachment_name,
-            'attachmentUrl' => $t->attachment_path ? Storage::disk('public')->url($t->attachment_path) : null,
+            // Attachments live in their own table; this used to read
+            // $t->attachment_name / $t->attachment_path, columns that do not
+            // exist on tickets, so Admin silently never showed any attachment.
+            'attachments' => $t->attachmentsPayload(),
             'approvalInfo' => $this->approvalInfo($t),
             'timeline' => TicketTimeline::steps($t),
             'requester' => $t->requester ? [
@@ -198,7 +199,18 @@ class TicketManagementController extends Controller
      * Ticket::getSlaLabelAttribute() (English, used by Requester screens)
      * so this page's wording doesn't leak into/break those.
      */
+    /**
+     * The shared SLA panel data, with this console's own Indonesian label and
+     * its extra "met-late" distinction layered on top — Admin is the only screen
+     * that separates "selesai tepat waktu" from "selesai melewati SLA".
+     */
     private function slaPresent(Ticket $t): array
+    {
+        return [...$t->slaPayload(), ...$this->slaVerdict($t)];
+    }
+
+    /** @return array{label:string,kind:string} */
+    private function slaVerdict(Ticket $t): array
     {
         if (in_array($t->status, Ticket::NO_SLA_STATUSES, true)) {
             return ['label' => '—', 'kind' => 'none'];

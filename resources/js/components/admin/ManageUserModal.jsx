@@ -5,6 +5,20 @@ import { apiFetch } from '../../lib/api';
 
 const TABS = ['Detail Pengguna', 'Edit Pengguna', 'Role & Hak Akses'];
 
+const EDIT_FIELDS = [
+    ['name', 'Nama'],
+    ['nip', 'NIP'],
+    ['email', 'Email'],
+    ['username', 'Username', 'Dikosongkan berarti memakai email korporat.'],
+    ['address', 'Alamat'],
+    ['phone', 'Nomor Telepon'],
+    ['unit', 'Unit Kerja'],
+    ['jabatan', 'Jabatan'],
+    ['kode_departemen', 'Kode Departemen'],
+    ['kode_divisi', 'Kode Divisi'],
+    ['kode_proyek', 'Kode Proyek'],
+];
+
 const ROLE_DESCRIPTIONS = {
     Requester: 'Membuat & memantau tiket sendiri, mengakses Knowledge Base, memberi rating/feedback.',
     Approver: 'Meninjau & memutuskan tiket yang membutuhkan persetujuan sebelum diteruskan ke Support.',
@@ -18,8 +32,11 @@ const ROLE_DESCRIPTIONS = {
 export default function ManageUserModal({ user, roles, onClose, onSave }) {
     const [tab, setTab] = useState('Detail Pengguna');
     const [form, setForm] = useState({
-        name: user.name, nip: user.nip, email: user.email, whatsapp: user.whatsapp,
-        unit: user.unit, jabatan: user.jabatan, status: user.status === 'Aktif' ? 'active' : 'inactive',
+        name: user.name, nip: user.nip, email: user.email, username: user.username,
+        phone: user.phone, address: dash(user.address), unit: user.unit,
+        jabatan: user.jabatan, kode_departemen: dash(user.kode_departemen),
+        kode_divisi: dash(user.kode_divisi), kode_proyek: dash(user.kode_proyek),
+        helpdesk_access: user.helpdesk_access ?? 'enabled',
     });
     const [roleIds, setRoleIds] = useState(user.role_ids ?? []);
     const [error, setError] = useState('');
@@ -97,12 +114,18 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                     <div>
                         <div className="grid grid-cols-2 gap-4">
                             <Detail label="Nama Lengkap" value={user.name} />
-                            <Detail label="Unit Kerja" value={user.unit} />
-                            <Detail label="NIP" value={user.nip} />
                             <Detail label="Email Korporat" value={user.email} />
-                            <Detail label="Status Akun" value={user.status} />
-                            <Detail label="Nomor WhatsApp" value={user.whatsapp} />
-                            <Detail label="Bergabung" value={user.joined_at} />
+                            <Detail label="Username" value={user.username} />
+                            <Detail label="NIP" value={user.nip} />
+                            <Detail label="Alamat" value={user.address} span />
+                            <Detail label="Nomor Telepon" value={user.phone} />
+                            <Detail label="Status Kepegawaian" value={user.employment_status} hint="Dari API perusahaan" />
+                            <Detail label="Akses Helpdesk" value={user.helpdesk_access === 'enabled' ? 'Aktif' : 'Nonaktif'} hint="Diatur Admin" />
+                            <Detail label="Jabatan" value={user.jabatan} />
+                            <Detail label="Unit Kerja" value={user.unit} />
+                            <Detail label="Kode Departemen" value={user.kode_departemen} />
+                            <Detail label="Kode Divisi" value={user.kode_divisi} />
+                            <Detail label="Kode Proyek" value={user.kode_proyek} />
                             <Detail label="Terakhir Login" value={user.last_login} />
                         </div>
                         <div className="mt-4 rounded-lg bg-gray-50 dark:bg-panel-3 p-4">
@@ -118,18 +141,26 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
 
                 {tab === 'Edit Pengguna' && (
                     <div className="space-y-4">
-                        <Field label="Nama"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" /></Field>
-                        <Field label="NIP"><input value={form.nip ?? ''} onChange={(e) => setForm({ ...form, nip: e.target.value })} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" /></Field>
-                        <Field label="Email"><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" /></Field>
-                        <Field label="Nomor WhatsApp"><input value={form.whatsapp ?? ''} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" /></Field>
-                        <Field label="Unit Kerja"><input value={form.unit ?? ''} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" /></Field>
-                        <Field label="Jabatan"><input value={form.jabatan ?? ''} onChange={(e) => setForm({ ...form, jabatan: e.target.value })} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" /></Field>
-                        <Field label="Status">
+                        {EDIT_FIELDS.map(([key, label, hint]) => (
+                            <Field key={key} label={label}>
+                                <input
+                                    value={form[key] ?? ''}
+                                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                                    className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
+                                />
+                                {hint && <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">{hint}</p>}
+                            </Field>
+                        ))}
+                        <Field label="Akses Helpdesk">
                             <SelectMenu
-                                value={form.status}
-                                onChange={(v) => setForm({ ...form, status: v })}
-                                options={[{ value: 'active', label: 'Aktif' }, { value: 'inactive', label: 'Nonaktif' }]}
+                                value={form.helpdesk_access}
+                                onChange={(v) => setForm({ ...form, helpdesk_access: v })}
+                                options={[{ value: 'enabled', label: 'Aktif' }, { value: 'disabled', label: 'Nonaktif' }]}
                             />
+                            <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">
+                                Status kepegawaian ({user.employment_status}) datang dari API perusahaan dan tidak bisa diubah di sini.
+                                {user.employment_status === 'Nonaktif' && ' Selama pegawai nonaktif, akun tetap terkunci walau akses helpdesk diaktifkan.'}
+                            </p>
                         </Field>
                     </div>
                 )}
@@ -177,11 +208,17 @@ function initials(name) {
     return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
-function Detail({ label, value }) {
+/** presentUser() renders empty optional fields as "-"; edit inputs want them blank. */
+function dash(value) {
+    return !value || value === '-' ? '' : value;
+}
+
+function Detail({ label, value, span, hint }) {
     return (
-        <div className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3">
+        <div className={`rounded-lg bg-gray-50 dark:bg-panel-3 p-3 ${span ? 'col-span-2' : ''}`}>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>
             <p className="mt-1 text-sm font-medium text-gray-900 dark:text-ink-1">{value}</p>
+            {hint && <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{hint}</p>}
         </div>
     );
 }

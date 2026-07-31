@@ -34,7 +34,7 @@ class TeguranNotifier
     {
         $recipientUser = $agent->user; // may be null — most seeded agents aren't linked to a users row
         $email = $recipientUser?->email ?? $agent->email;
-        $phone = $recipientUser?->whatsapp;
+        $phone = $recipientUser?->phone;
         $delivered = [];
 
         if (in_array('inapp', $channels, true) && $recipientUser) {
@@ -78,7 +78,7 @@ class TeguranNotifier
     {
         $recipientUser = $agent->user;
         $email = $recipientUser?->email ?? $agent->email;
-        $phone = $recipientUser?->whatsapp;
+        $phone = $recipientUser?->phone;
         $delivered = [];
 
         if (in_array('inapp', $channels, true) && $recipientUser) {

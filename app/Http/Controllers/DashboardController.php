@@ -23,7 +23,7 @@ class DashboardController extends Controller
         $needsResponse = $tickets->where('status', 'Waiting for Response');
         $resolved = $tickets->where('status', 'Resolved');
         $closedLast6Months = $tickets->whereIn('status', ['Closed', 'Completed'])
-            ->where('created_at', '>=', Carbon::now()->subMonths(6));
+            ->where('created_at', '>=', Carbon::now()->subMonthsNoOverflow(6));
 
         $approvalBreakdown = $awaitingApproval
             ->groupBy(fn (Ticket $t) => $t->approver?->name ?? 'Unassigned')
@@ -119,12 +119,6 @@ class DashboardController extends Controller
 
     private function presentRow(Ticket $t): array
     {
-        $elapsedPct = 0;
-        if ($t->sla_minutes_remaining !== null && $t->resolution_time_minutes > 0) {
-            $elapsedPct = (int) round((1 - max($t->sla_minutes_remaining, 0) / $t->resolution_time_minutes) * 100);
-            $elapsedPct = max(0, min(100, $t->sla_kind === 'breach' ? 100 : $elapsedPct));
-        }
-
         return [
             'id' => $t->ticket_no,
             'title' => $t->title,
@@ -137,7 +131,7 @@ class DashboardController extends Controller
             'sla' => $t->sla_label,
             'slaKind' => $t->sla_kind,
             'slaMinutes' => $t->sla_minutes_remaining,
-            'slaPct' => $elapsedPct,
+            'slaPct' => $t->sla_elapsed_percent,
             'created' => $t->created_at->format('M j, Y'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('requester.tickets.show', $t),
@@ -155,7 +149,12 @@ class DashboardController extends Controller
 
     private function createdVsResolvedByMonth(Collection $tickets): array
     {
-        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->subMonths($m));
+        // startOfMonth() first — subtracting months from day 29-31 of the
+        // current month can overflow into the wrong target month (e.g. today
+        // the 30th, minus 5 months, lands on a nonexistent Feb 30 and rolls
+        // forward into March), producing a repeated month label and silently
+        // dropping a real month from the chart.
+        $months = collect(range(5, 0))->map(fn (int $m) => Carbon::now()->startOfMonth()->subMonths($m));
 
         return $months->map(function (Carbon $month) use ($tickets) {
             $created = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month));

@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "fix-style": "node -e \"require('fs').rmSync('public/hot',{force:true})\" && vite build"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

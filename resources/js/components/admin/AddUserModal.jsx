@@ -3,12 +3,19 @@ import Modal, { ModalFooter, ModalHeader } from './Modal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
 
-const FIELDS = [
+// Split around the phone input, which needs its own +62 prefix markup.
+const FIELDS_BEFORE_PHONE = [
     ['name', 'Nama Lengkap', 'Nama lengkap pengguna'],
     ['nip', 'NIP', 'Nomor Induk Pegawai'],
     ['email', 'Email Korporat', 'nama@adhi.co.id'],
+];
+
+const FIELDS_AFTER_PHONE = [
+    ['address', 'Alamat', 'Alamat lengkap pengguna'],
     ['unit', 'Unit Kerja', 'Unit / divisi'],
     ['jabatan', 'Jabatan', 'Jabatan pengguna'],
+    ['kode_departemen', 'Kode Departemen', 'Kode departemen (jika ada)'],
+    ['kode_divisi', 'Kode Divisi', 'Kode divisi (jika ada)'],
     ['kode_proyek', 'Kode Proyek', 'Kode proyek (jika ada)'],
     ['nama_proyek', 'Nama Proyek', 'Nama proyek (jika ada)'],
 ];
@@ -24,7 +31,13 @@ const ROLE_DESCRIPTIONS = {
 };
 
 export default function AddUserModal({ roles, onClose, onSave }) {
-    const [form, setForm] = useState({ name: '', nip: '', email: '', whatsapp: '', unit: '', jabatan: '', kode_proyek: '', nama_proyek: '', status: 'active' });
+    const [form, setForm] = useState({
+        name: '', nip: '', email: '', username: '', phone: '', address: '',
+        unit: '', jabatan: '', kode_departemen: '', kode_divisi: '',
+        kode_proyek: '', nama_proyek: '', helpdesk_access: 'enabled',
+    });
+    // Username mirrors the email until the admin edits it directly.
+    const [usernameEdited, setUsernameEdited] = useState(false);
     const [roleIds, setRoleIds] = useState(() => {
         const requester = roles.find((r) => r.name === 'Requester');
         return requester ? [requester.id] : [];
@@ -33,7 +46,11 @@ export default function AddUserModal({ roles, onClose, onSave }) {
     const [saving, setSaving] = useState(false);
 
     function set(key, value) {
-        setForm((prev) => ({ ...prev, [key]: value }));
+        setForm((prev) => ({
+            ...prev,
+            [key]: value,
+            ...(key === 'email' && !usernameEdited ? { username: value } : {}),
+        }));
     }
 
     function toggleRole(id) {
@@ -60,7 +77,7 @@ export default function AddUserModal({ roles, onClose, onSave }) {
             <div className="space-y-4 overflow-y-auto px-6 py-5">
                 {error && <p className="rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
-                {FIELDS.slice(0, 3).map(([key, label, placeholder]) => (
+                {FIELDS_BEFORE_PHONE.map(([key, label, placeholder]) => (
                     <Field key={key} label={label}>
                         <input
                             value={form[key]}
@@ -71,19 +88,29 @@ export default function AddUserModal({ roles, onClose, onSave }) {
                     </Field>
                 ))}
 
-                <Field label="Nomor WhatsApp">
+                <Field label="Username">
+                    <input
+                        value={form.username}
+                        onChange={(e) => { setUsernameEdited(true); set('username', e.target.value); }}
+                        placeholder="Otomatis mengikuti email"
+                        className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">Dikosongkan berarti memakai email korporat.</p>
+                </Field>
+
+                <Field label="Nomor Telepon">
                     <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 focus-within:border-blue-400 focus-within:bg-white dark:focus-within:bg-panel-hover">
                         <span className="flex items-center px-3 text-sm text-gray-500 dark:text-ink-2">+62</span>
                         <input
-                            value={form.whatsapp}
-                            onChange={(e) => set('whatsapp', e.target.value)}
+                            value={form.phone}
+                            onChange={(e) => set('phone', e.target.value)}
                             placeholder="Contoh: 0812xxxxxxx"
                             className="w-full bg-transparent px-1 py-2.5 text-sm focus:outline-none"
                         />
                     </div>
                 </Field>
 
-                {FIELDS.slice(3).map(([key, label, placeholder]) => (
+                {FIELDS_AFTER_PHONE.map(([key, label, placeholder]) => (
                     <Field key={key} label={label}>
                         <input
                             value={form[key]}
@@ -119,12 +146,15 @@ export default function AddUserModal({ roles, onClose, onSave }) {
                     </div>
                 </Field>
 
-                <Field label="Status Akun">
+                <Field label="Akses Helpdesk">
                     <SelectMenu
-                        value={form.status}
-                        onChange={(v) => set('status', v)}
-                        options={[{ value: 'active', label: 'Aktif' }, { value: 'inactive', label: 'Nonaktif' }]}
+                        value={form.helpdesk_access}
+                        onChange={(v) => set('helpdesk_access', v)}
+                        options={[{ value: 'enabled', label: 'Aktif' }, { value: 'disabled', label: 'Nonaktif' }]}
                     />
+                    <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">
+                        Status kepegawaian diisi otomatis dari API perusahaan saat sinkronisasi berikutnya.
+                    </p>
                 </Field>
             </div>
 

@@ -44,6 +44,7 @@ class AuditTrailController extends Controller
             'ticket_support' => 'Penanganan Support',
             'team_lead' => 'Team Lead',
             'ticket_management' => 'Ticket Management',
+            'integration' => 'Integrasi',
             default => $module,
         };
     }
@@ -68,6 +69,7 @@ class AuditTrailController extends Controller
             'raise_priority' => 'Naikkan Prioritas',
             'remind_rating' => 'Teguran Rating',
             'return' => 'Dikembalikan',
+            'sync' => 'Sinkronisasi',
             default => $action,
         };
     }
