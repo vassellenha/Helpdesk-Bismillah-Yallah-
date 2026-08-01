@@ -1,4 +1,5 @@
 import RoleSwitcher from './RoleSwitcher';
+import LanguageSwitcher from './LanguageSwitcher';
 import NotificationBell from './NotificationBell';
 import TicketWorkspace from './TicketWorkspace';
 import AgentsPanel from './AgentsPanel';
@@ -53,6 +54,7 @@ import TeamLeadTicketDetail from './teamlead/TeamLeadTicketDetail';
 // that should be mounted on that node. Add new islands here only.
 export const registry = {
     RoleSwitcher,
+    LanguageSwitcher,
     NotificationBell,
     TicketWorkspace,
     AgentsPanel,

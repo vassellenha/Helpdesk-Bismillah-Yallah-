@@ -9,21 +9,18 @@
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
-    <header class="sticky top-0 z-30 border-b border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-1">
+    <header class="sticky top-3 z-30 mx-3 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
         <div class="flex items-center justify-between px-6 py-3">
             <div class="flex items-center gap-8">
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-700 text-sm font-bold text-white">AK</span>
-                    <span class="leading-tight">
-                        <span class="block text-sm font-bold text-gray-900 dark:text-ink-1">{{ config('helpdesk.company') }}</span>
-                        <span class="block text-xs text-gray-400 dark:text-ink-3">{{ config('helpdesk.product') }}</span>
-                    </span>
+                    <img src="{{ asset('images/logo.png') }}" alt="Helpdesk" class="h-9 w-9 rounded-xl object-cover">
+                    <span class="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</span>
                 </a>
                 <nav class="hidden items-center gap-1 lg:flex">
                     @foreach (config('helpdesk.admin_nav') as $item)
                         <a
                             href="{{ route($item['route']) }}"
-                            class="rounded-lg px-3 py-2 text-sm font-medium {{ request()->routeIs($item['route']) ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover' }}"
+                            class="rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-out {{ request()->routeIs($item['route']) ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10' }}"
                         >
                             {{ $item['label'] }}
                         </a>
@@ -31,6 +28,7 @@
                 </nav>
             </div>
             <div class="flex items-center gap-4">
+                <div data-react="LanguageSwitcher"></div>
                 <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '', 'profileUrl' => route('admin.profile')]) }}"></div>
             </div>
         </div>

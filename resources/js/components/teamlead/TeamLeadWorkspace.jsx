@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { TopProgressBar } from '../Spinner';
+import LanguageSwitcher from '../LanguageSwitcher';
 import TeamLeadTopNav from './TeamLeadTopNav';
 import TicketSlideOver from './TicketSlideOver';
 import RemindModal from './RemindModal';
@@ -123,13 +124,10 @@ export default function TeamLeadWorkspace(props) {
     return (
         <div className="flex min-h-screen flex-col">
             <TopProgressBar active={refreshing} />
-            <header className="sticky top-0 z-20 flex h-[62px] items-center gap-4 border-b border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-1 px-7">
+            <header className="sticky top-3 z-20 mx-3 flex h-[62px] items-center gap-4 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
                 <div className="flex shrink-0 items-center gap-2.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-blue-600 dark:bg-blue-500 text-sm font-extrabold text-white">A</span>
-                    <div className="leading-tight">
-                        <p className="text-sm font-bold text-gray-900 dark:text-ink-1">Adhi Helpdesk</p>
-                        <p className="text-[10px] text-gray-400 dark:text-ink-3">Enterprise ITSM</p>
-                    </div>
+                    <img src="/images/logo.png" alt="Helpdesk" className="h-8 w-8 rounded-[10px] object-cover" />
+                    <p className="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
                 </div>
 
                 <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -137,8 +135,8 @@ export default function TeamLeadWorkspace(props) {
                         <button
                             key={t.key}
                             onClick={() => setActive(t.key)}
-                            className={`flex shrink-0 items-center gap-2 rounded-[10px] px-3 py-2 text-[13px] font-semibold transition ${
-                                active === t.key ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] hover:text-gray-900 dark:hover:text-ink-1'
+                            className={`flex shrink-0 items-center gap-2 rounded-[10px] px-3 py-2 text-[13px] font-semibold transition-all duration-200 ease-out ${
+                                active === t.key ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1'
                             }`}
                         >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={t.icon} /></svg>
@@ -147,7 +145,8 @@ export default function TeamLeadWorkspace(props) {
                     ))}
                 </nav>
 
-                <div className="shrink-0">
+                <div className="flex shrink-0 items-center gap-1">
+                    <LanguageSwitcher />
                     <TeamLeadTopNav
                         notifications={props.notifications ?? []}
                         user={props.user ?? {}}

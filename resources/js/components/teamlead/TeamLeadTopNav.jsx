@@ -133,7 +133,7 @@ export default function TeamLeadTopNav({ notifications = [], user = {}, dashboar
 
                 {profileOpen && (
                     <div className="absolute right-0 top-[54px] z-50 w-[250px] overflow-hidden rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-xl">
-                        <div className="mb-1.5 flex items-center gap-2.5 border-b border-gray-50 px-3 py-2.5">
+                        <div className="mb-1.5 flex items-center gap-2.5 border-b border-gray-50 dark:border-edge px-3 py-2.5">
                             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:text-accent-text">
                                 {user.initials ?? 'T'}
                             </span>
@@ -158,7 +158,7 @@ export default function TeamLeadTopNav({ notifications = [], user = {}, dashboar
                         <a href="#" className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] hover:text-gray-900 dark:hover:text-ink-1">
                             Notification Preferences
                         </a>
-                        <div className="mt-1.5 border-t border-gray-50 pt-1.5">
+                        <div className="mt-1.5 border-t border-gray-50 dark:border-edge pt-1.5">
                             <a href="/" className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-semibold text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
                                 Log out
                             </a>

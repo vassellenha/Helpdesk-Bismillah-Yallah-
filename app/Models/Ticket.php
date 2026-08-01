@@ -387,6 +387,10 @@ class Ticket extends Model
      * deadline would leave the warning already in the past, so the ticket would
      * light up amber the instant it was escalated.
      *
+     * The bonus comes from the ticket's own SLA policy ("Escalated Time" in
+     * Admin > Konfigurasi SLA), not a single app-wide percentage — a Critical
+     * policy and a Low policy have no reason to grant the same bonus.
+     *
      * Returns the minutes granted (0 when the ticket has no live clock, e.g. it
      * is already resolved, so an escalation never revives a finished SLA).
      */
@@ -396,8 +400,7 @@ class Ticket extends Model
             return 0;
         }
 
-        $percent = (int) config('helpdesk.sla.escalation_extension_percent', 50);
-        $minutes = (int) round($this->resolution_time_minutes * $percent / 100);
+        $minutes = (int) ($this->slaPolicy?->escalation_extension_minutes ?? 0);
 
         if ($minutes <= 0) {
             return 0;

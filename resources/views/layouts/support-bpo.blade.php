@@ -10,26 +10,23 @@
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     <div class="flex min-h-screen flex-col">
-        <header class="sticky top-0 z-20 flex h-[62px] items-center gap-6 border-b border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-1 px-7">
+        <header class="sticky top-3 z-20 mx-3 flex h-[62px] items-center gap-6 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
             <div class="flex items-center gap-2.5">
-                <span class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-blue-600 text-sm font-extrabold text-white">A</span>
-                <div class="leading-tight">
-                    <p class="text-sm font-bold text-gray-900 dark:text-ink-1">Adhi Helpdesk</p>
-                    <p class="text-[10px] text-gray-400 dark:text-ink-3">Enterprise ITSM</p>
-                </div>
+                <img src="{{ asset('images/logo.png') }}" alt="Helpdesk" class="h-8 w-8 rounded-[10px] object-cover">
+                <p class="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
             </div>
 
             <nav class="flex items-center gap-1">
                 <a
                     href="{{ route('dashboard.support-bpo') }}"
-                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold {{ request()->routeIs('dashboard.support-bpo') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover hover:text-gray-900 dark:hover:text-ink-1' }}"
+                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold transition-all duration-200 ease-out {{ request()->routeIs('dashboard.support-bpo') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
                     Dashboard
                 </a>
                 <a
                     href="{{ route('support-bpo.tickets') }}"
-                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold {{ request()->routeIs('support-bpo.tickets*') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover hover:text-gray-900 dark:hover:text-ink-1' }}"
+                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold transition-all duration-200 ease-out {{ request()->routeIs('support-bpo.tickets*') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z"/><path d="M14 5v14"/></svg>
                     My Tickets
@@ -54,6 +51,8 @@
                     </select>
                 </form>
             @endif
+
+            <div data-react="LanguageSwitcher"></div>
 
             <div
                 data-react="ApproverTopNav"

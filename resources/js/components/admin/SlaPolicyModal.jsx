@@ -5,13 +5,21 @@ import { apiFetch } from '../../lib/api';
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
+// The API stores everything in minutes (fine-grained enough for any future
+// need), but typing "480" to mean "8 jam" is exactly the friction admins
+// complained about — so this form collects hours and converts at the edges.
+function minutesToHours(minutes) {
+    return minutes || minutes === 0 ? minutes / 60 : '';
+}
+
 export default function SlaPolicyModal({ policy, onClose, onSaved }) {
     const isEdit = !!policy;
     const [form, setForm] = useState({
         policy_name: policy?.policy_name ?? '',
         priority: policy?.priority ?? '',
-        response_time_minutes: policy?.response_time_minutes ?? '',
-        resolution_time_minutes: policy?.resolution_time_minutes ?? '',
+        response_time_hours: minutesToHours(policy?.response_time_minutes),
+        resolution_time_hours: minutesToHours(policy?.resolution_time_minutes),
+        escalation_extension_hours: minutesToHours(policy?.escalation_extension_minutes),
         warning_threshold_percent: policy?.warning_threshold_percent ?? '',
         status: policy?.status ?? 'active',
     });
@@ -27,10 +35,13 @@ export default function SlaPolicyModal({ policy, onClose, onSaved }) {
         setSaving(true);
         try {
             const payload = {
-                ...form,
-                response_time_minutes: Number(form.response_time_minutes),
-                resolution_time_minutes: Number(form.resolution_time_minutes),
+                policy_name: form.policy_name,
+                priority: form.priority,
+                response_time_minutes: Math.round(Number(form.response_time_hours) * 60),
+                resolution_time_minutes: Math.round(Number(form.resolution_time_hours) * 60),
+                escalation_extension_minutes: Math.round(Number(form.escalation_extension_hours) * 60),
                 warning_threshold_percent: Number(form.warning_threshold_percent),
+                status: form.status,
             };
             const saved = isEdit
                 ? await apiFetch(`/admin/sla-policies/${policy.id}`, { method: 'PUT', body: JSON.stringify(payload) })
@@ -63,13 +74,18 @@ export default function SlaPolicyModal({ policy, onClose, onSaved }) {
                 </Field>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <Field label="Response Time (menit)">
-                        <input type="number" min="1" value={form.response_time_minutes} onChange={(e) => set('response_time_minutes', e.target.value)} placeholder="mis. 120" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
+                    <Field label="Response Time (jam)">
+                        <input type="number" min="0.5" step="0.5" value={form.response_time_hours} onChange={(e) => set('response_time_hours', e.target.value)} placeholder="mis. 2" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                     </Field>
-                    <Field label="Resolution Time (menit)">
-                        <input type="number" min="1" value={form.resolution_time_minutes} onChange={(e) => set('resolution_time_minutes', e.target.value)} placeholder="mis. 480" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
+                    <Field label="Resolution Time (jam)">
+                        <input type="number" min="0.5" step="0.5" value={form.resolution_time_hours} onChange={(e) => set('resolution_time_hours', e.target.value)} placeholder="mis. 8" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                     </Field>
                 </div>
+
+                <Field label="Escalated Time (jam)">
+                    <input type="number" min="0" step="0.5" value={form.escalation_extension_hours} onChange={(e) => set('escalation_extension_hours', e.target.value)} placeholder="mis. 4" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
+                    <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-3">Tambahan waktu resolusi yang diberikan begitu tiket dengan priority ini dieskalasi.</p>
+                </Field>
 
                 <Field label="Warning Threshold (%)">
                     <input type="number" min="1" max="100" value={form.warning_threshold_percent} onChange={(e) => set('warning_threshold_percent', e.target.value)} placeholder="mis. 80" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />

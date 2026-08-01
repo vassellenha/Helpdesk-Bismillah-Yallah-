@@ -21,6 +21,7 @@ class SlaPolicyController extends Controller
         'priority' => 'Priority',
         'response_time_minutes' => 'Response Time',
         'resolution_time_minutes' => 'Resolution Time',
+        'escalation_extension_minutes' => 'Escalated Time',
         'warning_threshold_percent' => 'Warning Threshold',
         'status' => 'Status',
     ];
@@ -155,6 +156,7 @@ class SlaPolicyController extends Controller
         return [
             'response_time_minutes' => fn ($v) => AuditDescriber::minutesLabel((int) $v),
             'resolution_time_minutes' => fn ($v) => AuditDescriber::minutesLabel((int) $v),
+            'escalation_extension_minutes' => fn ($v) => AuditDescriber::minutesLabel((int) $v),
             'warning_threshold_percent' => fn ($v) => "{$v}%",
             'status' => fn ($v) => $v === 'active' ? 'Aktif' : 'Nonaktif',
         ];
@@ -167,6 +169,7 @@ class SlaPolicyController extends Controller
             'priority' => ['required', Rule::in(['Critical', 'High', 'Medium', 'Low'])],
             'response_time_minutes' => 'required|integer|min:1',
             'resolution_time_minutes' => 'required|integer|gt:response_time_minutes',
+            'escalation_extension_minutes' => 'required|integer|min:0',
             'warning_threshold_percent' => 'required|integer|min:1|max:100',
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);

@@ -3,10 +3,11 @@ import SlaPolicyModal from './SlaPolicyModal';
 import { apiFetch } from '../../lib/api';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
+// Always "Jam" — switching between Menit/Jam/Hari depending on how evenly a
+// value divides is exactly the inconsistency admins found confusing.
 function formatMinutes(minutes) {
-    if (minutes % 1440 === 0) return `${minutes / 1440} Hari`;
-    if (minutes % 60 === 0) return `${minutes / 60} Jam`;
-    return `${minutes} Menit`;
+    const hours = minutes / 60;
+    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} Jam`;
 }
 
 export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaBreakdown }) {
@@ -85,6 +86,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                                 <th className="px-5 py-3">Prioritas</th>
                                 <th className="px-5 py-3">Response Time</th>
                                 <th className="px-5 py-3">Resolution Time</th>
+                                <th className="px-5 py-3">Escalated Time</th>
                                 <th className="px-5 py-3">SLA Warning</th>
                                 <th className="px-5 py-3">Status</th>
                                 <th className="px-5 py-3 text-right">Aksi</th>
@@ -99,6 +101,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                                     </td>
                                     <td className="px-5 py-3 text-gray-600 dark:text-ink-2">{formatMinutes(p.response_time_minutes)}</td>
                                     <td className="px-5 py-3 text-gray-600 dark:text-ink-2">{formatMinutes(p.resolution_time_minutes)}</td>
+                                    <td className="px-5 py-3 text-gray-600 dark:text-ink-2">{formatMinutes(p.escalation_extension_minutes)}</td>
                                     <td className="px-5 py-3 text-gray-600 dark:text-ink-2">{p.warning_threshold_percent}%</td>
                                     <td className="px-5 py-3">
                                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${p.status === 'active' ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text' : 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2'}`}>
@@ -221,6 +224,7 @@ function PolicyDetailModal({ policy, onClose }) {
                     <Detail label="Prioritas" value={policy.priority} />
                     <Detail label="Response Time" value={formatMinutes(policy.response_time_minutes)} />
                     <Detail label="Resolution Time" value={formatMinutes(policy.resolution_time_minutes)} />
+                    <Detail label="Escalated Time" value={formatMinutes(policy.escalation_extension_minutes)} />
                     <Detail label="Warning Threshold" value={`${policy.warning_threshold_percent}%`} />
                     <Detail label="Status" value={policy.status === 'active' ? 'Aktif' : 'Nonaktif'} />
                 </div>

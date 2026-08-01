@@ -12,6 +12,7 @@ class SlaPolicy extends Model
         'priority',
         'response_time_minutes',
         'resolution_time_minutes',
+        'escalation_extension_minutes',
         'warning_threshold_percent',
         'status',
     ];
@@ -19,6 +20,7 @@ class SlaPolicy extends Model
     protected $casts = [
         'response_time_minutes' => 'integer',
         'resolution_time_minutes' => 'integer',
+        'escalation_extension_minutes' => 'integer',
         'warning_threshold_percent' => 'integer',
     ];
 

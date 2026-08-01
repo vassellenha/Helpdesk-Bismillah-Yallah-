@@ -12,11 +12,8 @@
     <div class="flex min-h-screen items-center justify-center px-4 py-10">
         <div class="w-full max-w-md">
             <div class="mb-6 flex items-center gap-2.5">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-700 text-sm font-bold text-white">AK</span>
-                <div>
-                    <p class="text-sm font-bold leading-tight text-gray-900 dark:text-ink-1">{{ config('helpdesk.company') }}</p>
-                    <p class="text-xs text-gray-400 dark:text-ink-3">{{ config('helpdesk.product') }}</p>
-                </div>
+                <img src="{{ asset('images/logo.png') }}" alt="Helpdesk" class="h-10 w-10 rounded-xl object-cover">
+                <p class="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
             </div>
 
             <div class="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
