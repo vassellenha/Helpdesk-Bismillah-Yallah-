@@ -7,5 +7,6 @@
     'conversations' => $conversations,
     'stats' => $stats,
     'showing' => $showing,
+    'retentionDays' => $retentionDays,
 ]) }}"></div>
 @endsection

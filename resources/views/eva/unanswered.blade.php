@@ -7,6 +7,7 @@
     'gaps' => $gaps,
     'closed' => $closed,
     'threshold' => $threshold,
+    'retentionDays' => $retentionDays,
     'endpoints' => $endpoints,
     'links' => $links,
 ]) }}"></div>

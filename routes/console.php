@@ -37,3 +37,21 @@ Schedule::command('eva:snapshot-coverage')
 Schedule::command('eva:sweep-stuck-documents')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+/*
+ | Penyapu log EVA yang lewat masa simpan (default 14 hari,
+ | config `eva.log_retention_days`).
+ |
+ | Pukul 02:00, SETELAH snapshot coverage pukul 01:00 — urutannya menentukan,
+ | bukan kebetulan. Snapshot memotret angka hari itu dari kb_answer_logs yang
+ | masih utuh; kalau penyapu jalan lebih dulu, potretnya sudah kehilangan baris
+ | tak terjawab yang seharusnya ikut terhitung, dan tren Coverage berlubang
+ | satu hari tanpa ada yang tahu sebabnya.
+ |
+ | Harian, bukan tiap jam: yang disapu berumur dua minggu, jadi menyapunya 24
+ | kali sehari tidak membuat satu baris pun hilang lebih cepat dalam ukuran
+ | yang berarti.
+ */
+Schedule::command('eva:purge-expired-logs')
+    ->dailyAt('02:00')
+    ->withoutOverlapping();

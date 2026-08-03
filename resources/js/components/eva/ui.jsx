@@ -101,6 +101,30 @@ export function Badge({ children, tone = 'neutral' }) {
     );
 }
 
+/**
+ * Hitung mundur sebelum sebuah baris log disapu `eva:purge-expired-logs`.
+ *
+ * Angkanya datang dari server (LogRetention::daysLeft), tidak dihitung ulang di
+ * klien: jam browser admin bisa meleset, dan yang menentukan penghapusan adalah
+ * jam server.
+ *
+ * Warnanya menanjak, bukan tetap. Lencana netral pada baris yang tinggal
+ * sehari lagi terbaca sebagai keterangan biasa, padahal itu justru satu-satunya
+ * baris yang menuntut tindakan hari ini.
+ */
+export function RetentionCountdown({ days }) {
+    if (days === null || days === undefined) return null;
+
+    const tone = days <= 1 ? 'red' : days <= 4 ? 'amber' : 'neutral';
+    const label = days === 0 ? 'dihapus hari ini' : `dihapus ${days} hari lagi`;
+
+    return (
+        <Badge tone={tone}>
+            <span title="Log EVA disapu otomatis setelah lewat masa simpan">{label}</span>
+        </Badge>
+    );
+}
+
 /** Saklar "Show in EVA" — gerbang yang menentukan materi ikut dijawab atau tidak. */
 export function Toggle({ on, onChange, label }) {
     return (

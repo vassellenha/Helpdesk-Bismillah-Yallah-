@@ -5,6 +5,7 @@ namespace App\Services\Knowledge;
 use App\Models\Knowledge\AnswerLog;
 use App\Models\Knowledge\AnswerRating;
 use Carbon\Carbon;
+use App\Support\Eva\LogRetention;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -106,14 +107,28 @@ final class KnowledgeStats
                 DB::raw('count(*) as ask_count'),
                 DB::raw('max(created_at) as last_asked_at'),
             ])
-            ->map(fn ($row) => [
-                'question' => $row->question,
-                'count' => (int) $row->ask_count,
+            ->map(function ($row) {
                 // Hasil agregat MAX() kembali sebagai string mentah, bukan
                 // Carbon — tanpa parse eksplisit, layar menampilkan
                 // "2026-07-23 03:21:39" alih-alih "2 jam yang lalu".
-                'last_asked_at' => Carbon::parse($row->last_asked_at)->diffForHumans(),
-            ]);
+                $terakhir = Carbon::parse($row->last_asked_at);
+
+                return [
+                    'question' => $row->question,
+                    'count' => (int) $row->ask_count,
+                    'last_asked_at' => $terakhir->diffForHumans(),
+                    /*
+                     | Hitung mundur dipatok ke penanyaan TERAKHIR, bukan yang
+                     | pertama. Penyapu membuang baris satu per satu, jadi baris
+                     | tertua hilang lebih dulu dan angka "ditanyakan Nx" ikut
+                     | menyusut — tapi pertanyaannya baru benar-benar lenyap
+                     | dari layar ini saat baris TERMUDA-nya ikut terhapus.
+                     | Memakai yang tertua akan menjanjikan penghapusan yang
+                     | tidak terjadi.
+                    */
+                    'expires_in_days' => LogRetention::daysLeft($terakhir),
+                ];
+            });
     }
 
     /** Total pertanyaan tak terjawab — volume kerja yang menunggu. */

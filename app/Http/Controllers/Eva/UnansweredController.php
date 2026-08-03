@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Eva;
 
 use App\Http\Controllers\Controller;
+use App\Support\Eva\LogRetention;
 use App\Models\Knowledge\DismissedQuestion;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\KnowledgeStats;
@@ -56,6 +57,7 @@ class UnansweredController extends Controller
             'gaps' => $gaps->where('is_still_gap', true)->values()->all(),
             'closed' => $gaps->where('is_still_gap', false)->values()->all(),
             'threshold' => KnowledgeSearch::MIN_CONFIDENCE,
+            'retentionDays' => LogRetention::days(),
             'endpoints' => [
                 'dismiss' => route('eva.unanswered.dismiss'),
                 'dismissMany' => route('eva.unanswered.dismiss-many'),

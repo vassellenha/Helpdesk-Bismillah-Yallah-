@@ -48,6 +48,17 @@ return [
     'stuck_after_minutes' => (int) env('EVA_STUCK_AFTER_MINUTES', 30),
 
     /*
+    | Masa simpan log percakapan dan pertanyaan tak terjawab, dalam hari.
+    | Disapu oleh `eva:purge-expired-logs`.
+    |
+    | Ini penghapusan PERMANEN dan tidak ada tempat sampahnya. Menurunkan
+    | angkanya berarti memperpendek jendela kerja admin untuk menutup celah
+    | materi — pertanyaan yang belum sempat dijawab akan hilang, bukan
+    | ditandai. Naikkan kalau tim belum sempat mengejar backlog-nya.
+    */
+    'log_retention_days' => (int) env('EVA_LOG_RETENTION_DAYS', 14),
+
+    /*
     | Batas potongan (chunk) per dokumen — lihat DocumentIndexer::MAX_CHUNKS.
     | Dokumen yang melewatinya tetap terindeks, ekornya dipangkas, dan
     | pemangkasannya dicatat di log.

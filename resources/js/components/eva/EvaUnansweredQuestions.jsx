@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import {
     PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge, Button,
-    EmptyState, ErrorBanner, Modal, Pagination, usePagination,
+    EmptyState, ErrorBanner, Modal, Pagination, usePagination, RetentionCountdown,
     inputStyle, thStyle, tdStyle,
 } from './ui';
 
@@ -22,7 +22,7 @@ const PER_PAGE = 15;
  */
 
 export default function EvaUnansweredQuestions({
-    gaps: initialGaps, closed, threshold, endpoints, links,
+    gaps: initialGaps, closed, threshold, endpoints, links, retentionDays,
 }) {
     const [query, setQuery] = useState('');
     const [gaps, setGaps] = useState(initialGaps);
@@ -116,7 +116,7 @@ export default function EvaUnansweredQuestions({
         <div style={PAGE}>
             <PageHeader
                 title="Unanswered Questions"
-                subtitle="Pertanyaan user yang belum dapat dijawab EVA."
+                subtitle={`Pertanyaan user yang belum dapat dijawab EVA. Tiap baris terhapus otomatis ${retentionDays} hari setelah terakhir ditanyakan.`}
             />
 
             {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -170,7 +170,10 @@ export default function EvaUnansweredQuestions({
                                         {gap.count}×
                                     </td>
                                     <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--slate-500)', fontSize: '12px' }}>
-                                        {gap.last_asked_at}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
+                                            <span>{gap.last_asked_at}</span>
+                                            <RetentionCountdown days={gap.expires_in_days} />
+                                        </div>
                                     </td>
                                     <td style={tdStyle}>
                                         {/*

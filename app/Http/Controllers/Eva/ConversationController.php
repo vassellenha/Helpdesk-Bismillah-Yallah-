@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Eva;
 
 use App\Http\Controllers\Controller;
+use App\Support\Eva\LogRetention;
 use App\Models\Knowledge\Conversation;
 use App\Models\Knowledge\ConversationTurn;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +38,7 @@ class ConversationController extends Controller
                 'abandoned' => Conversation::where('outcome', Conversation::OUTCOME_ABANDONED)->count(),
             ],
             'showing' => $conversations->count(),
+            'retentionDays' => LogRetention::days(),
         ]);
     }
 
@@ -68,6 +70,10 @@ class ConversationController extends Controller
             'outcome' => $conversation->outcome,
             'ticket_reference' => $conversation->ticket_reference,
             'started_at' => $conversation->started_at?->diffForHumans(),
+            // Hitung mundur dipatok ke started_at — kolom yang sama yang dipakai
+            // penyapu untuk memutuskan. Memakai created_at akan menghasilkan
+            // angka yang berbeda pada percakapan yang di-backfill.
+            'expires_in_days' => LogRetention::daysLeft($conversation->started_at),
             // Pertanyaan pembuka dipakai sebagai judul baris — itu yang dicari
             // orang saat menelusuri log, bukan nomor percakapan.
             'opening_question' => $turns->firstWhere('role', ConversationTurn::ROLE_USER)?->message ?? '—',

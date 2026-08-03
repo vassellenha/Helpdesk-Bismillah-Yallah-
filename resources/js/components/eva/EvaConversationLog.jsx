@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import {
     PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge, Button,
-    EmptyState, ErrorBanner, Modal, Pagination, usePagination, inputStyle,
+    EmptyState, ErrorBanner, Modal, Pagination, usePagination, inputStyle, RetentionCountdown,
 } from './ui';
 
 /*
@@ -59,7 +59,7 @@ const CLAMP_2 = {
     overflow: 'hidden',
 };
 
-export default function EvaConversationLog({ conversations: initialConversations, stats: initialStats, showing }) {
+export default function EvaConversationLog({ conversations: initialConversations, stats: initialStats, showing, retentionDays }) {
     const [query, setQuery] = useState('');
     const [outcome, setOutcome] = useState(ALL);
     const [selectedId, setSelectedId] = useState(null);
@@ -145,7 +145,7 @@ export default function EvaConversationLog({ conversations: initialConversations
         <div style={PAGE}>
             <PageHeader
                 title="Log Percakapan"
-                subtitle={`Menampilkan ${showing} percakapan terbaru dari ${stats.total} percakapan yang tercatat.`}
+                subtitle={`Menampilkan ${showing} percakapan terbaru dari ${stats.total} percakapan yang tercatat. Transkrip terhapus otomatis ${retentionDays} hari setelah percakapan dimulai.`}
             />
 
             <ErrorBanner message={error} onDismiss={() => setError(null)} />
@@ -338,6 +338,11 @@ function ConversationRow({ conversation, active, onClick }) {
                 </Badge>
                 <span style={{ fontSize: '11px', color: 'var(--slate-500)' }}>
                     {conversation.turn_count} giliran · {conversation.started_at}
+                </span>
+                {/* Didorong ke kanan supaya hitung mundur sejajar di semua baris
+                    dan bisa dipindai satu kolom, bukan dicari di tengah teks. */}
+                <span style={{ marginLeft: 'auto' }}>
+                    <RetentionCountdown days={conversation.expires_in_days} />
                 </span>
             </div>
             <div style={{ fontSize: '13px', fontWeight: 600, lineHeight: 1.45, color: 'var(--ink-900)', ...CLAMP_2 }}>
