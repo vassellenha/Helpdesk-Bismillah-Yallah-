@@ -15,6 +15,7 @@
         'approversUrl' => route('approvers.index'),
         'submitUrl' => route('tickets.store'),
         'ticketsUrl' => route('requester.tickets'),
+        'evaDraft' => $evaDraft,
     ]) }}"
 ></div>
 @endsection

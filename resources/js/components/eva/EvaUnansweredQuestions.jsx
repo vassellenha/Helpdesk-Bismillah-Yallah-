@@ -116,7 +116,7 @@ export default function EvaUnansweredQuestions({
         <div style={PAGE}>
             <PageHeader
                 title="Unanswered Questions"
-                subtitle="Pertanyaan karyawan yang belum dapat dijawab EVA."
+                subtitle="Pertanyaan user yang belum dapat dijawab EVA."
             />
 
             {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -317,7 +317,7 @@ export default function EvaUnansweredQuestions({
                         </p>
                         <p style={{ margin: '12px 0 0', fontSize: '12.5px', lineHeight: 1.6, color: 'var(--ink-700)' }}>
                             Log jawaban tidak ikut terhapus, sehingga angka pada Analytics tidak berubah.
-                            Pertanyaan akan muncul kembali apabila karyawan menanyakannya lagi.
+                            Pertanyaan akan muncul kembali apabila user menanyakannya lagi.
                         </p>
                     </div>
 

@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Hash;
  * MASTER APLIKASI, INSIDEN, SERVICE, USER ACCESS), pre-flattened into
  * database/seeders/data/service_catalog.csv. The database, not this file,
  * is the runtime source of truth from here on — see ServiceCatalogController.
- *
+ *comm
  * Every write below is a firstOrCreate, so this seeder is safe to re-run
  * after the CSV or MASTER_APPLICATIONS list gets updated — it only inserts
  * what's missing, never duplicates or overwrites existing rows.

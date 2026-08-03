@@ -65,6 +65,13 @@ class DashboardController extends Controller
                 'pctWithinSla' => (int) round($onTrack / $slaTotal * 100),
             ],
             'slaRows' => $slaRows,
+            /*
+             | Draf titipan EVA, kalau memang ada. `pull` — dibaca SEKALIGUS
+             | dibuang: tanpa itu form akan membuka diri sendiri dan terisi lagi
+             | setiap kali karyawan kembali ke dashboard, termasuk berhari-hari
+             | setelah percakapannya selesai.
+             */
+            'evaDraft' => session()->pull('eva.ticket_draft'),
         ]);
     }
 

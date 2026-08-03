@@ -121,7 +121,7 @@ export default function EvaPreview({ endpoints, thresholds }) {
                     <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '18px 17px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {messages.length === 0 && (
                             <div style={{ fontSize: '13px', color: 'var(--slate-500)', lineHeight: 1.6 }}>
-                                Ajukan pertanyaan sebagaimana karyawan menuliskannya. Pertanyaan yang kurang
+                                Ajukan pertanyaan sebagaimana user menuliskannya. Pertanyaan yang kurang
                                 jelas akan dijawab EVA dengan pertanyaan balik.
                             </div>
                         )}

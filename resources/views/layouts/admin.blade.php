@@ -12,9 +12,8 @@
     <header class="sticky top-3 z-30 mx-3 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
         <div class="flex items-center justify-between px-6 py-3">
             <div class="flex items-center gap-8">
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                    <img src="{{ asset('images/logo.png') }}" alt="Helpdesk" class="h-9 w-9 rounded-xl object-cover">
-                    <span class="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</span>
+                <a href="{{ route('admin.dashboard') }}" class="flex items-center">
+                    @include('partials.brand-lockup')
                 </a>
                 <nav class="hidden items-center gap-1 lg:flex">
                     @foreach (config('helpdesk.admin_nav') as $item)

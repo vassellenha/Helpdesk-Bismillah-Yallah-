@@ -129,13 +129,17 @@ export default function NewTicketModal({
     editTicket = null,
     editUrl = null,
     triggerLabel = 'New Ticket',
+    evaDraft = null,
 }) {
     const isEdit = !!editTicket;
     // A draft that an approver sent back for revision can only be re-submitted,
     // not re-saved as a fresh draft — so the "Save as Draft" action is hidden
     // in that case, leaving just Cancel and Submit Ticket.
     const isRevision = editTicket?.approvalNote?.decision === 'revision_requested' || !!editTicket?.supportReturnNote;
-    const [open, setOpen] = useState(false);
+    // Datang dari EVA berarti karyawan sudah menyatakan maksudnya di chat.
+    // Menyuruh mereka mengeklik "New Ticket" sekali lagi hanya untuk melihat
+    // form yang sudah terisi adalah langkah kosong, jadi form dibuka langsung.
+    const [open, setOpen] = useState(!!evaDraft && !editTicket);
     const [catalog, setCatalog] = useState(null);
     const [policies, setPolicies] = useState(null);
     const [approvers, setApprovers] = useState(null);
@@ -151,6 +155,10 @@ export default function NewTicketModal({
     const [submitting, setSubmitting] = useState(false);
     const [created, setCreated] = useState(null);
     const approverRef = useRef(null);
+    // Draf EVA sekali pakai. Kalau karyawan menutup form lalu membukanya lagi,
+    // yang mereka maksud adalah tiket BARU — bukan mengulang draf yang tadi
+    // sudah mereka batalkan.
+    const evaDraftUsed = useRef(false);
 
     useEffect(() => {
         if (!open) return;
@@ -207,6 +215,39 @@ export default function NewTicketModal({
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, isEdit, catalog]);
+
+    // Mengisi form dari draf yang dititipkan EVA, setelah katalog termuat.
+    //
+    // Subject dicari lewat ID, bukan lewat nama seperti alur Edit Draft di
+    // atas. EVA memang membawa subject_id katalog, dan nama subject tidak unik
+    // — ada "Reset Password" di bawah SAP dan "Reset Password" lain di bawah
+    // SILO. Mencocokkan lewat nama berarti tiketnya bisa mendarat di tim yang
+    // salah tanpa ada yang menyadarinya.
+    //
+    // Prioritas dan approver SENGAJA tidak diisi: keduanya keputusan karyawan,
+    // dan EVA tidak punya dasar untuk menebaknya.
+    useEffect(() => {
+        if (!open || isEdit || !catalog || !evaDraft || evaDraftUsed.current) return;
+        evaDraftUsed.current = true;
+
+        const subject = evaDraft.subject
+            && catalog.subjects.find((s) => String(s.id) === String(evaDraft.subject.subject_id));
+        const subcategory = subject
+            && catalog.subcategories.find((sc) => String(sc.id) === String(subject.subcategory_id));
+
+        // Tebakan subject boleh saja meleset atau kosong — EVA hanya menebak
+        // saat cukup yakin. Kalau begitu, deskripsinya tetap terisi dan
+        // karyawan memilih sendiri kategorinya.
+        set({
+            description: evaDraft.description ?? '',
+            ...(subcategory ? {
+                serviceId: String(subcategory.service_id),
+                subcategoryId: String(subcategory.id),
+                subjectId: String(subject.id),
+            } : {}),
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, isEdit, catalog, evaDraft]);
 
     // A priority whose SLA policy the admin has deactivated can't be picked —
     // if the currently selected one just went inactive (or the form opened

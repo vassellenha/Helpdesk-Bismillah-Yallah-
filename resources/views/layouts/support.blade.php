@@ -11,10 +11,7 @@
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     <div class="flex min-h-screen flex-col">
         <header class="sticky top-3 z-20 mx-3 flex h-[62px] items-center gap-6 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
-            <div class="flex items-center gap-2.5">
-                <img src="{{ asset('images/logo.png') }}" alt="Helpdesk" class="h-8 w-8 rounded-[10px] object-cover">
-                <p class="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
-            </div>
+            @include('partials.brand-lockup')
 
             <nav class="flex items-center gap-1">
                 <a

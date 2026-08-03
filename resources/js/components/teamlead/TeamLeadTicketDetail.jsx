@@ -4,6 +4,7 @@ import RemindModal from './RemindModal';
 import ReassignModal from './ReassignModal';
 import RaisePriorityModal from './RaisePriorityModal';
 import SlaPanel from '../SlaPanel';
+import BrandLockup from '../BrandLockup';
 import LanguageSwitcher from '../LanguageSwitcher';
 
 
@@ -31,10 +32,7 @@ export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], c
     return (
         <div className="flex min-h-screen flex-col">
             <header className="sticky top-3 z-20 mx-3 flex h-[62px] items-center gap-4 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
-                <div className="flex items-center gap-2.5">
-                    <img src="/images/logo.png" alt="Helpdesk" className="h-8 w-8 rounded-[10px] object-cover" />
-                    <p className="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
-                </div>
+                <BrandLockup />
                 <a href={dashboardUrl} className="ml-2 flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-gray-600 dark:text-ink-2 transition-all duration-200 ease-out hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
                     Kembali ke Dashboard

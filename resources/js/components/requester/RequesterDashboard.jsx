@@ -26,7 +26,7 @@ function StatCard({ label, value, hint, hintClass = 'text-gray-400 dark:text-ink
     );
 }
 
-export default function RequesterDashboard({ user = {}, stats, chart = [], slaDonut, slaRows = [], catalogUrl, approversUrl, submitUrl, ticketsUrl }) {
+export default function RequesterDashboard({ user = {}, stats, chart = [], slaDonut, slaRows = [], catalogUrl, approversUrl, submitUrl, ticketsUrl, evaDraft = null }) {
     const firstName = (user.name ?? 'there').split(' ')[0];
     const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -37,7 +37,7 @@ export default function RequesterDashboard({ user = {}, stats, chart = [], slaDo
                     <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">Good morning, {firstName} 👋</h1>
                     <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">Your ticket summary and SLA status as of today, {today}.</p>
                 </div>
-                <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} />
+                <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} evaDraft={evaDraft} />
             </div>
 
             <div className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">

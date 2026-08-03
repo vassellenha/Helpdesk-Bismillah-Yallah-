@@ -148,7 +148,7 @@ function TargetRow({ target, thresholds, links, isOpen, onToggle }) {
 
                 {/*
                     Dua angka yang berbeda dan keduanya perlu: VOLUME adalah
-                    berapa kali karyawan bertanya (seberapa mendesak), TOTAL
+                    berapa kali user bertanya (seberapa mendesak), TOTAL
                     adalah berapa pertanyaan berbeda (seberapa lebar). Satu
                     artikel menutup keduanya sekaligus, dan tanpa dipisah "3×"
                     selalu terbaca sebagai yang satunya.
@@ -192,7 +192,7 @@ function TargetRow({ target, thresholds, links, isOpen, onToggle }) {
 
                     <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '6px 14px 10px 35px', lineHeight: 1.6 }}>
                         Angka di kanan adalah keyakinan pengarahan. Mulai {thresholds.auto_fill}, subject
-                        terisi otomatis pada draf tiket; di bawahnya karyawan masih diminta memastikan.
+                        terisi otomatis pada draf tiket; di bawahnya user masih diminta memastikan.
                     </p>
                 </div>
             )}
@@ -236,7 +236,7 @@ function UnroutedQuestions({ rows, links }) {
             </ul>
 
             <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '12px 18px', lineHeight: 1.6 }}>
-                Tidak ada subject katalog yang mendekati pertanyaan ini, sehingga karyawan harus memilih
+                Tidak ada subject katalog yang mendekati pertanyaan ini, sehingga user harus memilih
                 sendiri dari katalog. Tambahkan sinonim kata kuncinya pada Search Settings.
             </p>
 
@@ -290,7 +290,7 @@ function Bench({ endpoint, thresholds }) {
             <div style={{ padding: '0 18px 13px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <input
                     style={{ ...inputStyle, flex: '1 1 280px' }}
-                    placeholder="Ketik pertanyaan karyawan, misalnya “mailbox saya penuh”…"
+                    placeholder="Ketik pertanyaan user, misalnya “mailbox saya penuh”…"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && run()}

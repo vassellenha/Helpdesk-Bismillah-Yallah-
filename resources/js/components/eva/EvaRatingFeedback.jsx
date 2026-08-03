@@ -90,7 +90,7 @@ export default function EvaRatingFeedback({ summary, distribution, sources, comm
         <div style={PAGE}>
             <PageHeader
                 title="Rating & Feedback"
-                subtitle={`Penilaian karyawan atas jawaban EVA. Dinyatakan membantu apabila memperoleh ${helpfulThreshold} bintang atau lebih.`}
+                subtitle={`Penilaian user atas jawaban EVA. Dinyatakan membantu apabila memperoleh ${helpfulThreshold} bintang atau lebih.`}
             />
 
             <StatRow columns={3}>
@@ -270,7 +270,7 @@ function DetailPanel({ source, recentComments, onClear, helpfulThreshold }) {
                 <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
                     {recentComments.length === 0 ? (
                         <EmptyState>
-                            Belum ada tanggapan tertulis dari karyawan.
+                            Belum ada tanggapan tertulis dari user.
                         </EmptyState>
                     ) : (
                         recentComments.map((comment) => <CommentItem key={comment.id} comment={comment} showQuestion />)

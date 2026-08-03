@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { TopProgressBar } from '../Spinner';
+import BrandLockup from '../BrandLockup';
 import LanguageSwitcher from '../LanguageSwitcher';
 import TeamLeadTopNav from './TeamLeadTopNav';
 import TicketSlideOver from './TicketSlideOver';
@@ -125,10 +126,7 @@ export default function TeamLeadWorkspace(props) {
         <div className="flex min-h-screen flex-col">
             <TopProgressBar active={refreshing} />
             <header className="sticky top-3 z-20 mx-3 flex h-[62px] items-center gap-4 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
-                <div className="flex shrink-0 items-center gap-2.5">
-                    <img src="/images/logo.png" alt="Helpdesk" className="h-8 w-8 rounded-[10px] object-cover" />
-                    <p className="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
-                </div>
+                <BrandLockup />
 
                 <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {TABS.map((t) => (

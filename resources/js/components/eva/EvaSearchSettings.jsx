@@ -102,7 +102,7 @@ export default function EvaSearchSettings({ synonyms: initial, threshold, endpoi
                                         style={inputStyle}
                                         value={draft.note ?? ''}
                                         onChange={(e) => setDraft({ ...draft, note: e.target.value })}
-                                        placeholder="Karyawan menulis 'sandi', dokumen menulis 'password'"
+                                        placeholder="User menulis 'sandi', dokumen menulis 'password'"
                                     />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
@@ -167,7 +167,7 @@ export default function EvaSearchSettings({ synonyms: initial, threshold, endpoi
                         {synonyms.length === 0 && (
                             <EmptyState>
                                 Belum ada kelompok sinonim. Contoh penggunaan: “password, sandi”,
-                                untuk kondisi karyawan menulis “sandi” sedangkan dokumen menulis “password”.
+                                untuk kondisi user menulis “sandi” sedangkan dokumen menulis “password”.
                             </EmptyState>
                         )}
                     </Card>
@@ -214,7 +214,7 @@ function LiveTest({ endpoint, threshold }) {
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') run(); }}
-                    placeholder="Tulis pertanyaan sebagaimana karyawan menuliskannya…"
+                    placeholder="Tulis pertanyaan sebagaimana user menuliskannya…"
                 />
                 <Button onClick={run} disabled={busy || !question.trim()}>
                     {busy ? 'Mencari…' : 'Uji'}

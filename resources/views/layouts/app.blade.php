@@ -11,9 +11,8 @@
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     <div class="flex min-h-screen">
         <aside class="hidden w-64 shrink-0 flex-col border-r border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-1 lg:flex">
-            <div class="flex items-center gap-2 px-6 py-5">
-                <img src="{{ asset('images/logo.png') }}" alt="Helpdesk" class="h-9 w-9 rounded-xl object-cover">
-                <p class="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
+            <div class="flex items-center px-6 py-5">
+                @include('partials.brand-lockup')
             </div>
 
             <nav class="flex-1 space-y-1 px-3 py-2">

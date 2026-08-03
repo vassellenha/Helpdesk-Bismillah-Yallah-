@@ -116,3 +116,95 @@
         --chart-empty: #212b4a;
     }
 }
+
+/*
+ * Brand lockup — ikon tiket + wordmark "Helpdesk" di kiri atas tiap header role.
+ *
+ * Ini versi STILISTIK, menggantikan versi kaca fotorealistis sebelumnya. Isi
+ * ikonnya gradien datar dengan ukiran putih pekat — tanpa rim, bayangan dalam,
+ * atau blur spekular. Konsekuensinya penting: bentuk ini tidak lagi bergantung
+ * pada ketebalan garis, jadi ia aman diperkecil sampai 16px, hal yang justru
+ * merontokkan versi kaca.
+ *
+ * Gradien birunya diambil dari skala tombol primer (blue-400/500/700) supaya
+ * logo dan CTA satu keluarga warna.
+ *
+ * Karena isinya buram penuh, warnanya sama di light dan dark mode. Yang masih
+ * perlu dibedakan cuma wordmark-nya.
+ */
+:root {
+    --brand-word: #131f3f;
+    /*
+     * Gradien wordmark sengaja TIPIS — dua warna yang berdekatan, bukan lompatan
+     * jauh. Wordmark dibaca sebagai kata, bukan sebagai gambar; kalau gradiennya
+     * kontras, mata melihat huruf pertama dan terakhir berbeda warna dan itu
+     * mengganggu keterbacaan. Yang dicari cuma kesan bahan, bukan pelangi.
+     */
+    --brand-word-gradient: linear-gradient(135deg, #2a4a9e 0%, #131f3f 58%);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --brand-word: rgb(255 255 255 / 0.96);
+        --brand-word-gradient: linear-gradient(135deg, #ffffff 0%, #c8dcff 100%);
+    }
+}
+
+.brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: none;
+}
+
+/*
+ * 36px, naik dari 34px: ikon sekarang bujur sangkar, bukan kartu melebar, jadi
+ * pada tinggi yang sama ia terlihat lebih kecil di samping wordmark.
+ */
+.brand-lockup__icon {
+    display: block;
+    height: 36px;
+    width: auto;
+    flex: none;
+}
+
+/*
+ * Plus Jakarta Sans — di-SELF-HOST, bukan diandalkan dari font yang terpasang
+ * di mesin. Font yang di-install di macOS hanya ada di mesin itu; pengguna lain
+ * yang membuka aplikasi ini akan jatuh ke fallback dan wordmark-nya berubah
+ * bentuk tanpa ada yang sadar.
+ *
+ * Berkasnya sudah di-subset ke Latin dasar + Latin-1 dan dikonversi ke WOFF:
+ * 17 KB, dari 95 KB TTF aslinya. Hanya bobot 800 yang dibawa karena wordmark
+ * cuma memakai satu bobot — jangan pakai kelas ini untuk teks antarmuka.
+ *
+ * 800 (ExtraBold) adalah bobot TERBERAT yang punya Plus Jakarta Sans; tidak ada
+ * Black di atasnya. Kalau perlu lebih tebal lagi, jalannya bukan menaikkan
+ * angka — nilai di atas 800 akan disintesis browser dan hurufnya jadi gepeng.
+ */
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    src: url('/fonts/plus-jakarta-sans/PlusJakartaSans-ExtraBold.woff') format('woff');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+.brand-lockup__word {
+    font-family: 'Plus Jakarta Sans', 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    /* Makin tebal huruf, makin sempit ruang antar-huruf yang terasa pas. */
+    letter-spacing: -0.025em;
+    line-height: 1;
+    white-space: nowrap;
+
+    /*
+     * `color` tetap ditulis sebagai jaring pengaman: kalau background-clip:text
+     * tidak didukung, teksnya jatuh ke warna pekat, bukan jadi tak terlihat.
+     */
+    color: var(--brand-word);
+    background-image: var(--brand-word-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

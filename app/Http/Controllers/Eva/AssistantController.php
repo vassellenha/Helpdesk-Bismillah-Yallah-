@@ -105,9 +105,21 @@ final class AssistantController extends Controller
     public function ticketDraft(Request $request): JsonResponse
     {
         $data = $request->validate(EvaChat::TICKET_DRAFT_RULES);
+        $result = $this->chat->ticketDraft($data['answer_log_id'], $data['question']);
 
-        return response()->json(
-            $this->chat->ticketDraft($data['answer_log_id'], $data['question']),
-        );
+        /*
+         | Draf dititipkan ke SESI, bukan cukup dikembalikan sebagai JSON.
+         |
+         | Widget hidup di halaman portal, sedangkan form Buat Tiket ada di
+         | dashboard Requester — halaman lain, pemuatan lain. Begitu karyawan
+         | mengeklik tautannya, balasan JSON tadi ikut hilang bersama halamannya.
+         |
+         | Titipannya ditulis di CONTROLLER, bukan di dalam EvaChat: layanan itu
+         | juga dipakai EVA Preview milik admin, dan Preview tidak boleh
+         | diam-diam mengisi form Buat Tiket milik siapa pun.
+         */
+        $request->session()->put('eva.ticket_draft', $result['draft']);
+
+        return response()->json($result);
     }
 }

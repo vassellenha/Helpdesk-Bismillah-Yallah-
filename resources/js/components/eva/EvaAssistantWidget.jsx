@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import EvaMark from './EvaMark';
 import { EvaBubble, UserBubble } from './widget/EvaChatMessages';
 
 /*
@@ -141,10 +142,17 @@ export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
             {open && (
                 <section className="eva-w-panel" role="dialog" aria-label="Asisten EVA">
                     <header className="eva-w-head">
-                        <span className="eva-w-avatar">E</span>
+                        <EvaMark size={32} className="eva-w-avatar" />
                         <div className="eva-w-head-text">
                             <div className="eva-w-head-title">EVA</div>
-                            <div className="eva-w-head-sub">Asisten Layanan TI</div>
+                            {/*
+                             | Bukan "Asisten Layanan TI". Katalog layanan yang
+                             | dilayani EVA sudah melewati batas TI — perangkat,
+                             | fasilitas kantor, sampai permintaan akses — dan
+                             | label yang menyebut satu domain membuat user
+                             | menahan pertanyaan yang sebenarnya bisa dijawab.
+                            */}
+                            <div className="eva-w-head-sub">Asisten Layanan Helpdesk</div>
                         </div>
                         <button
                             type="button"
@@ -169,8 +177,8 @@ export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
                         {messages.length === 0 && (
                             <div className="eva-w-empty">
                                 <p>
-                                    Selamat datang. Silakan tanyakan kendala layanan TI Anda, dan saya akan
-                                    mencarikan panduannya.
+                                    Selamat datang. Silakan sampaikan kendala atau permintaan layanan Anda,
+                                    dan saya akan mencarikan panduannya.
                                 </p>
                                 <div className="eva-w-quick-label">Pertanyaan yang sering diajukan</div>
                                 {QUICK_QUESTIONS.map((question) => (
@@ -237,13 +245,22 @@ export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
 
             <button
                 type="button"
-                className="eva-w-launcher"
+                className={`eva-w-launcher${open ? '' : ' eva-w-launcher--mark'}`}
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
                 aria-label={open ? 'Tutup asisten EVA' : 'Buka asisten EVA'}
                 title="Tanya EVA"
             >
-                {open ? '✕' : 'E'}
+                {/*
+                 | Saat tertutup, mark EVA menjadi WAJAH tombolnya sendiri —
+                 | kelas modifier mematikan latar biru bawaan tombol. Tanpa itu,
+                 | squircle mark duduk di atas lingkaran biru lain dan terlihat
+                 | seperti ikon yang ditempel.
+                 |
+                 | Saat terbuka, tombol kembali jadi lingkaran biru berisi ✕:
+                 | fungsinya sudah bukan "ini EVA" melainkan "tutup".
+                */}
+                {open ? '✕' : <EvaMark size={56} />}
             </button>
         </div>
     );
