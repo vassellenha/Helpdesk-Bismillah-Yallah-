@@ -1,6 +1,6 @@
 @extends('layouts.requester')
 
-@section('title', 'My Tickets')
+@section('title', __('requester.my_tickets'))
 
 @section('content')
 <div

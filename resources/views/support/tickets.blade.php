@@ -1,6 +1,6 @@
 @extends('layouts.support')
 
-@section('title', 'My Tickets')
+@section('title', __('support.history.title'))
 
 @section('content')
 <div

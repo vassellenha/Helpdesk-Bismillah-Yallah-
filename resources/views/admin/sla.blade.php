@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Konfigurasi SLA')
+@section('title', __('admin.sla.title'))
 
 @section('content')
 <nav class="mb-3 text-sm text-gray-400 dark:text-ink-3">

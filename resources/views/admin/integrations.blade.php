@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Integrasi')
+@section('title', __('admin.integration.title'))
 
 @section('content')
 <div

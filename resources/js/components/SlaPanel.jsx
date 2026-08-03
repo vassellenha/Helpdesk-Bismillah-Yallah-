@@ -38,7 +38,7 @@ export default function SlaPanel({ sla, rating, feedbackNote, ratingActive = tru
     return (
         <div>
             <div className="mb-3 flex items-center justify-between gap-3">
-                <span className="text-[13px] text-gray-500 dark:text-ink-2">Resolution</span>
+                <span className="text-[13px] text-gray-500 dark:text-ink-2">Penyelesaian</span>
                 <span className="text-right text-[13px] font-bold" style={{ color: SLA_COLOR[sla.kind] ?? SLA_COLOR.none }}>
                     {sla.label}
                 </span>
@@ -51,15 +51,15 @@ export default function SlaPanel({ sla, rating, feedbackNote, ratingActive = tru
             </div>
 
             <div className="mt-4 space-y-2 border-t border-gray-100 dark:border-edge pt-3.5 text-[13px]">
-                <Row label="Start at" value={sla.startedAt} />
-                <Row label="End at" value={sla.endedAt ?? `Target ${sla.dueAt ?? '—'}`} />
-                <Row label="Response target" value={sla.responseTarget} />
-                <Row label="Resolution target" value={sla.resolutionTarget} />
-                {sla.priority && <Row label="Priority" value={sla.priority} />}
+                <Row label="Mulai" value={sla.startedAt} />
+                <Row label="Selesai" value={sla.endedAt ?? `Target ${sla.dueAt ?? '—'}`} />
+                <Row label="Target Respons" value={sla.responseTarget} />
+                <Row label="Target Penyelesaian" value={sla.resolutionTarget} />
+                {sla.priority && <Row label="Prioritas" value={sla.priority} />}
             </div>
 
             <div className="mt-3.5 border-t border-gray-100 dark:border-edge pt-3.5 text-[13px]">
-                <Row label="Responsiveness" value={response.label} tone={RESPONSE_TONE[response.kind] ?? RESPONSE_TONE.none} />
+                <Row label="Kecepatan Respons" value={response.label} tone={RESPONSE_TONE[response.kind] ?? RESPONSE_TONE.none} />
                 {response.at && <Row label="Direspons pada" value={response.at} />}
                 {!response.at && response.dueAt && <Row label="Batas respons" value={response.dueAt} />}
                 <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">

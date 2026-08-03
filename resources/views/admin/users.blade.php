@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'User & Role Management')
+@section('title', __('admin.users.title'))
 
 @section('content')
 <div

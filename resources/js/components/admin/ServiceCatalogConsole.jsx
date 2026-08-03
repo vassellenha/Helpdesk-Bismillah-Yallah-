@@ -3,9 +3,11 @@ import ServiceCatalogFormModal from './ServiceCatalogFormModal';
 import ServiceCatalogDetailModal from './ServiceCatalogDetailModal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 import { LEVEL_LABELS } from '../../lib/formatters';
 
-const ALL = 'Semua';
+// Language-independent sentinel: this is compared against real catalog values.
+const ALL = '__all';
 
 export default function ServiceCatalogConsole({ subjects: initialSubjects, issueCategories, services: initialServices, subcategories: initialSubcategories, supportAgents }) {
     const [subjects, setSubjects] = useState(initialSubjects);
@@ -85,7 +87,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
             const updated = await apiFetch(`/admin/service-catalog/subjects/${subject.id}/toggle`, { method: 'POST' });
             setSubjects((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
         } catch (e) {
-            setError(e.message || 'Gagal memperbarui status.');
+            setError(e.message || trans('admin.catalog.status_failed'));
         }
     }
 
@@ -97,7 +99,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
             await apiFetch(`/admin/service-catalog/subjects/${subject.id}`, { method: 'DELETE' });
             setSubjects((prev) => prev.filter((s) => s.id !== subject.id));
         } catch (e) {
-            setError(e.message || 'Gagal menghapus subject.');
+            setError(e.message || trans('admin.catalog.delete_failed'));
         }
     }
 
@@ -108,21 +110,21 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
         <div>
             <div className="mb-6 flex items-start justify-between gap-3">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">Service Catalog Management</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Master data Issue Category → Layanan → Sub Category → Subject — sumber tunggal untuk form Tiket Baru, dari data Excel Insiden &amp; Service List.</p>
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.catalog.title')}</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.catalog.subtitle')}</p>
                 </div>
                 <button onClick={() => setModal('add')} className="shrink-0 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
-                    + Tambah Layanan
+                    {trans('admin.catalog.add_service')}
                 </button>
             </div>
 
             {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
             <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <Stat label="TOTAL SUBJECT" value={subjects.length} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
-                <Stat label="AKTIF" value={activeCount} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
-                <Stat label="MEMERLUKAN APPROVAL" value={approvalCount} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
-                <Stat label="TOTAL LAYANAN" value={layananOptions.length} bg="bg-gray-100 dark:bg-panel-3" color="text-gray-600 dark:text-ink-2" />
+                <Stat label={trans('admin.catalog.stat_total_subject')} value={subjects.length} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
+                <Stat label={trans('admin.catalog.stat_active')} value={activeCount} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
+                <Stat label={trans('admin.catalog.stat_needs_approval')} value={approvalCount} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
+                <Stat label={trans('admin.catalog.stat_total_service')} value={layananOptions.length} bg="bg-gray-100 dark:bg-panel-3" color="text-gray-600 dark:text-ink-2" />
             </div>
 
             <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
@@ -130,33 +132,33 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Cari layanan, sub category, atau subject"
+                        placeholder={trans('admin.catalog.search')}
                         className="w-full max-w-sm rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                        <SearchableSelect value={layananFilter} onChange={setLayananFilter} label="Semua Layanan" options={layananOptions} searchPlaceholder="Cari layanan…" />
-                        <SearchableSelect value={subcategoryFilter} onChange={setSubcategoryFilter} label="Semua Sub Category" options={subcategoryOptions} searchPlaceholder="Cari sub category…" />
-                        <SearchableSelect value={issueFilter} onChange={setIssueFilter} label="Semua Issue Category" options={issueCategories} searchPlaceholder="Cari issue category…" />
-                        <Select value={approvalFilter} onChange={setApprovalFilter} label="Semua Approval" options={['Yes', 'No']} />
-                        <Select value={statusFilter} onChange={setStatusFilter} label="Semua Status" options={[['active', 'Aktif'], ['inactive', 'Nonaktif']]} />
-                        <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">Reset Filter</button>
+                        <SearchableSelect value={layananFilter} onChange={setLayananFilter} label={trans('admin.catalog.all_service')} options={layananOptions} searchPlaceholder={trans('admin.catalog.search_service')} />
+                        <SearchableSelect value={subcategoryFilter} onChange={setSubcategoryFilter} label={trans('admin.catalog.all_subcategory')} options={subcategoryOptions} searchPlaceholder={trans('admin.catalog.search_subcategory')} />
+                        <SearchableSelect value={issueFilter} onChange={setIssueFilter} label={trans('admin.catalog.all_issue')} options={issueCategories} searchPlaceholder={trans('admin.catalog.search_issue')} />
+                        <Select value={approvalFilter} onChange={setApprovalFilter} label={trans('admin.catalog.all_approval')} options={[['Yes', trans('admin.integration.yes')], ['No', trans('admin.integration.no')]]} />
+                        <Select value={statusFilter} onChange={setStatusFilter} label={trans('admin.catalog.all_status')} options={[['active', trans('admin.common.active')], ['inactive', trans('admin.common.inactive')]]} />
+                        <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">{trans('admin.common.reset_filter')}</button>
                     </div>
                 </div>
-                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">Menampilkan {filtered.length} dari {subjects.length} subject</p>
+                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">{trans('admin.catalog.showing', { shown: filtered.length, total: subjects.length })}</p>
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                         <thead>
                             <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                <th className="px-4 py-3">Issue Category</th>
-                                <th className="px-4 py-3">Layanan</th>
-                                <th className="px-4 py-3">Sub Category</th>
-                                <th className="px-4 py-3">Subject</th>
-                                <th className="px-4 py-3">Support</th>
-                                <th className="px-4 py-3">Level</th>
-                                <th className="px-4 py-3">Approval</th>
-                                <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3 text-right">Aksi</th>
+                                <th className="px-4 py-3">{trans('admin.catalog.col_issue')}</th>
+                                <th className="px-4 py-3">{trans('admin.catalog.col_service')}</th>
+                                <th className="px-4 py-3">{trans('admin.catalog.col_subcategory')}</th>
+                                <th className="px-4 py-3">{trans('admin.catalog.col_subject')}</th>
+                                <th className="px-4 py-3">{trans('admin.catalog.col_support')}</th>
+                                <th className="px-4 py-3">{trans('admin.catalog.col_level')}</th>
+                                <th className="px-4 py-3">{trans('admin.catalog.col_approval')}</th>
+                                <th className="px-4 py-3">{trans('admin.common.status')}</th>
+                                <th className="px-4 py-3 text-right">{trans('admin.common.action')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-transparent">
@@ -184,11 +186,11 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{LEVEL_LABELS[s.support_level]}</td>
-                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{s.requires_approval ? 'Yes' : 'No'}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{s.requires_approval ? trans('admin.integration.yes') : trans('admin.integration.no')}</td>
                                     <td className="px-4 py-3">
                                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${s.status === 'active' ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text' : 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2'}`}>
                                             <span className={`h-1.5 w-1.5 rounded-full ${s.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                                            {s.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                                            {s.status === 'active' ? trans('admin.common.active') : trans('admin.common.inactive')}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right">
@@ -200,7 +202,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada subject yang cocok dengan filter.</td>
+                                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-ink-3">{trans('admin.catalog.empty')}</td>
                                 </tr>
                             )}
                         </tbody>
@@ -220,7 +222,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                         <DuplicateIcon /> Duplicate
                     </button>
                     <button onClick={() => toggleStatus(menu.subject)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-amber-600 dark:text-warn-text hover:bg-amber-50 dark:hover:bg-warn-soft">
-                        <ToggleIcon /> {menu.subject.status === 'active' ? 'Deactivate' : 'Activate'}
+                        <ToggleIcon /> {menu.subject.status === 'active' ? trans('admin.common.deactivate') : trans('admin.common.activate')}
                     </button>
                     <button onClick={() => remove(menu.subject)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
                         <DeleteIcon /> Delete
@@ -261,7 +263,7 @@ function Select({ value, onChange, label, options }) {
 // a plain <select> makes those unscannable, so this swaps in a search box
 // over a styled, height-capped list instead (same pattern as the PIC
 // filter in Admin Ticket Management).
-function SearchableSelect({ value, onChange, label, options, searchPlaceholder = 'Cari…' }) {
+function SearchableSelect({ value, onChange, label, options, searchPlaceholder = trans('admin.common.search') }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const ref = useRef(null);
@@ -324,7 +326,7 @@ function SearchableSelect({ value, onChange, label, options, searchPlaceholder =
                                 </button>
                             </li>
                         ))}
-                        {filtered.length === 0 && <li className="px-3 py-4 text-center text-xs text-gray-400 dark:text-ink-3">Tidak ada hasil.</li>}
+                        {filtered.length === 0 && <li className="px-3 py-4 text-center text-xs text-gray-400 dark:text-ink-3">{trans('admin.common.no_result')}</li>}
                     </ul>
                 </div>
             )}

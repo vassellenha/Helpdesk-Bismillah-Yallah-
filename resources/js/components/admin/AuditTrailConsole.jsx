@@ -1,41 +1,49 @@
 import { useMemo, useState } from 'react';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
+import { t as trans } from '../../lib/i18n';
 
-const ALL = 'Semua';
+// Language-independent sentinel — compared against real module/action codes.
+const ALL = '__all';
 const PAGE_SIZE = 15;
 
-const MODULE_LABELS = {
-    service_catalog: 'Service Catalog',
-    sla_configuration: 'Konfigurasi SLA',
-    user_role_management: 'User & Role Management',
-    ticket_approval: 'Approval Tiket',
-    ticket_support: 'Penanganan Support',
-    team_lead: 'Team Lead',
-    ticket_management: 'Ticket Management',
-    integration: 'Integrasi',
+const MODULE_KEYS = {
+    service_catalog: 'catalog',
+    sla_configuration: 'sla',
+    user_role_management: 'users',
+    ticket_approval: 'approval',
+    ticket_support: 'support',
+    team_lead: 'teamlead',
+    ticket_management: 'tickets',
+    integration: 'integration',
 };
 
-const ACTION_LABELS = {
-    create: 'Tambah',
-    update: 'Edit',
-    activate: 'Aktifkan',
-    deactivate: 'Nonaktifkan',
-    assign_support: 'Ubah Support',
-    change_level: 'Ubah Level',
-    change_role: 'Ubah Role',
-    approve: 'Setujui',
-    request_revision: 'Minta Perbaikan',
-    reject: 'Tolak',
-    resolve: 'Tutup Layanan',
-    escalate: 'Eskalasi',
-    remind: 'Kirim Teguran',
-    reassign: 'Alihkan Tiket',
-    raise_priority: 'Naikkan Prioritas',
-    remind_rating: 'Teguran Rating',
-    return: 'Dikembalikan',
-    sync: 'Sinkronisasi',
+const moduleLabel = (code) => trans(`admin.audit.module_name.${MODULE_KEYS[code]}`, {}, code);
+
+const ACTION_KEYS = {
+    create: 'create',
+    update: 'edit',
+    activate: 'activate',
+    deactivate: 'deactivate',
+    assign_support: 'update_support',
+    change_level: 'update_level',
+    change_role: 'update_role',
+    approve: 'approve',
+    request_revision: 'revision',
+    reject: 'reject',
+    resolve: 'resolve',
+    escalate: 'escalate',
+    remind: 'remind',
+    reassign: 'reassign',
+    raise_priority: 'raise',
+    remind_rating: 'rating_remind',
+    return: 'returned',
+    sync: 'sync',
 };
+
+const actionLabel = (code) => (code === 'update'
+    ? trans('admin.audit.edit')
+    : trans(`admin.audit.action.${ACTION_KEYS[code]}`, {}, code));
 
 export default function AuditTrailConsole({ logs, administrators }) {
     const [search, setSearch] = useState('');
@@ -47,9 +55,9 @@ export default function AuditTrailConsole({ logs, administrators }) {
     const [page, setPage] = useState(1);
     const [detailLog, setDetailLog] = useState(null);
 
-    const moduleOptions = useMemo(() => [{ value: ALL, label: 'Semua Modul' }, ...Object.entries(MODULE_LABELS).map(([v, label]) => ({ value: v, label }))], []);
-    const actionOptions = useMemo(() => [{ value: ALL, label: 'Semua Aktivitas' }, ...Object.entries(ACTION_LABELS).map(([v, label]) => ({ value: v, label }))], []);
-    const adminOptions = useMemo(() => [{ value: ALL, label: 'Semua Pengguna' }, ...administrators.map((a) => ({ value: a, label: a }))], [administrators]);
+    const moduleOptions = useMemo(() => [{ value: ALL, label: trans('admin.audit.all_module') }, ...Object.keys(MODULE_KEYS).map((v) => ({ value: v, label: moduleLabel(v) }))], []);
+    const actionOptions = useMemo(() => [{ value: ALL, label: trans('admin.audit.all_activity') }, ...Object.keys(ACTION_KEYS).map((v) => ({ value: v, label: actionLabel(v) }))], []);
+    const adminOptions = useMemo(() => [{ value: ALL, label: trans('admin.audit.all_user') }, ...administrators.map((a) => ({ value: a, label: a }))], [administrators]);
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
@@ -95,8 +103,8 @@ export default function AuditTrailConsole({ logs, administrators }) {
     return (
         <div>
             <div className="mb-6">
-                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">Audit Trail Viewer</h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Riwayat aktivitas seluruh pengguna — Service Catalog, Konfigurasi SLA, User &amp; Role Management, Approval, dan Penanganan Tiket.</p>
+                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.audit.title')}</h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.audit.subtitle')}</p>
             </div>
 
             <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
@@ -104,7 +112,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                     <input
                         value={search}
                         onChange={(e) => updateFilter(setSearch)(e.target.value)}
-                        placeholder="Cari target, pengguna, atau deskripsi"
+                        placeholder={trans('admin.audit.search')}
                         className="w-full max-w-sm rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex flex-wrap items-center gap-2">
@@ -114,21 +122,21 @@ export default function AuditTrailConsole({ logs, administrators }) {
                         <input type="date" value={dateFrom} onChange={(e) => updateFilter(setDateFrom)(e.target.value)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none" />
                         <span className="text-sm text-gray-400 dark:text-ink-3">—</span>
                         <input type="date" value={dateTo} onChange={(e) => updateFilter(setDateTo)(e.target.value)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none" />
-                        <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">Reset Filter</button>
+                        <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">{trans('admin.common.reset_filter')}</button>
                     </div>
                 </div>
-                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">Menampilkan {filtered.length === 0 ? 0 : (page_ - 1) * PAGE_SIZE + 1}–{Math.min(page_ * PAGE_SIZE, filtered.length)} dari {filtered.length} aktivitas</p>
+                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">{trans('admin.audit.showing', { from: filtered.length === 0 ? 0 : (page_ - 1) * PAGE_SIZE + 1, to: Math.min(page_ * PAGE_SIZE, filtered.length), total: filtered.length })}</p>
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                         <thead>
                             <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                <th className="px-4 py-3">Waktu</th>
-                                <th className="px-4 py-3">Pengguna</th>
-                                <th className="px-4 py-3">Modul</th>
-                                <th className="px-4 py-3">Aktivitas</th>
-                                <th className="px-4 py-3">Target</th>
-                                <th className="px-4 py-3 text-right">Detail</th>
+                                <th className="px-4 py-3">{trans('admin.common.time')}</th>
+                                <th className="px-4 py-3">{trans('admin.common.user')}</th>
+                                <th className="px-4 py-3">{trans('admin.common.module')}</th>
+                                <th className="px-4 py-3">{trans('admin.common.activity')}</th>
+                                <th className="px-4 py-3">{trans('admin.audit.col_target')}</th>
+                                <th className="px-4 py-3 text-right">{trans('admin.common.detail')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-transparent">
@@ -151,7 +159,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                             {paginated.length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="px-4 py-14 text-center text-sm text-gray-400 dark:text-ink-3">
-                                        {logs.length === 0 ? 'Belum ada aktivitas.' : 'Tidak ada aktivitas yang cocok dengan filter.'}
+                                        {logs.length === 0 ? trans('admin.audit.no_activity') : trans('admin.audit.empty')}
                                     </td>
                                 </tr>
                             )}
@@ -166,15 +174,15 @@ export default function AuditTrailConsole({ logs, administrators }) {
                             disabled={page_ === 1}
                             className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            ← Sebelumnya
+                            {trans('admin.audit.prev')}
                         </button>
-                        <span className="text-sm text-gray-500 dark:text-ink-2">Halaman {page_} dari {totalPages}</span>
+                        <span className="text-sm text-gray-500 dark:text-ink-2">{trans('admin.audit.page', { page: page_, total: totalPages })}</span>
                         <button
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                             disabled={page_ === totalPages}
                             className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            Berikutnya →
+                            {trans('admin.audit.next')}
                         </button>
                     </div>
                 )}
@@ -231,9 +239,9 @@ function DetailModal({ log, onClose }) {
                             <table className="min-w-full table-fixed divide-y divide-gray-100 dark:divide-transparent text-sm">
                                 <thead>
                                     <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                        <th className="w-1/3 py-2 pr-4">Field</th>
-                                        {hasBefore && <th className="w-1/3 py-2 pr-4">Sebelum</th>}
-                                        <th className="py-2">{hasBefore ? 'Sesudah' : 'Nilai'}</th>
+                                        <th className="w-1/3 py-2 pr-4">{trans('admin.audit.col_field')}</th>
+                                        {hasBefore && <th className="w-1/3 py-2 pr-4">{trans('admin.audit.before')}</th>}
+                                        <th className="py-2">{hasBefore ? trans('admin.audit.after') : trans('admin.audit.value')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-transparent">
@@ -248,12 +256,12 @@ function DetailModal({ log, onClose }) {
                             </table>
                         </div>
                     ) : (
-                        <p className="px-6 pb-6 text-sm text-gray-400 dark:text-ink-3">Tidak ada detail nilai tambahan untuk aktivitas ini.</p>
+                        <p className="px-6 pb-6 text-sm text-gray-400 dark:text-ink-3">{trans('admin.audit.no_values')}</p>
                     )}
                 </div>
 
                 <div className="flex justify-end border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
-                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">Tutup</button>
+                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">{trans('admin.common.close')}</button>
                 </div>
             </div>
         </div>

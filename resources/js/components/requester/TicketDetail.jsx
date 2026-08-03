@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import NewTicketModal from '../NewTicketModal';
@@ -103,7 +104,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
             <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-5 py-4">
                     <div>
-                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Konfirmasi Penyelesaian</h2>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.detail.confirm_title')}</h2>
                         <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{ticket.id} · {ticket.title}</p>
                     </div>
                     <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600" aria-label="Tutup">
@@ -116,7 +117,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
 
                     {step === 'choice' && (
                         <>
-                            <p className="mb-4 text-[14px] font-semibold text-gray-800 dark:text-ink-1">Apakah masalah Anda sudah teratasi?</p>
+                            <p className="mb-4 text-[14px] font-semibold text-gray-800 dark:text-ink-1">{trans('requester.detail.confirm_question')}</p>
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => setStep('reopen')}
@@ -125,8 +126,8 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600 dark:text-bad-text">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
                                     </span>
-                                    <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">Belum</span>
-                                    <span className="text-[11px] text-gray-500 dark:text-ink-2">Masih ada kendala</span>
+                                    <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.detail.not_yet')}</span>
+                                    <span className="text-[11px] text-gray-500 dark:text-ink-2">{trans('requester.detail.not_yet_hint')}</span>
                                 </button>
                                 <button
                                     onClick={() => setStep('rate')}
@@ -135,7 +136,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:text-ok-text">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                                     </span>
-                                    <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">Ya, Sudah</span>
+                                    <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.detail.yes_done')}</span>
                                     <span className="text-[11px] text-gray-500 dark:text-ink-2">Beri penilaian &amp; tutup</span>
                                 </button>
                             </div>
@@ -148,7 +149,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
                                 Tiket akan dibuka kembali dan dikirim ke Tim Support untuk penanganan lanjutan. Jelaskan kendala yang masih Anda alami.
                             </div>
-                            <label className="mb-1.5 block text-[13px] font-bold text-gray-800 dark:text-ink-1">Catatan untuk Tim Support *</label>
+                            <label className="mb-1.5 block text-[13px] font-bold text-gray-800 dark:text-ink-1">{trans('requester.detail.note_required')}</label>
                             <textarea
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
@@ -161,15 +162,15 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
 
                     {step === 'rate' && (
                         <>
-                            <p className="mb-2.5 text-[14px] font-semibold text-gray-800 dark:text-ink-1">Bagaimana penilaian Anda atas layanan ini?</p>
+                            <p className="mb-2.5 text-[14px] font-semibold text-gray-800 dark:text-ink-1">{trans('requester.detail.rate_question')}</p>
                             <StarRating value={rating} onChange={(n) => { setRating(n); setRatingTouched(false); }} />
                             {ratingTouched && rating < 1 ? (
-                                <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-bad-text">Ketuk bintang untuk menilai</p>
+                                <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-bad-text">{trans('requester.detail.rate_hint')}</p>
                             ) : (
-                                <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-3">Ketuk bintang untuk menilai</p>
+                                <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-3">{trans('requester.detail.rate_hint')}</p>
                             )}
 
-                            <label className="mb-1.5 mt-4 block text-[13px] font-bold text-gray-800 dark:text-ink-1">Catatan untuk Tim Support (opsional)</label>
+                            <label className="mb-1.5 mt-4 block text-[13px] font-bold text-gray-800 dark:text-ink-1">{trans('requester.detail.note_optional')}</label>
                             <textarea
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
@@ -309,7 +310,7 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
                 <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 dark:bg-ok-soft text-emerald-600 dark:text-ok-text">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                 </span>
-                <h2 className="text-[16px] font-bold text-gray-900 dark:text-ink-1">Tiket Anda Telah Diselesaikan</h2>
+                <h2 className="text-[16px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.detail.resolved_banner')}</h2>
                 <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">
                     {support ? `${support.name} (${support.role})` : 'Tim Support'} telah menyelesaikan tiket{' '}
                     <span className="font-semibold text-gray-700 dark:text-ink-2">{ticket.id}</span> — {ticket.title}. Mohon konfirmasi apakah masalah Anda sudah teratasi agar tiket dapat ditutup.
@@ -424,12 +425,12 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.7fr_1fr]">
                 <div className="flex flex-col gap-6">
-                    <Card title="Ticket Information">
+                    <Card title="Informasi Tiket">
                         <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'No description was provided.'}</p>
                         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-3">
-                            <Field label="Category" value={ticket.category} />
-                            <Field label="Layanan" value={ticket.service} />
-                            <Field label="Subject" value={ticket.subject} />
+                            <Field label={trans('requester.detail.category')} value={ticket.category} />
+                            <Field label={trans('requester.detail.service')} value={ticket.service} />
+                            <Field label={trans('requester.detail.subject')} value={ticket.subject} />
                         </div>
                         <AttachmentViewer attachments={ticket.attachments} className="mt-4" />
                     </Card>
@@ -507,7 +508,7 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                                     </span>
                                     <div className="min-w-0">
                                         <p className="truncate text-[13px] font-semibold text-gray-500 dark:text-ink-2">Support Team</p>
-                                        <p className="truncate text-[11px] text-gray-400 dark:text-ink-3">Belum ditugaskan</p>
+                                        <p className="truncate text-[11px] text-gray-400 dark:text-ink-3">{trans('requester.detail.unassigned')}</p>
                                     </div>
                                 </div>
                             )}

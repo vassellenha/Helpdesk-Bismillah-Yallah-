@@ -1,5 +1,6 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, BarRow } from '../ui';
+import { t as trans } from '../../../lib/i18n';
 
 export default function ManagementTab({ ticketTrend = [], topIssues = [], topApps = [], servicePerformance = [] }) {
     const maxApp = Math.max(1, ...topApps.map((a) => a.count));
@@ -7,7 +8,7 @@ export default function ManagementTab({ ticketTrend = [], topIssues = [], topApp
     return (
         <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <Card title="Tren Tiket" subtitle="Total tiket dibuat per bulan">
+                <Card title={trans('teamlead.management.trend')} subtitle={trans('teamlead.management.trend_hint')}>
                     <div className="h-[230px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={ticketTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
@@ -15,13 +16,13 @@ export default function ManagementTab({ ticketTrend = [], topIssues = [], topApp
                                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--chart-axis)' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: 'var(--chart-axis)' }} axisLine={false} tickLine={false} allowDecimals={false} />
                                 <Tooltip contentStyle={{ borderRadius: 8, borderColor: 'var(--chart-tooltip-border)', backgroundColor: 'var(--chart-tooltip-bg)', color: 'var(--chart-tooltip-text)', fontSize: 12 }} />
-                                <Line type="monotone" dataKey="created" name="Dibuat" stroke="var(--chart-blue)" strokeWidth={2.5} dot={{ r: 3 }} />
+                                <Line type="monotone" dataKey="created" name={trans('teamlead.columns.created')} stroke="var(--chart-blue)" strokeWidth={2.5} dot={{ r: 3 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </Card>
 
-                <Card title="Isu Teratas" subtitle="Subjek tiket dengan volume tertinggi">
+                <Card title={trans('teamlead.management.top_issues')} subtitle={trans('teamlead.management.top_issues_hint')}>
                     <div className="flex flex-col">
                         {topIssues.map((t, i) => (
                             <div key={t.name} className="flex items-center gap-3.5 border-b border-gray-50 dark:border-transparent dark:even:bg-white/[0.03] py-3 last:border-0">
@@ -33,22 +34,22 @@ export default function ManagementTab({ ticketTrend = [], topIssues = [], topApp
                                 <span className="text-base font-extrabold text-gray-900 dark:text-ink-1">{t.count}</span>
                             </div>
                         ))}
-                        {topIssues.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada data.</p>}
+                        {topIssues.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.common.no_data')}</p>}
                     </div>
                 </Card>
             </div>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <Card title="Aplikasi Teratas" subtitle="Volume tiket per aplikasi">
+                <Card title={trans('teamlead.management.top_apps')} subtitle={trans('teamlead.management.top_apps_hint')}>
                     <div className="flex flex-col gap-3.5">
                         {topApps.map((a) => (
                             <BarRow key={a.name} label={a.name} value={a.count} pct={Math.round((a.count / maxApp) * 100)} />
                         ))}
-                        {topApps.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada data.</p>}
+                        {topApps.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.common.no_data')}</p>}
                     </div>
                 </Card>
 
-                <Card title="Performa Layanan" subtitle="Avg resolusi, volume, & kepatuhan SLA per kategori">
+                <Card title={trans('teamlead.management.service_performance')} subtitle={trans('teamlead.management.service_performance_hint')}>
                     <div className="flex flex-col">
                         {servicePerformance.map((s) => (
                             <div key={s.name} className="flex items-center justify-between border-b border-gray-50 dark:border-transparent dark:even:bg-white/[0.03] py-3 last:border-0">
@@ -61,7 +62,7 @@ export default function ManagementTab({ ticketTrend = [], topIssues = [], topApp
                                 </span>
                             </div>
                         ))}
-                        {servicePerformance.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada data.</p>}
+                        {servicePerformance.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.common.no_data')}</p>}
                     </div>
                 </Card>
             </div>

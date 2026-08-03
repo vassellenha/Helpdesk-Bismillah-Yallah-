@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './Modal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 
 export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], modules = [], actions = [] }) {
     const [step, setStep] = useState(1);
@@ -24,7 +25,7 @@ export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], mo
             const created = await apiFetch('/admin/roles', { method: 'POST', body: JSON.stringify({ name: form.name, status: form.status }) });
             onSave(created);
         } catch (e) {
-            setError(e.message || 'Gagal membuat role.');
+            setError(e.message || trans('admin.roles.create_failed'));
         } finally {
             setSaving(false);
         }
@@ -32,45 +33,45 @@ export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], mo
 
     return (
         <Modal onClose={onClose} maxWidth="max-w-3xl">
-            <ModalHeader title="Tambah Role" subtitle="Definisikan informasi, cakupan layanan, dan hak akses role ini." onClose={onClose} />
+            <ModalHeader title={trans('admin.roles.add_title')} subtitle={trans('admin.roles.add_subtitle')} onClose={onClose} />
 
             <div className="flex items-center gap-3 px-6 pt-4">
-                <StepBadge active={step === 1} done={step > 1} number={1} label="Informasi Role" />
+                <StepBadge active={step === 1} done={step > 1} number={1} label={trans('admin.roles.step_info')} />
                 <div className="h-px flex-1 bg-gray-200" />
-                <StepBadge active={step === 2} done={false} number={2} label="Hak Akses" />
+                <StepBadge active={step === 2} done={false} number={2} label={trans('admin.roles.step_access')} />
             </div>
 
             <div className="overflow-y-auto px-6 py-5">
                 {step === 1 ? (
                     <div className="space-y-4">
-                        <Field label="Nama Role">
+                        <Field label={trans('admin.roles.name')}>
                             <input
                                 value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                placeholder="mis. Support IT Hardware"
+                                placeholder={trans('admin.roles.name_hint')}
                                 className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                             />
                         </Field>
-                        <Field label="Kode Role">
+                        <Field label={trans('admin.roles.code')}>
                             <input
                                 value={form.code}
                                 onChange={(e) => setForm({ ...form, code: e.target.value })}
-                                placeholder="mis. ROLE-SUP-HW"
+                                placeholder={trans('admin.roles.code_hint')}
                                 className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                             />
                         </Field>
-                        <Field label="Unit Organisasi">
+                        <Field label={trans('admin.roles.step_scope')}>
                             <SelectMenu
                                 value={form.unit}
                                 onChange={(v) => setForm({ ...form, unit: v })}
-                                options={[{ value: '', label: 'Pilih...' }, ...unitOrganisasi.map((u) => ({ value: u, label: u }))]}
+                                options={[{ value: '', label: trans('admin.common.choose') }, ...unitOrganisasi.map((u) => ({ value: u, label: u }))]}
                             />
                         </Field>
-                        <Field label="Status Role">
+                        <Field label={trans('admin.roles.role_status')}>
                             <SelectMenu
                                 value={form.status}
                                 onChange={(v) => setForm({ ...form, status: v })}
-                                options={[{ value: 'active', label: 'Aktif' }, { value: 'inactive', label: 'Nonaktif' }]}
+                                options={[{ value: 'active', label: trans('admin.common.active') }, { value: 'inactive', label: trans('admin.common.inactive') }]}
                             />
                         </Field>
                         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-ink-2">
@@ -80,19 +81,19 @@ export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], mo
                                 onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
                                 className="h-4 w-4 rounded border-gray-300 dark:border-edge-strong"
                             />
-                            <span className="font-medium">Jadikan Default Role</span>
-                            <span className="text-gray-400 dark:text-ink-3">— otomatis ditawarkan saat menambah user baru</span>
+                            <span className="font-medium">{trans('admin.roles.make_default')}</span>
+                            <span className="text-gray-400 dark:text-ink-3">{trans('admin.roles.default_hint')}</span>
                         </label>
                     </div>
                 ) : (
                     <div>
                         {error && <p className="mb-3 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
-                        <p className="mb-3 text-sm text-gray-500 dark:text-ink-2">Atur permission berdasarkan modul untuk role ini. Geser ke kanan untuk melihat seluruh aksi.</p>
+                        <p className="mb-3 text-sm text-gray-500 dark:text-ink-2">{trans('admin.roles.permission_hint')}</p>
                         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-edge-strong">
                             <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                                 <thead>
                                     <tr className="bg-gray-50 dark:bg-panel-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                        <th className="px-4 py-2.5">Modul</th>
+                                        <th className="px-4 py-2.5">{trans('admin.roles.module')}</th>
                                         {actions.map((a) => (
                                             <th key={a} className="px-3 py-2.5 text-center">{a}</th>
                                         ))}
@@ -119,18 +120,18 @@ export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], mo
                         </div>
 
                         <div className="mt-4 rounded-lg bg-blue-50 dark:bg-accent-soft p-4 text-sm">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-900 dark:text-accent-text">Role Summary</p>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-900 dark:text-accent-text">{trans('admin.roles.summary')}</p>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <p className="text-xs text-gray-500 dark:text-ink-2">Nama Role</p>
+                                    <p className="text-xs text-gray-500 dark:text-ink-2">{trans('admin.roles.name')}</p>
                                     <p className="font-semibold text-gray-900 dark:text-ink-1">{form.name || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-500 dark:text-ink-2">Kategori</p>
-                                    <p className="font-semibold text-gray-900 dark:text-ink-1">Role Kustom</p>
+                                    <p className="text-xs text-gray-500 dark:text-ink-2">{trans('admin.roles.category')}</p>
+                                    <p className="font-semibold text-gray-900 dark:text-ink-1">{trans('admin.roles.custom')}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-500 dark:text-ink-2">Layanan</p>
+                                    <p className="text-xs text-gray-500 dark:text-ink-2">{trans('admin.roles.service')}</p>
                                     <p className="font-semibold text-gray-900 dark:text-ink-1">{permissionCount}</p>
                                 </div>
                             </div>
@@ -142,15 +143,15 @@ export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], mo
             <ModalFooter>
                 {step === 1 ? (
                     <>
-                        <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
-                        <button onClick={() => setStep(2)} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">Lanjut</button>
+                        <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">{trans('admin.common.cancel')}</button>
+                        <button onClick={() => setStep(2)} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">{trans('admin.common.next')}</button>
                     </>
                 ) : (
                     <>
-                        <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
-                        <button onClick={() => setStep(1)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-gray-600 dark:text-ink-2 hover:bg-white dark:hover:bg-panel-hover">Kembali</button>
+                        <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">{trans('admin.common.cancel')}</button>
+                        <button onClick={() => setStep(1)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-gray-600 dark:text-ink-2 hover:bg-white dark:hover:bg-panel-hover">{trans('admin.common.back')}</button>
                         <button onClick={save} disabled={saving || !form.name} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:opacity-50">
-                            {saving ? 'Menyimpan...' : 'Simpan Role'}
+                            {saving ? trans('admin.common.saving') : trans('admin.roles.save')}
                         </button>
                     </>
                 )}

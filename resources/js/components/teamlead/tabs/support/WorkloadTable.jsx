@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { PriorityBadge } from '../../../StatusBadge';
 import { apiFetch } from '../../../../lib/api';
 import useLockBodyScroll from '../../../../lib/useLockBodyScroll';
+import { t as trans } from '../../../../lib/i18n';
 
 const AVAIL = {
-    Online: { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-ok-text', bg: 'bg-emerald-50 dark:bg-ok-soft' },
-    Sibuk: { dot: 'bg-amber-500', text: 'text-amber-700 dark:text-warn-text', bg: 'bg-amber-50 dark:bg-warn-soft' },
-    Cuti: { dot: 'bg-gray-400', text: 'text-gray-500 dark:text-ink-2', bg: 'bg-gray-100 dark:bg-panel-3' },
+    Online: { labelKey: 'teamlead.support.online', dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-ok-text', bg: 'bg-emerald-50 dark:bg-ok-soft' },
+    Sibuk: { labelKey: 'teamlead.support.busy', dot: 'bg-amber-500', text: 'text-amber-700 dark:text-warn-text', bg: 'bg-amber-50 dark:bg-warn-soft' },
+    Cuti: { labelKey: 'teamlead.support.leave', dot: 'bg-gray-400', text: 'text-gray-500 dark:text-ink-2', bg: 'bg-gray-100 dark:bg-panel-3' },
 };
 
 function loadBar(load) {
@@ -58,7 +59,7 @@ function StarRow({ rating = 0, size = 18 }) {
 function RatingTeguranBox({ agent, remindRatingUrlBase, onSent }) {
     const [open, setOpen] = useState(false);
     const [message, setMessage] = useState(
-        `Halo ${agent.name}, rating kepuasan Anda saat ini ${agent.rating.toFixed(1)}/5 dari ${agent.ratingCount} ulasan Requester, di bawah standar minimal tim. Mohon tingkatkan kualitas layanan pada tiket berikutnya. Terima kasih.`
+        trans('teamlead.support.rating_msg', { name: agent.name, rating: agent.rating.toFixed(1), count: agent.ratingCount })
     );
     const [sending, setSending] = useState(null); // channel being sent
     const [error, setError] = useState('');
@@ -75,7 +76,7 @@ function RatingTeguranBox({ agent, remindRatingUrlBase, onSent }) {
             setSent((prev) => Array.from(new Set([...prev, channel])));
             onSent?.(res);
         } catch (e) {
-            setError(e.message || 'Gagal mengirim teguran.');
+            setError(e.message || trans('teamlead.support.warn_failed'));
         } finally {
             setSending(null);
         }
@@ -89,14 +90,14 @@ function RatingTeguranBox({ agent, remindRatingUrlBase, onSent }) {
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 py-2.5 text-[12.5px] font-bold text-white hover:bg-amber-700"
             >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.4 5.6a8 8 0 0 1 1.9 8.9c-.5 1.2-.3 2.6.5 3.6l.2.3H3l.2-.3c.8-1 1-2.4.5-3.6a8 8 0 0 1 14.7-8.9Z M10 21h4"/></svg>
-                Beri Teguran Rating
+                {trans('teamlead.support.give_rating_teguran')}
             </button>
         );
     }
 
     return (
         <div className="mt-3 rounded-2xl border border-amber-200 bg-white dark:bg-panel-2 p-3.5">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">Teguran Rating</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.support.teguran_rating')}</p>
             <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -111,7 +112,7 @@ function RatingTeguranBox({ agent, remindRatingUrlBase, onSent }) {
                     disabled={!!sending}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-50 dark:bg-accent-soft py-2 text-[12px] font-bold text-blue-700 dark:text-accent-text hover:bg-blue-100 dark:hover:bg-panel-hover disabled:opacity-50"
                 >
-                    {sent.includes('email') ? 'Terkirim ✓' : sending === 'email' ? 'Mengirim…' : 'Kirim Email'}
+                    {sent.includes('email') ? trans('teamlead.support.sent') : sending === 'email' ? trans('teamlead.common.sending') : trans('teamlead.support.send_email')}
                 </button>
                 <button
                     type="button"
@@ -119,7 +120,7 @@ function RatingTeguranBox({ agent, remindRatingUrlBase, onSent }) {
                     disabled={!!sending}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-ok-soft py-2 text-[12px] font-bold text-emerald-700 dark:text-ok-text hover:bg-emerald-100 dark:hover:bg-ok-soft disabled:opacity-50"
                 >
-                    {sent.includes('whatsapp') ? 'Terkirim ✓' : sending === 'whatsapp' ? 'Mengirim…' : 'Kirim WhatsApp'}
+                    {sent.includes('whatsapp') ? trans('teamlead.support.sent') : sending === 'whatsapp' ? trans('teamlead.common.sending') : trans('teamlead.support.send_whatsapp')}
                 </button>
                 <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -140,7 +141,7 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
                     <div className="min-w-0 flex-1">
                         <p className="text-lg font-extrabold text-gray-900 dark:text-ink-1">{agent.name}</p>
                         <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${a.bg} ${a.text}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${a.dot}`} />{agent.availability} · Support {agent.type}
+                            <span className={`h-1.5 w-1.5 rounded-full ${a.dot}`} />{trans('teamlead.support.agent_type', { availability: trans(a.labelKey), type: agent.type })}
                         </span>
                     </div>
                     <button onClick={onClose} className="rounded-lg p-1 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover">
@@ -150,7 +151,7 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
 
                 <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid grid-cols-2 gap-3">
-                        {[['Beban Aktif', agent.load, agent.load >= 6 ? 'text-red-600 dark:text-bad-text' : agent.load >= 3 ? 'text-amber-600 dark:text-warn-text' : 'text-emerald-600 dark:text-ok-text'], ['Resolved', agent.resolved, 'text-gray-900 dark:text-ink-1'], ['Produktivitas', agent.productivity === null ? '—' : `${agent.productivity}%`, 'text-gray-900 dark:text-ink-1'], ['Avg Resolusi', agent.avgResolution, 'text-gray-900 dark:text-ink-1']].map(([label, val, color]) => (
+                        {[[trans('teamlead.support.active_load'), agent.load, agent.load >= 6 ? 'text-red-600 dark:text-bad-text' : agent.load >= 3 ? 'text-amber-600 dark:text-warn-text' : 'text-emerald-600 dark:text-ok-text'], [trans('teamlead.support.resolved'), agent.resolved, 'text-gray-900 dark:text-ink-1'], [trans('teamlead.support.productivity'), agent.productivity === null ? '—' : `${agent.productivity}%`, 'text-gray-900 dark:text-ink-1'], [trans('teamlead.support.avg_resolution'), agent.avgResolution, 'text-gray-900 dark:text-ink-1']].map(([label, val, color]) => (
                             <div key={label} className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>
                                 <p className={`mt-1 text-2xl font-extrabold ${color}`}>{val}</p>
@@ -161,9 +162,9 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
                     <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-warn-soft p-4">
                         <div className="flex items-center justify-between gap-3">
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">Rating &amp; Kepuasan</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.support.rating_satisfaction')}</p>
                                 <p className="mt-0.5 text-xs text-gray-500 dark:text-ink-2">
-                                    {agent.ratingCount > 0 ? `Dari ${agent.ratingCount} ulasan Requester` : 'Belum ada ulasan'}
+                                    {agent.ratingCount > 0 ? trans('teamlead.support.from_reviews', { count: agent.ratingCount }) : trans('teamlead.support.no_reviews')}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -177,8 +178,8 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
                     </div>
 
                     <div className="mt-5 flex items-center justify-between">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-ink-2">Tiket Sedang Dipegang</p>
-                        <span className="rounded-full bg-gray-100 dark:bg-panel-3 px-2.5 py-0.5 text-[11px] font-bold text-gray-500 dark:text-ink-2">{agent.tickets.length} tiket</span>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-ink-2">{trans('teamlead.support.held_tickets')}</p>
+                        <span className="rounded-full bg-gray-100 dark:bg-panel-3 px-2.5 py-0.5 text-[11px] font-bold text-gray-500 dark:text-ink-2">{trans('teamlead.support.ticket_count', { count: agent.tickets.length })}</span>
                     </div>
                     <div className="mt-3 flex flex-col gap-2.5">
                         {agent.tickets.map((t) => (
@@ -199,7 +200,7 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
                                 </div>
                             </button>
                         ))}
-                        {agent.tickets.length === 0 && <p className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada tiket aktif.</p>}
+                        {agent.tickets.length === 0 && <p className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 text-center text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.support.no_active_tickets')}</p>}
                     </div>
                 </div>
             </div>
@@ -234,19 +235,19 @@ export default function WorkloadTable({ rows = [], onOpenTicket, remindRatingUrl
         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4 p-5">
                 <div>
-                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Support Workload</h2>
-                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">Active tickets &amp; produktivitas per agen</p>
+                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.support.workload')}</h2>
+                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.support.workload_hint')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
                     <div className="flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-panel-3 px-3.5 py-2">
-                        <div><p className="text-base font-extrabold leading-none text-gray-900 dark:text-ink-1">{summary.totalLoad}</p><p className="text-[10px] font-semibold text-gray-400 dark:text-ink-3">Total aktif</p></div>
+                        <div><p className="text-base font-extrabold leading-none text-gray-900 dark:text-ink-1">{summary.totalLoad}</p><p className="text-[10px] font-semibold text-gray-400 dark:text-ink-3">{trans('teamlead.support.total_active')}</p></div>
                         <span className="h-6 w-px bg-gray-200" />
-                        <div><p className="text-base font-extrabold leading-none text-gray-900 dark:text-ink-1">{summary.avg}</p><p className="text-[10px] font-semibold text-gray-400 dark:text-ink-3">Rata / agen</p></div>
+                        <div><p className="text-base font-extrabold leading-none text-gray-900 dark:text-ink-1">{summary.avg}</p><p className="text-[10px] font-semibold text-gray-400 dark:text-ink-3">{trans('teamlead.support.per_agent')}</p></div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <span className="flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-bad-soft px-2.5 py-1 text-[11px] font-bold text-red-600 dark:text-bad-text"><span className="h-1.5 w-1.5 rounded-full bg-red-500" />{summary.padat} Padat</span>
-                        <span className="flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-warn-soft px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-warn-text"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{summary.sedang} Sedang</span>
-                        <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-ok-soft px-2.5 py-1 text-[11px] font-bold text-emerald-600 dark:text-ok-text"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{summary.ringan} Ringan</span>
+                        <span className="flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-bad-soft px-2.5 py-1 text-[11px] font-bold text-red-600 dark:text-bad-text"><span className="h-1.5 w-1.5 rounded-full bg-red-500" />{trans('teamlead.support.load_heavy', { count: summary.padat })}</span>
+                        <span className="flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-warn-soft px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-warn-text"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{trans('teamlead.support.load_medium', { count: summary.sedang })}</span>
+                        <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-ok-soft px-2.5 py-1 text-[11px] font-bold text-emerald-600 dark:text-ok-text"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{trans('teamlead.support.load_light', { count: summary.ringan })}</span>
                     </div>
                 </div>
             </div>
@@ -256,14 +257,14 @@ export default function WorkloadTable({ rows = [], onOpenTicket, remindRatingUrl
                     <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-ink-3">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Z M20 20l-3.6-3.6"/></svg>
                     </span>
-                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari agen support…" className="w-full rounded-xl border border-gray-200 dark:border-edge-strong py-2.5 pl-10 pr-4 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={trans('teamlead.support.workload_search')} className="w-full rounded-xl border border-gray-200 dark:border-edge-strong py-2.5 pl-10 pr-4 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
                 </div>
             </div>
 
             <div className="overflow-x-auto">
                 <div className="min-w-[930px]">
                     <div className="grid grid-cols-[190px_1fr_70px_100px_90px_74px_70px_50px] gap-3 border-y border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                        <span>Agent</span><span>Active Load</span><span className="text-right">Resolved</span><span className="text-right">Avg Response</span><span className="text-right">Avg Resolusi</span><span className="text-right">Produktif</span><span className="text-right">Rating</span><span className="text-right">Detail</span>
+                        <span>{trans('teamlead.support.agent')}</span><span>{trans('teamlead.support.active_load')}</span><span className="text-right">{trans('teamlead.support.resolved')}</span><span className="text-right">{trans('teamlead.support.avg_response')}</span><span className="text-right">{trans('teamlead.support.avg_resolution')}</span><span className="text-right">{trans('teamlead.support.productive')}</span><span className="text-right">{trans('teamlead.columns.rating')}</span><span className="text-right">{trans('teamlead.common.detail')}</span>
                     </div>
                     {filtered.map((a) => {
                         const av = AVAIL[a.availability] ?? AVAIL.Online;
@@ -273,7 +274,7 @@ export default function WorkloadTable({ rows = [], onOpenTicket, remindRatingUrl
                                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700 dark:text-accent-text">{a.initials}</span>
                                     <div className="min-w-0">
                                         <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-ink-1">{a.name}</p>
-                                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${av.bg} ${av.text}`}><span className={`h-1 w-1 rounded-full ${av.dot}`} />{a.availability}</span>
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${av.bg} ${av.text}`}><span className={`h-1 w-1 rounded-full ${av.dot}`} />{trans(av.labelKey)}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 pr-4">
@@ -289,7 +290,7 @@ export default function WorkloadTable({ rows = [], onOpenTicket, remindRatingUrl
                             </div>
                         );
                     })}
-                    {filtered.length === 0 && <div className="px-6 py-10 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada agen yang cocok.</div>}
+                    {filtered.length === 0 && <div className="px-6 py-10 text-center text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.support.workload_empty')}</div>}
                 </div>
             </div>
 

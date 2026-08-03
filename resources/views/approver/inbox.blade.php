@@ -1,6 +1,6 @@
 @extends('layouts.approver')
 
-@section('title', 'Approval Inbox')
+@section('title', __('approver.inbox.title'))
 
 @section('content')
 <div

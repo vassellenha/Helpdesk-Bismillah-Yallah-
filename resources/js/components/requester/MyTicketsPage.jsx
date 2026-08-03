@@ -3,19 +3,27 @@ import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import NewTicketModal from '../NewTicketModal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+// Imported as `trans`, not `t`: this file already uses `t` for a ticket in half
+// a dozen callbacks, and the shadowing would be silent — the translation call
+// would just read a property off a ticket and render nothing.
+import { t as trans } from '../../lib/i18n';
 
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
-const PERIOD_DAYS = { 'Last 30 days': 30, 'Last 3 months': 92, 'Last 6 months': 183, 'This year': 366 };
+
+// Stable keys, not labels: a filter or period the user picked must survive a
+// language switch, so state holds the key and only its label is translated.
+const PERIOD_DAYS = { last_30_days: 30, last_3_months: 92, last_6_months: 183, this_year: 366 };
+const ALL = 'all';
 const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
 const COLUMNS = [
-    { key: 'id', label: 'Ticket No.' },
-    { key: 'title', label: 'Subject' },
-    { key: 'category', label: 'Category' },
-    { key: 'priority', label: 'Priority' },
-    { key: 'status', label: 'Status' },
-    { key: 'slaMinutes', label: 'SLA' },
-    { key: 'createdAt', label: 'Created' },
+    { key: 'id', labelKey: 'requester.columns.id' },
+    { key: 'title', labelKey: 'requester.columns.title' },
+    { key: 'category', labelKey: 'requester.columns.category' },
+    { key: 'priority', labelKey: 'requester.columns.priority' },
+    { key: 'status', labelKey: 'requester.columns.status' },
+    { key: 'slaMinutes', labelKey: 'requester.columns.sla' },
+    { key: 'createdAt', labelKey: 'requester.columns.created' },
 ];
 
 // Same status pills the Approver's My Tickets uses, so a requester and an
@@ -91,11 +99,11 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
     const [tickets, setTickets] = useState(initialTickets);
     const [tab, setTab] = useState('Semua');
     const [search, setSearch] = useState('');
-    const [category, setCategory] = useState('All Issue Categories');
-    const [service, setService] = useState('All Layanan');
-    const [subcategory, setSubcategory] = useState('All Sub Category');
-    const [priority, setPriority] = useState('All Priorities');
-    const [period, setPeriod] = useState('Last 6 months');
+    const [category, setCategory] = useState(ALL);
+    const [service, setService] = useState(ALL);
+    const [subcategory, setSubcategory] = useState(ALL);
+    const [priority, setPriority] = useState(ALL);
+    const [period, setPeriod] = useState('last_6_months');
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -125,19 +133,26 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
         }
     }
 
-    const categories = useMemo(() => ['All Issue Categories', ...new Set(tickets.map((t) => t.category).filter(Boolean))], [tickets]);
-    const services = useMemo(() => ['All Layanan', ...new Set(tickets.map((t) => t.service).filter(Boolean))], [tickets]);
-    const subcategories = useMemo(() => ['All Sub Category', ...new Set(tickets.map((t) => t.subcategory).filter(Boolean))], [tickets]);
+    // Each option is { value, label }: value is the raw data (or ALL) used for
+    // comparison, label is what the user reads.
+    const options = (values, allLabelKey) => [
+        { value: ALL, label: trans(allLabelKey) },
+        ...values.map((v) => ({ value: v, label: v })),
+    ];
+
+    const categories = useMemo(() => [...new Set(tickets.map((t) => t.category).filter(Boolean))], [tickets]);
+    const services = useMemo(() => [...new Set(tickets.map((t) => t.service).filter(Boolean))], [tickets]);
+    const subcategories = useMemo(() => [...new Set(tickets.map((t) => t.subcategory).filter(Boolean))], [tickets]);
 
     const filtered = useMemo(() => {
         const cutoff = Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
 
         const rows = tickets.filter((t) => {
             if (!inTab(tab, t.status)) return false;
-            if (category !== 'All Issue Categories' && t.category !== category) return false;
-            if (service !== 'All Layanan' && t.service !== service) return false;
-            if (subcategory !== 'All Sub Category' && t.subcategory !== subcategory) return false;
-            if (priority !== 'All Priorities' && t.priority !== priority) return false;
+            if (category !== ALL && t.category !== category) return false;
+            if (service !== ALL && t.service !== service) return false;
+            if (subcategory !== ALL && t.subcategory !== subcategory) return false;
+            if (priority !== ALL && t.priority !== priority) return false;
             if (new Date(t.createdAt).getTime() < cutoff) return false;
             if (search.trim() !== '') {
                 const q = search.trim().toLowerCase();
@@ -198,7 +213,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
         <div className="flex flex-col gap-7">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">My Tickets</h1>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">{trans('requester.my_tickets')}</h1>
                     <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">Track the history and progress of every ticket you have submitted.</p>
                 </div>
                 <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} />
@@ -212,7 +227,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 14 4 9l5-5" /><path d="M20 20v-7a4 4 0 0 0-4-4H4" /></svg>
                     <span>
-                        <span className="font-bold">{returnedCount} tiket dikembalikan Tim Support untuk diperbaiki.</span>{' '}
+                        <span className="font-bold">{trans('requester.returned_banner', { count: returnedCount })}</span>{' '}
                         Buka tiketnya, baca catatan Support, lalu tekan “Edit &amp; Resubmit” untuk mengirim ulang.
                     </span>
                 </button>
@@ -224,7 +239,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     type="text"
-                    placeholder="Cari tiket, judul, atau layanan…"
+                    placeholder={trans('requester.search_placeholder')}
                     className="flex-1 border-none bg-transparent text-[13px] text-gray-900 dark:text-ink-1 outline-none placeholder:text-gray-400"
                 />
             </div>
@@ -245,11 +260,11 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                     })}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                    <SelectMenu value={service} onChange={setService} options={services.map((s) => ({ value: s, label: s }))} />
-                    <SelectMenu value={subcategory} onChange={setSubcategory} options={subcategories.map((s) => ({ value: s, label: s }))} />
-                    <SelectMenu value={category} onChange={setCategory} options={categories.map((c) => ({ value: c, label: c }))} />
-                    <SelectMenu value={priority} onChange={setPriority} options={['All Priorities', 'Critical', 'High', 'Medium', 'Low'].map((p) => ({ value: p, label: p }))} />
-                    <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: p }))} />
+                    <SelectMenu value={service} onChange={setService} options={options(services, 'requester.filters.all_service')} />
+                    <SelectMenu value={subcategory} onChange={setSubcategory} options={options(subcategories, 'requester.filters.all_subcategory')} />
+                    <SelectMenu value={category} onChange={setCategory} options={options(categories, 'requester.filters.all_category')} />
+                    <SelectMenu value={priority} onChange={setPriority} options={options(['Critical', 'High', 'Medium', 'Low'], 'requester.filters.all_priority')} />
+                    <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: trans(`requester.periods.${p}`) }))} />
                 </div>
             </div>
 
@@ -305,7 +320,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                                             onClick={() => toggleSort(col.key)}
                                             className="flex items-center gap-1 uppercase tracking-wide text-gray-400 dark:text-ink-3 hover:text-gray-700 dark:hover:text-ink-1"
                                         >
-                                            {col.label}
+                                            {trans(col.labelKey)}
                                             <span aria-hidden="true" className={sortKey === col.key ? 'text-gray-600 dark:text-ink-2' : 'text-gray-300'}>
                                                 {sortKey === col.key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                                             </span>
@@ -345,14 +360,14 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={bulkDeletable ? 8 : 7} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">No tickets match these filters.</td>
+                                    <td colSpan={bulkDeletable ? 8 : 7} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">{trans('requester.empty')}</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
                 <div className="flex items-center justify-between px-5 py-3">
-                    <span className="text-xs text-gray-400 dark:text-ink-3">Showing {filtered.length} of {tickets.length} tickets</span>
+                    <span className="text-xs text-gray-400 dark:text-ink-3">{trans('requester.showing', { shown: filtered.length, total: tickets.length })}</span>
                 </div>
             </div>
         </div>

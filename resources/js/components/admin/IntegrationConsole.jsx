@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 
 const ICON_SYNC = 'M21 12a9 9 0 1 1-2.64-6.36 M21 3v6h-6';
 const ICON_PLUG = 'M9 2v6 M15 2v6 M6 8h12v4a6 6 0 0 1-12 0Z M12 18v4';
@@ -35,13 +36,14 @@ function Row({ label, value, hint }) {
 
 function Summary({ summary }) {
     const cells = [
-        ['Diterima', summary.fetched],
-        ['Dibuat', summary.created],
-        ['Diperbarui', summary.updated],
-        ['Tetap', summary.unchanged],
-        ['Dilewati', summary.skipped.length],
-        ['Field dipertahankan', summary.kept_empty],
-        ['Di luar sumber', (summary.not_in_source ?? []).length],
+        [trans('admin.integration.fetched'), summary.fetched],
+        [trans('admin.integration.created'), summary.created],
+        [trans('admin.integration.updated'), summary.updated],
+        [trans('admin.integration.unchanged'), summary.unchanged],
+        [trans('admin.integration.skipped'), summary.skipped.length],
+        [trans('admin.integration.kept_empty'), summary.kept_empty],
+        [trans('admin.integration.not_in_source'), (summary.not_in_source ?? []).length],
+        [trans('admin.integration.key_mismatch'), (summary.key_mismatch ?? []).length],
     ];
 
     return (
@@ -87,7 +89,7 @@ export default function IntegrationConsole({ integration, history: initialHistor
                 });
             }
         } catch (e) {
-            setError(e.message || 'Gagal menghubungi sumber data.');
+            setError(e.message || trans('admin.integration.unreachable'));
         } finally {
             setBusy(null);
         }
@@ -99,9 +101,9 @@ export default function IntegrationConsole({ integration, history: initialHistor
         <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">Integrasi</h1>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">{trans('admin.integration.title')}</h1>
                     <p className="mt-1 text-[13px] text-gray-500 dark:text-ink-2">
-                        Sumber data pegawai perusahaan. Kredensial diatur di <code className="rounded bg-gray-100 dark:bg-panel-3 px-1 py-0.5 text-[12px]">.env</code>, bukan di halaman ini.
+                        {trans('admin.integration.subtitle_a')}<code className="rounded bg-gray-100 dark:bg-panel-3 px-1 py-0.5 text-[12px]">.env</code>{trans('admin.integration.subtitle_b')}
                     </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -111,7 +113,7 @@ export default function IntegrationConsole({ integration, history: initialHistor
                         className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON_PLUG} /></svg>
-                        {busy === 'test' ? 'Menguji…' : 'Tes Koneksi'}
+                        {busy === 'test' ? trans('admin.integration.testing') : trans('admin.integration.test')}
                     </button>
                     <button
                         onClick={() => run('sync')}
@@ -119,7 +121,7 @@ export default function IntegrationConsole({ integration, history: initialHistor
                         className="flex items-center gap-2 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={busy === 'sync' ? 'animate-spin' : ''} aria-hidden="true"><path d={ICON_SYNC} /></svg>
-                        {busy === 'sync' ? 'Menyinkronkan…' : 'Sync Sekarang'}
+                        {busy === 'sync' ? trans('admin.integration.syncing') : trans('admin.integration.sync_now')}
                     </button>
                 </div>
             </div>
@@ -131,9 +133,9 @@ export default function IntegrationConsole({ integration, history: initialHistor
                     <div className="flex items-start justify-between gap-3">
                         <p>
                             <span className="font-bold">{result.message}</span>
-                            {result.dryRun && <span className="ml-1.5 text-xs">(uji coba — tidak ada yang ditulis)</span>}
+                            {result.dryRun && <span className="ml-1.5 text-xs">{trans('admin.integration.dry_run')}</span>}
                         </p>
-                        <button onClick={() => setResult(null)} className="shrink-0 rounded p-0.5 hover:bg-emerald-100 dark:hover:bg-panel-hover" aria-label="Tutup">✕</button>
+                        <button onClick={() => setResult(null)} className="shrink-0 rounded p-0.5 hover:bg-emerald-100 dark:hover:bg-panel-hover" aria-label={trans('admin.common.close')}>✕</button>
                     </div>
                     <div className="mt-3"><Summary summary={result.summary} /></div>
                     {result.summary.changes.length > 0 && (
@@ -153,42 +155,50 @@ export default function IntegrationConsole({ integration, history: initialHistor
                             Tidak ada di data API, dibiarkan apa adanya: <span className="font-medium">{result.summary.not_in_source.join(', ')}</span>
                         </p>
                     )}
+                    {(result.summary.key_mismatch ?? []).length > 0 && (
+                        <div className="mt-3 rounded-lg bg-amber-50 dark:bg-warn-soft p-2.5 text-xs text-amber-800 dark:text-warn-text">
+                            <p className="font-semibold">{result.summary.key_mismatch.length} pegawai kunci identitasnya berbeda antara API dan helpdesk.</p>
+                            <ul className="mt-1 list-inside list-disc space-y-0.5">
+                                {result.summary.key_mismatch.map((m) => <li key={m}>{m}</li>)}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             )}
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div className="flex flex-col gap-6 lg:col-span-2">
                     <Card
-                        title="Sumber Data Pegawai"
-                        subtitle="Dari sini data user disinkronkan"
+                        title={trans('admin.integration.source')}
+                        subtitle={trans('admin.integration.source_hint')}
                         actions={
                             <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${integration.isLive ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text' : 'bg-amber-50 dark:bg-warn-soft text-amber-700 dark:text-warn-text'}`}>
                                 {integration.isLive ? 'LIVE' : 'MOCK'}
                             </span>
                         }
                     >
-                        <Row label="Driver" value={integration.driverLabel} hint={`(${integration.driver})`} />
+                        <Row label={trans('admin.integration.driver')} value={integration.driverLabel} hint={`(${integration.driver})`} />
                         {integration.isLive ? (
                             <>
-                                <Row label="Base URL" value={integration.baseUrl ?? 'belum diisi'} />
-                                <Row label="Endpoint" value={integration.endpoint} />
-                                <Row label="Token" value={integration.tokenSet ? 'Terisi' : 'Belum diisi'} hint={integration.tokenSet ? '(nilainya tidak ditampilkan)' : null} />
-                                <Row label="Timeout" value={`${integration.timeout} detik`} />
-                                <Row label="Kunci koleksi" value={integration.collectionKey || '(body langsung array)'} />
+                                <Row label={trans('admin.integration.base_url')} value={integration.baseUrl ?? trans('admin.integration.not_filled')} />
+                                <Row label={trans('admin.integration.endpoint')} value={integration.endpoint} />
+                                <Row label={trans('admin.integration.token')} value={integration.tokenSet ? trans('admin.integration.token_set') : trans('admin.integration.token_unset')} hint={integration.tokenSet ? trans('admin.integration.token_hidden') : null} />
+                                <Row label={trans('admin.integration.timeout')} value={trans('admin.integration.seconds', { count: integration.timeout })} />
+                                <Row label={trans('admin.integration.collection_key')} value={integration.collectionKey || trans('admin.integration.body_is_array')} />
                             </>
                         ) : (
                             <Row label="Fixture" value={<code className="text-[12px]">{integration.fixture}</code>} />
                         )}
-                        <Row label="Dicocokkan lewat" value={integration.matchBy} />
-                        <Row label="Role user baru" value={integration.defaultRole} />
+                        <Row label={trans('admin.integration.matched_by')} value={integration.matchBy} />
+                        <Row label={trans('admin.integration.default_role')} value={integration.defaultRole} />
                         <Row
-                            label="Nonaktifkan yang absen"
-                            value={integration.deactivateMissing ? 'Ya' : 'Tidak'}
-                            hint={integration.deactivateMissing ? null : '(aman — API error tidak menonaktifkan siapa pun)'}
+                            label={trans('admin.integration.deactivate_missing')}
+                            value={integration.deactivateMissing ? trans('admin.integration.yes') : trans('admin.integration.no')}
+                            hint={integration.deactivateMissing ? null : trans('admin.integration.safe_note')}
                         />
                         <Row
-                            label="Kosong menimpa data"
-                            value={integration.overwriteWithEmpty ? 'Ya' : 'Tidak'}
+                            label={trans('admin.integration.overwrite_empty')}
+                            value={integration.overwriteWithEmpty ? trans('admin.integration.yes') : trans('admin.integration.no')}
                             hint={integration.overwriteWithEmpty ? '(API pemilik mutlak)' : '(data lokal dipertahankan)'}
                         />
 
@@ -201,9 +211,9 @@ export default function IntegrationConsole({ integration, history: initialHistor
                         )}
                     </Card>
 
-                    <Card title="Riwayat Sinkronisasi" subtitle="Dibaca dari Audit Trail — modul “Integrasi”">
+                    <Card title={trans('admin.integration.history')} subtitle={trans('admin.integration.history_hint')}>
                         {history.length === 0 ? (
-                            <p className="py-6 text-center text-sm text-gray-400 dark:text-ink-3">Belum pernah disinkronkan.</p>
+                            <p className="py-6 text-center text-sm text-gray-400 dark:text-ink-3">{trans('admin.integration.never_synced')}</p>
                         ) : (
                             <div className="flex flex-col">
                                 {history.map((h) => (
@@ -221,18 +231,18 @@ export default function IntegrationConsole({ integration, history: initialHistor
                 </div>
 
                 <div className="flex flex-col gap-6">
-                    <Card title="Sinkronisasi Terakhir">
+                    <Card title={trans('admin.integration.last_sync')}>
                         {lastRun ? (
                             <>
                                 <p className={`text-[13px] ${lastRun.failed ? 'text-red-700 dark:text-bad-text' : 'text-gray-800 dark:text-ink-1'}`}>{lastRun.description}</p>
                                 <p className="mt-1.5 text-[11px] text-gray-400 dark:text-ink-3">{lastRun.at} · {lastRun.by}</p>
                             </>
                         ) : (
-                            <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada.</p>
+                            <p className="text-sm text-gray-400 dark:text-ink-3">{trans('admin.integration.none')}</p>
                         )}
                     </Card>
 
-                    <Card title="Pemetaan Field" subtitle="Field API → kolom users">
+                    <Card title={trans('admin.integration.field_map')} subtitle={trans('admin.integration.field_map_hint')}>
                         <div className="flex flex-col gap-1.5 text-[12px]">
                             {Object.entries(integration.fieldMap).map(([source, column]) => (
                                 <div key={source} className="flex items-center gap-2">
@@ -248,7 +258,7 @@ export default function IntegrationConsole({ integration, history: initialHistor
                         </p>
                     </Card>
 
-                    <Card title="Pemetaan Status">
+                    <Card title={trans('admin.integration.status_map')}>
                         <div className="flex flex-wrap gap-1.5 text-[11px]">
                             {Object.entries(integration.statusMap).map(([raw, mapped]) => (
                                 <span key={raw} className="rounded-full bg-gray-50 dark:bg-panel-3 px-2 py-1 text-gray-600 dark:text-ink-2">

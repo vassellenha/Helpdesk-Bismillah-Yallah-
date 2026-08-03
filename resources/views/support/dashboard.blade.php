@@ -1,6 +1,6 @@
 @extends('layouts.support')
 
-@section('title', 'Dashboard')
+@section('title', __('support.dashboard.title'))
 
 @section('content')
 <div

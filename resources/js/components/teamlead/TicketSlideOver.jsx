@@ -4,6 +4,7 @@ import { StatusBadge, PriorityBadge } from '../StatusBadge';
 import RemindModal from './RemindModal';
 import ReassignModal from './ReassignModal';
 import RaisePriorityModal from './RaisePriorityModal';
+import { t as trans } from '../../lib/i18n';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import { SkeletonBar } from '../Spinner';
 
@@ -68,7 +69,7 @@ function ApprovalFlow({ flow }) {
     return (
         <div>
             <div className="mb-3 flex items-center justify-between">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">Alur Approval</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.approval_flow')}</p>
                 <span className="rounded-full bg-gray-100 dark:bg-panel-3 px-2.5 py-0.5 text-[11px] font-semibold text-gray-500 dark:text-ink-2">{flow.type}</span>
             </div>
             <div className="flex items-stretch rounded-2xl bg-white dark:bg-panel-2 p-4 shadow-sm">
@@ -131,8 +132,8 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
             const c = await apiFetch(`${remindUrlBase}/${ticketId}/note`, { method: 'POST', body: JSON.stringify({ message: note }) });
             setComments((prev) => [...prev, c]);
             setNote('');
-            flash('Catatan ditambahkan.');
-        } catch (e) { flash(e.message || 'Gagal menambah catatan.'); }
+            flash(trans('teamlead.ticket.note_added'));
+        } catch (e) { flash(e.message || trans('teamlead.ticket.note_failed')); }
     }
 
     const t = data?.ticket;
@@ -144,7 +145,7 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
                 {loading ? (
                     <SlideOverSkeleton />
                 ) : !t ? (
-                    <div className="flex flex-1 items-center justify-center text-sm text-gray-400 dark:text-ink-3">Tiket tidak ditemukan.</div>
+                    <div className="flex flex-1 items-center justify-center text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.not_found')}</div>
                 ) : (
                     <>
                         <div className="border-b border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-6 py-5">
@@ -164,7 +165,7 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
 
                         <div className="flex-1 overflow-y-auto px-6 py-5">
                             <div className="grid grid-cols-2 gap-x-5 gap-y-4">
-                                {[['Pelapor', t.requester?.name ?? '—'], ['Unit Kerja', t.requester?.unit ?? '—'], ['Aplikasi', t.service], ['Agen Ditugaskan', t.agent], ['Kategori', t.type], ['Sub-Kategori', t.subcategory]].map(([k, v]) => (
+                                {[[trans('teamlead.ticket.reporter'), t.requester?.name ?? '—'], [trans('teamlead.ticket.unit'), t.requester?.unit ?? '—'], [trans('teamlead.ticket.app'), t.service], [trans('teamlead.ticket.assigned_agent'), t.agent], [trans('teamlead.ticket.category'), t.type], [trans('teamlead.ticket.subcategory'), t.subcategory]].map(([k, v]) => (
                                     <div key={k}>
                                         <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{k}</p>
                                         <p className="mt-0.5 text-[13px] font-semibold text-gray-900 dark:text-ink-1">{v}</p>
@@ -173,14 +174,14 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
                             </div>
 
                             <div className="mt-6">
-                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">Deskripsi Masalah</p>
-                                <div className="rounded-2xl bg-white dark:bg-panel-2 p-4 text-[13px] leading-relaxed text-gray-700 dark:text-ink-2 shadow-sm">{t.description || 'Tidak ada deskripsi.'}</div>
+                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.description')}</p>
+                                <div className="rounded-2xl bg-white dark:bg-panel-2 p-4 text-[13px] leading-relaxed text-gray-700 dark:text-ink-2 shadow-sm">{t.description || trans('teamlead.ticket.no_description')}</div>
                             </div>
 
                             <div className="mt-6"><ApprovalFlow flow={data.approvalFlow} /></div>
 
                             <div className="mt-6">
-                                <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">Timeline SLA</p>
+                                <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.sla_timeline')}</p>
                                 <div className="flex flex-col">
                                     {data.timeline.map((s, i) => (
                                         <div key={i} className="flex gap-3">
@@ -198,7 +199,7 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
                             </div>
 
                             <div className="mt-6">
-                                <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">Riwayat Aktivitas</p>
+                                <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.activity')}</p>
                                 <div className="flex flex-col gap-3.5">
                                     {comments.map((c) => (
                                         <div key={c.id} className="flex gap-3">
@@ -206,29 +207,29 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
                                             <div><p className="text-[12.5px] text-gray-800 dark:text-ink-1"><span className="font-bold">{c.authorName}</span> <span className="text-gray-400 dark:text-ink-3">· {c.at}</span></p><p className="mt-0.5 text-[12.5px] text-gray-700 dark:text-ink-2">{c.message}</p></div>
                                         </div>
                                     ))}
-                                    {comments.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada aktivitas.</p>}
+                                    {comments.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.no_activity')}</p>}
                                 </div>
                             </div>
 
                             <div className="mt-6">
-                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">Catatan Internal</p>
-                                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Tambah catatan untuk tim…" className="w-full resize-none rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-3.5 text-[13px] outline-none focus:border-blue-400" />
-                                <button onClick={saveNote} disabled={!note.trim()} className="mt-2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2 text-[12.5px] font-bold text-white hover:bg-gray-800 disabled:opacity-40">Tambah Catatan</button>
+                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.internal_note')}</p>
+                                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder={trans('teamlead.ticket.note_placeholder')} className="w-full resize-none rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-3.5 text-[13px] outline-none focus:border-blue-400" />
+                                <button onClick={saveNote} disabled={!note.trim()} className="mt-2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2 text-[12.5px] font-bold text-white hover:bg-gray-800 disabled:opacity-40">{trans('teamlead.ticket.add_note')}</button>
                             </div>
                         </div>
 
                         <div className="flex gap-2 border-t border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-6 py-3.5">
-                            <button onClick={() => setModal('remind')} title="Kirim teguran" className="flex h-11 w-11 items-center justify-center rounded-xl border border-red-200 text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.4 5.6a8 8 0 0 1 1.9 8.9c-.5 1.2-.3 2.6.5 3.6l.2.3H3l.2-.3c.8-1 1-2.4.5-3.6a8 8 0 0 1 14.7-8.9Z M10 21h4"/></svg></button>
-                            <button onClick={() => setModal('reassign')} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 py-3 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 8h13 M16 5l4 3-4 3 M17 16H4 M8 13l-4 3 4 3"/></svg>Alihkan</button>
-                            <button onClick={() => setModal('raise')} className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-edge-strong px-4 py-3 text-[13px] font-bold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M6 11l6-6 6 6"/></svg>Prioritas</button>
+                            <button onClick={() => setModal('remind')} title={trans('teamlead.ticket.send_remind')} className="flex h-11 w-11 items-center justify-center rounded-xl border border-red-200 text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.4 5.6a8 8 0 0 1 1.9 8.9c-.5 1.2-.3 2.6.5 3.6l.2.3H3l.2-.3c.8-1 1-2.4.5-3.6a8 8 0 0 1 14.7-8.9Z M10 21h4"/></svg></button>
+                            <button onClick={() => setModal('reassign')} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 py-3 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 8h13 M16 5l4 3-4 3 M17 16H4 M8 13l-4 3 4 3"/></svg>{trans('teamlead.ticket.reassign')}</button>
+                            <button onClick={() => setModal('raise')} className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-edge-strong px-4 py-3 text-[13px] font-bold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M6 11l6-6 6 6"/></svg>{trans('teamlead.ticket.priority_btn')}</button>
                         </div>
                     </>
                 )}
             </div>
 
-            {modal === 'remind' && row && <RemindModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSent={(res) => { setModal(null); flash(res?.message ?? 'Teguran terkirim.'); load(); onChanged?.(); }} />}
-            {modal === 'reassign' && row && <ReassignModal ticket={row} agents={data.agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setModal(null); flash(res?.message ?? 'Tiket dialihkan.'); load(); onChanged?.(); }} />}
-            {modal === 'raise' && row && <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setModal(null); flash(res?.message ?? 'Prioritas diperbarui.'); load(); onChanged?.(); }} />}
+            {modal === 'remind' && row && <RemindModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSent={(res) => { setModal(null); flash(res?.message ?? trans('teamlead.ticket.reminded')); load(); onChanged?.(); }} />}
+            {modal === 'reassign' && row && <ReassignModal ticket={row} agents={data.agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setModal(null); flash(res?.message ?? trans('teamlead.ticket.reassigned')); load(); onChanged?.(); }} />}
+            {modal === 'raise' && row && <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setModal(null); flash(res?.message ?? trans('teamlead.ticket.priority_updated')); load(); onChanged?.(); }} />}
 
             {toast && <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
         </div>

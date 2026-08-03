@@ -1,6 +1,6 @@
 @extends('layouts.support-bpo')
 
-@section('title', 'Dashboard')
+@section('title', __('support.dashboard.title'))
 
 @section('content')
 <div

@@ -3,6 +3,7 @@ import { StatusBadge, PriorityBadge } from '../StatusBadge';
 import RemindModal from './RemindModal';
 import ReassignModal from './ReassignModal';
 import RaisePriorityModal from './RaisePriorityModal';
+import { t as trans } from '../../lib/i18n';
 import SlaPanel from '../SlaPanel';
 import BrandLockup from '../BrandLockup';
 import LanguageSwitcher from '../LanguageSwitcher';
@@ -58,21 +59,21 @@ export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], c
                     </div>
 
                     <div className="mt-5 flex flex-wrap gap-2 border-t border-gray-100 dark:border-edge pt-5">
-                        <button onClick={() => setModal('remind')} className="flex items-center gap-1.5 rounded-xl bg-red-50 dark:bg-bad-soft px-4 py-2.5 text-[13px] font-bold text-red-600 dark:text-bad-text hover:bg-red-100 dark:hover:bg-bad-soft">Kirim Teguran</button>
-                        <button onClick={() => setModal('reassign')} className="flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">Alihkan</button>
-                        <button onClick={() => setModal('raise')} className="flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">Naikkan Prioritas</button>
+                        <button onClick={() => setModal('remind')} className="flex items-center gap-1.5 rounded-xl bg-red-50 dark:bg-bad-soft px-4 py-2.5 text-[13px] font-bold text-red-600 dark:text-bad-text hover:bg-red-100 dark:hover:bg-bad-soft">{trans('teamlead.ticket.send_remind_btn')}</button>
+                        <button onClick={() => setModal('reassign')} className="flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">{trans('teamlead.ticket.reassign')}</button>
+                        <button onClick={() => setModal('raise')} className="flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">{trans('teamlead.ticket.raise')}</button>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     <div className="flex flex-col gap-6 lg:col-span-2">
                         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
-                            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Deskripsi Masalah</h2>
-                            <p className="text-[13.5px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'Tidak ada deskripsi.'}</p>
+                            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.description')}</h2>
+                            <p className="text-[13.5px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || trans('teamlead.ticket.no_description')}</p>
                         </div>
 
                         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
-                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Riwayat Aktivitas</h2>
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.activity')}</h2>
                             <div className="flex flex-col gap-4">
                                 {comments.map((c) => (
                                     <div key={c.id} className="flex gap-3">
@@ -83,16 +84,16 @@ export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], c
                                         </div>
                                     </div>
                                 ))}
-                                {comments.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada aktivitas.</p>}
+                                {comments.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.no_activity')}</p>}
                             </div>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-6">
                         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
-                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Informasi</h2>
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.info')}</h2>
                             <dl className="flex flex-col gap-3 text-[13px]">
-                                {[['PIC Support', ticket.agent], ['Pelapor', ticket.requester?.name ?? '—'], ['Unit', ticket.requester?.unit ?? '—'], ['Email', ticket.requester?.email ?? '—'], ['Sub-Kategori', ticket.subcategory], ['Dibuat', ticket.createdAt], ['Batas SLA', ticket.resolutionDue ?? '—']].map(([k, v]) => (
+                                {[[trans('teamlead.ticket.support_pic'), ticket.agent], [trans('teamlead.ticket.reporter'), ticket.requester?.name ?? '—'], [trans('teamlead.ticket.unit'), ticket.requester?.unit ?? '—'], [trans('teamlead.ticket.email'), ticket.requester?.email ?? '—'], [trans('teamlead.ticket.subcategory'), ticket.subcategory], [trans('teamlead.ticket.created'), ticket.createdAt], [trans('teamlead.ticket.sla_due'), ticket.resolutionDue ?? '—']].map(([k, v]) => (
                                     <div key={k} className="flex flex-col gap-0.5">
                                         <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{k}</dt>
                                         <dd className="font-semibold text-gray-900 dark:text-ink-1">{v}</dd>
@@ -112,7 +113,7 @@ export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], c
                         </div>
 
                         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
-                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Timeline SLA</h2>
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.sla_timeline')}</h2>
                             <div className="flex flex-col">
                                 {timeline.map((s, i) => {
                                     const st = STEP_STYLE[s.state] ?? STEP_STYLE.pending;
@@ -136,13 +137,13 @@ export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], c
             </main>
 
             {modal === 'remind' && (
-                <RemindModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSent={(res) => { setModal(null); flash(res?.message ?? 'Teguran terkirim.'); }} />
+                <RemindModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSent={(res) => { setModal(null); flash(res?.message ?? trans('teamlead.ticket.reminded')); }} />
             )}
             {modal === 'reassign' && (
-                <ReassignModal ticket={row} agents={agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setTicket((t) => ({ ...t, agent: res.agent.name, agentId: res.agent.id })); setModal(null); flash(res?.message ?? 'Tiket dialihkan.'); }} />
+                <ReassignModal ticket={row} agents={agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setTicket((t) => ({ ...t, agent: res.agent.name, agentId: res.agent.id })); setModal(null); flash(res?.message ?? trans('teamlead.ticket.reassigned')); }} />
             )}
             {modal === 'raise' && (
-                <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setTicket((t) => ({ ...t, priority: res.priority })); setModal(null); flash(res?.message ?? 'Prioritas diperbarui.'); }} />
+                <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setTicket((t) => ({ ...t, priority: res.priority })); setModal(null); flash(res?.message ?? trans('teamlead.ticket.priority_updated')); }} />
             )}
 
             {toast && <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}

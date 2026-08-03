@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { t as trans } from '../../lib/i18n';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { PriorityBadge } from '../StatusBadge';
 import SelectMenu from '../SelectMenu';
@@ -35,7 +36,7 @@ function PriorityDistribution({ rows = [], total = 0, highlight = '' }) {
     return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex items-start justify-between">
-                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Distribusi Prioritas · Bulan Ini</h2>
+                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('approver.inbox.priority_distribution')}</h2>
                 <span className="text-xs text-gray-400 dark:text-ink-3">Total {total} menunggu</span>
             </div>
             <div className="flex flex-col gap-3.5">
@@ -61,11 +62,11 @@ function DecisionTrendChart({ data = [] }) {
         <div className="flex h-full flex-col gap-4">
             <div className="flex items-start justify-between">
                 <div>
-                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Tren Keputusan Approval</h2>
+                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('approver.inbox.trend')}</h2>
                     <p className="text-xs text-gray-400 dark:text-ink-3">6 minggu terakhir</p>
                 </div>
                 <div className="flex gap-3.5 text-[11px] font-medium text-gray-400 dark:text-ink-3">
-                    <span className="flex items-center gap-1.5"><span className="h-0.5 w-3.5 rounded bg-blue-600 dark:bg-blue-500" />Disetujui</span>
+                    <span className="flex items-center gap-1.5"><span className="h-0.5 w-3.5 rounded bg-blue-600 dark:bg-blue-500" />{trans('approver.inbox.approved')}</span>
                     <span className="flex items-center gap-1.5"><span className="h-0.5 w-3.5 rounded border-t-2 border-dashed border-red-600" />Ditolak &amp; Revisi</span>
                 </div>
             </div>
@@ -129,30 +130,30 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
     return (
         <div className="flex flex-col gap-7">
             <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">Approval Inbox</h1>
+                <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">{trans('approver.inbox.title')}</h1>
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
-                    label="Menunggu Persetujuan"
+                    label={trans('approver.inbox.stat_pending')}
                     value={metrics.waitingApproval}
                     icon="M9 12h6M9 16h6M9 8h6M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
                     iconBg="bg-blue-50 dark:bg-accent-soft" iconColor="text-blue-600 dark:text-accent-text"
                 />
                 <MetricCard
-                    label="Menunggu Terlama"
+                    label={trans('approver.inbox.stat_oldest')}
                     value={metrics.waitingLongest}
                     icon="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 3"
                     iconBg="bg-amber-50 dark:bg-warn-soft" iconColor="text-amber-600 dark:text-warn-text"
                 />
                 <MetricCard
-                    label="Disetujui Bulan Ini"
+                    label={trans('approver.inbox.stat_approved_month')}
                     value={metrics.approvedThisMonth}
                     icon="M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9"
                     iconBg="bg-emerald-50 dark:bg-ok-soft" iconColor="text-emerald-600 dark:text-ok-text"
                 />
                 <MetricCard
-                    label="Ditolak Bulan Ini"
+                    label={trans('approver.inbox.stat_rejected_month')}
                     value={metrics.rejectedThisMonth}
                     icon="M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z"
                     iconBg="bg-gray-100 dark:bg-panel-3" iconColor="text-gray-500 dark:text-ink-2"
@@ -170,23 +171,23 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
 
             <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-edge p-5">
-                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Menunggu Persetujuan Anda</h2>
+                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('approver.inbox.pending')}</h2>
                     <div className="flex flex-wrap items-end gap-3">
                         <label className="flex flex-col gap-1">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Cari</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('approver.inbox.search')}</span>
                             <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-3 py-2.5">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400 dark:text-ink-3"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
                                 <input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     type="text"
-                                    placeholder="No. tiket, subject…"
+                                    placeholder={trans('approver.inbox.search_placeholder')}
                                     className="w-36 border-none bg-transparent text-[13px] text-gray-900 dark:text-ink-1 outline-none placeholder:text-gray-400 dark:placeholder:text-ink-3"
                                 />
                             </div>
                         </label>
                         <label className="flex flex-col gap-1">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Kategori</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('approver.inbox.category')}</span>
                             <SelectMenu
                                 value={category}
                                 onChange={setCategory}
@@ -199,7 +200,7 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
                             />
                         </label>
                         <label className="flex flex-col gap-1">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Prioritas</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('approver.inbox.priority')}</span>
                             <SelectMenu
                                 value={priority}
                                 onChange={setPriority}

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Service Catalog Management')
+@section('title', __('admin.catalog.title'))
 
 @section('content')
 <nav class="mb-3 text-sm text-gray-400 dark:text-ink-3">

@@ -457,7 +457,7 @@ export default function NewTicketModal({
 
             {open && (
                 <Modal onClose={close} maxWidth="max-w-2xl">
-                    <ModalHeader title="Ticket Information" subtitle={isEdit ? 'Update the details of your draft request.' : 'Fill in the details of your request.'} onClose={close} />
+                    <ModalHeader title="Informasi Tiket" subtitle={isEdit ? 'Update the details of your draft request.' : 'Fill in the details of your request.'} onClose={close} />
 
                     <div className="space-y-4 overflow-y-auto px-6 py-5">
                         {created ? (
@@ -482,7 +482,7 @@ export default function NewTicketModal({
                                     />
                                 </Field>
 
-                                <Field label="Sub Category">
+                                <Field label="Sub Kategori">
                                     <SearchableSelect
                                         value={form.subcategoryId}
                                         placeholder={form.serviceId ? 'Select a sub category' : 'Pilih Layanan terlebih dahulu'}
@@ -494,12 +494,12 @@ export default function NewTicketModal({
                                 </Field>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <Field label="Subject">
+                                    <Field label="Subjek">
                                         {isOtherSubcategory ? (
                                             <input
                                                 value={form.subjectText}
                                                 onChange={(e) => set({ subjectText: e.target.value })}
-                                                placeholder="Describe the item"
+                                                placeholder="Jelaskan kebutuhan Anda"
                                                 className="w-full rounded-[10px] border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-900 dark:text-ink-1 outline-none focus:border-blue-400"
                                             />
                                         ) : (
@@ -513,7 +513,7 @@ export default function NewTicketModal({
                                             />
                                         )}
                                     </Field>
-                                    <Field label="Issue Category">
+                                    <Field label="Kategori Masalah">
                                         {isOtherSubcategory ? (
                                             <SelectMenu
                                                 value={form.issueCategoryId}
@@ -593,7 +593,7 @@ export default function NewTicketModal({
                                     </div>
                                 )}
 
-                                <Field label="Detailed Description">
+                                <Field label="Deskripsi Detail">
                                     <textarea
                                         rows={4}
                                         value={form.description}
@@ -603,7 +603,7 @@ export default function NewTicketModal({
                                     />
                                 </Field>
 
-                                <Field label="Priority">
+                                <Field label="Prioritas">
                                     <div className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 p-2.5 sm:grid-cols-4">
                                         {PRIORITIES.map((p) => {
                                             const active = form.priority === p.label;

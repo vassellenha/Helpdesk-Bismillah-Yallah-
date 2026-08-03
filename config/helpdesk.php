@@ -89,13 +89,16 @@ return [
     ],
 
     // Top navigation for the Admin Console layout (resources/views/layouts/admin.blade.php).
+    // Labels live in lang/{id,en}/admin.php under admin.nav.<key> and are resolved
+    // in the view, not here: config is cached by `config:cache`, so calling __()
+    // at this point would freeze one language into the cache file.
     'admin_nav' => [
-        ['label' => 'Dashboard', 'route' => 'admin.dashboard'],
-        ['label' => 'User & Role Management', 'route' => 'admin.users'],
-        ['label' => 'Integrasi', 'route' => 'admin.integrations'],
-        ['label' => 'Konfigurasi SLA', 'route' => 'admin.sla'],
-        ['label' => 'Audit Trail Viewer', 'route' => 'admin.audit-trail'],
-        ['label' => 'Service Catalog & Kategori Tiket', 'route' => 'admin.service-catalog'],
-        ['label' => 'Ticket Management', 'route' => 'admin.ticket-management'],
+        ['key' => 'dashboard', 'route' => 'admin.dashboard'],
+        ['key' => 'users', 'route' => 'admin.users'],
+        ['key' => 'integrations', 'route' => 'admin.integrations'],
+        ['key' => 'sla', 'route' => 'admin.sla'],
+        ['key' => 'audit', 'route' => 'admin.audit-trail'],
+        ['key' => 'catalog', 'route' => 'admin.service-catalog'],
+        ['key' => 'tickets', 'route' => 'admin.ticket-management'],
     ],
 ];

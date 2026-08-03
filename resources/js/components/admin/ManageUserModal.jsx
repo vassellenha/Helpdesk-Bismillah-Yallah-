@@ -2,21 +2,24 @@ import { useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './Modal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 
-const TABS = ['Detail Pengguna', 'Edit Pengguna', 'Role & Hak Akses'];
+// Stable keys, not labels: the active tab is compared in six places, so a
+// translated string here would silently break tab switching in English.
+const TABS = ['detail', 'edit', 'roles'];
 
 const EDIT_FIELDS = [
-    ['name', 'Nama'],
-    ['nip', 'NIP'],
-    ['email', 'Email'],
-    ['username', 'Username', 'Dikosongkan berarti memakai email korporat.'],
-    ['address', 'Alamat'],
-    ['phone', 'Nomor Telepon'],
-    ['unit', 'Unit Kerja'],
-    ['jabatan', 'Jabatan'],
-    ['kode_departemen', 'Kode Departemen'],
-    ['kode_divisi', 'Kode Divisi'],
-    ['kode_proyek', 'Kode Proyek'],
+    ['name', 'full_name'],
+    ['nip', 'nip'],
+    ['email', 'email'],
+    ['username', 'username', 'username_note'],
+    ['address', 'address'],
+    ['phone', 'phone'],
+    ['unit', 'unit'],
+    ['jabatan', 'jabatan'],
+    ['kode_departemen', 'kode_departemen'],
+    ['kode_divisi', 'kode_divisi'],
+    ['kode_proyek', 'kode_proyek'],
 ];
 
 const ROLE_DESCRIPTIONS = {
@@ -30,7 +33,7 @@ const ROLE_DESCRIPTIONS = {
 };
 
 export default function ManageUserModal({ user, roles, onClose, onSave }) {
-    const [tab, setTab] = useState('Detail Pengguna');
+    const [tab, setTab] = useState('detail');
     const [form, setForm] = useState({
         name: user.name, nip: user.nip, email: user.email, username: user.username,
         phone: user.phone, address: dash(user.address), unit: user.unit,
@@ -53,7 +56,7 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
             const updated = await apiFetch(`/admin/users/${user.id}`, { method: 'PUT', body: JSON.stringify(form) });
             onSave(updated);
         } catch (e) {
-            setError(e.message || 'Gagal menyimpan perubahan.');
+            setError(e.message || trans('admin.user_form.save_failed'));
         } finally {
             setSaving(false);
         }
@@ -66,21 +69,21 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
             const updated = await apiFetch(`/admin/users/${user.id}/roles`, { method: 'PATCH', body: JSON.stringify({ role_ids: roleIds }) });
             onSave(updated);
         } catch (e) {
-            setError(e.message || 'Gagal menyimpan role.');
+            setError(e.message || trans('admin.user_form.role_failed'));
         } finally {
             setSaving(false);
         }
     }
 
     function save() {
-        if (tab === 'Edit Pengguna') return saveProfile();
-        if (tab === 'Role & Hak Akses') return saveRoles();
+        if (tab === 'edit') return saveProfile();
+        if (tab === 'roles') return saveRoles();
         onClose();
     }
 
     return (
         <Modal onClose={onClose} maxWidth="max-w-2xl">
-            <ModalHeader title="Kelola Pengguna" subtitle={user.name} onClose={onClose} />
+            <ModalHeader title={trans('admin.user_form.manage_title')} subtitle={user.name} onClose={onClose} />
 
             <div className="overflow-y-auto px-6 py-5">
                 {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
@@ -92,7 +95,7 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                     <span className="font-semibold text-gray-900 dark:text-ink-1">{user.name}</span>
                     <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-ok-soft px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-ok-text">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        {user.status}
+                        {user.status === 'Aktif' ? trans('admin.common.active') : trans('admin.common.inactive')}
                     </span>
                 </div>
 
@@ -105,31 +108,31 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                                 tab === t ? 'bg-white dark:bg-panel-2 text-gray-900 dark:text-ink-1 shadow-sm' : 'text-gray-500 dark:text-ink-2 hover:text-gray-700 dark:hover:text-ink-1'
                             }`}
                         >
-                            {t}
+                            {trans(`admin.user_form.tab_${t}`)}
                         </button>
                     ))}
                 </div>
 
-                {tab === 'Detail Pengguna' && (
+                {tab === 'detail' && (
                     <div>
                         <div className="grid grid-cols-2 gap-4">
-                            <Detail label="Nama Lengkap" value={user.name} />
-                            <Detail label="Email Korporat" value={user.email} />
-                            <Detail label="Username" value={user.username} />
-                            <Detail label="NIP" value={user.nip} />
-                            <Detail label="Alamat" value={user.address} span />
-                            <Detail label="Nomor Telepon" value={user.phone} />
-                            <Detail label="Status Kepegawaian" value={user.employment_status} hint="Dari API perusahaan" />
-                            <Detail label="Akses Helpdesk" value={user.helpdesk_access === 'enabled' ? 'Aktif' : 'Nonaktif'} hint="Diatur Admin" />
-                            <Detail label="Jabatan" value={user.jabatan} />
-                            <Detail label="Unit Kerja" value={user.unit} />
-                            <Detail label="Kode Departemen" value={user.kode_departemen} />
-                            <Detail label="Kode Divisi" value={user.kode_divisi} />
-                            <Detail label="Kode Proyek" value={user.kode_proyek} />
-                            <Detail label="Terakhir Login" value={user.last_login} />
+                            <Detail label={trans('admin.user_form.full_name')} value={user.name} />
+                            <Detail label={trans('admin.user_form.email')} value={user.email} />
+                            <Detail label={trans('admin.user_form.username')} value={user.username} />
+                            <Detail label={trans('admin.user_form.nip')} value={user.nip} />
+                            <Detail label={trans('admin.user_form.address')} value={user.address} span />
+                            <Detail label={trans('admin.user_form.phone')} value={user.phone} />
+                            <Detail label={trans('admin.user_form.employment_status')} value={user.employment_status} hint={trans('admin.user_form.from_api')} />
+                            <Detail label={trans('admin.user_form.helpdesk_access')} value={user.helpdesk_access === 'enabled' ? trans('admin.common.active') : trans('admin.common.inactive')} hint={trans('admin.user_form.set_by_admin')} />
+                            <Detail label={trans('admin.user_form.jabatan')} value={user.jabatan} />
+                            <Detail label={trans('admin.user_form.unit')} value={user.unit} />
+                            <Detail label={trans('admin.user_form.kode_departemen')} value={user.kode_departemen} />
+                            <Detail label={trans('admin.user_form.kode_divisi')} value={user.kode_divisi} />
+                            <Detail label={trans('admin.user_form.kode_proyek')} value={user.kode_proyek} />
+                            <Detail label={trans('admin.user_form.last_login')} value={user.last_login} />
                         </div>
                         <div className="mt-4 rounded-lg bg-gray-50 dark:bg-panel-3 p-4">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Role Aktif</p>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('admin.user_form.active_roles')}</p>
                             <div className="flex flex-wrap gap-2">
                                 {user.roles.map((r) => (
                                     <span key={r} className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-accent-text">{r}</span>
@@ -139,35 +142,35 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                     </div>
                 )}
 
-                {tab === 'Edit Pengguna' && (
+                {tab === 'edit' && (
                     <div className="space-y-4">
-                        {EDIT_FIELDS.map(([key, label, hint]) => (
-                            <Field key={key} label={label}>
+                        {EDIT_FIELDS.map(([key, k, hintKey]) => (
+                            <Field key={key} label={trans(`admin.user_form.${k}`)}>
                                 <input
                                     value={form[key] ?? ''}
                                     onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                                     className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                                 />
-                                {hint && <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">{hint}</p>}
+                                {hintKey && <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">{trans(`admin.user_form.${hintKey}`)}</p>}
                             </Field>
                         ))}
-                        <Field label="Akses Helpdesk">
+                        <Field label={trans('admin.user_form.helpdesk_access')}>
                             <SelectMenu
                                 value={form.helpdesk_access}
                                 onChange={(v) => setForm({ ...form, helpdesk_access: v })}
-                                options={[{ value: 'enabled', label: 'Aktif' }, { value: 'disabled', label: 'Nonaktif' }]}
+                                options={[{ value: 'enabled', label: trans('admin.common.active') }, { value: 'disabled', label: trans('admin.common.inactive') }]}
                             />
                             <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">
-                                Status kepegawaian ({user.employment_status}) datang dari API perusahaan dan tidak bisa diubah di sini.
-                                {user.employment_status === 'Nonaktif' && ' Selama pegawai nonaktif, akun tetap terkunci walau akses helpdesk diaktifkan.'}
+                                {trans('admin.user_form.employment_note', { status: user.employment_status })}
+                                {user.employment_status === 'Nonaktif' && trans('admin.user_form.employment_locked_note')}
                             </p>
                         </Field>
                     </div>
                 )}
 
-                {tab === 'Role & Hak Akses' && (
+                {tab === 'roles' && (
                     <div>
-                        <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-ink-2">Role Pengguna</p>
+                        <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-ink-2">{trans('admin.user_form.user_roles')}</p>
                         <div className="grid grid-cols-2 gap-3">
                             {roles.map((r) => (
                                 <label
@@ -185,7 +188,7 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                                     />
                                     <span>
                                         <span className="block font-semibold text-gray-900 dark:text-ink-1">{r.name}</span>
-                                        <span className="text-xs text-gray-500 dark:text-ink-2">{ROLE_DESCRIPTIONS[r.name] ?? 'Role kustom.'}</span>
+                                        <span className="text-xs text-gray-500 dark:text-ink-2">{trans(`admin.role_desc.${r.name}`, {}, trans('admin.user_form.custom_role'))}</span>
                                     </span>
                                 </label>
                             ))}
@@ -195,9 +198,9 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
             </div>
 
             <ModalFooter>
-                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
+                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">{trans('admin.common.cancel')}</button>
                 <button onClick={save} disabled={saving} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:opacity-50">
-                    {saving ? 'Menyimpan...' : tab === 'Role & Hak Akses' ? 'Simpan Role' : tab === 'Edit Pengguna' ? 'Simpan Perubahan' : 'Tutup'}
+                    {saving ? trans('admin.common.saving') : tab === 'roles' ? trans('admin.user_form.save_roles') : tab === 'edit' ? trans('admin.common.save_changes') : trans('admin.common.close')}
                 </button>
             </ModalFooter>
         </Modal>

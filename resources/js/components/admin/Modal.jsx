@@ -1,4 +1,5 @@
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
+import { t as trans } from '../../lib/i18n';
 
 export default function Modal({ children, onClose, maxWidth = 'max-w-lg' }) {
     useLockBodyScroll();
@@ -21,7 +22,7 @@ export function ModalHeader({ title, subtitle, onClose }) {
                 <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">{title}</h2>
                 {subtitle && <p className="mt-0.5 text-sm text-gray-500 dark:text-ink-2">{subtitle}</p>}
             </div>
-            <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600" aria-label="Tutup">
+            <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600" aria-label={trans('admin.common.close')}>
                 ✕
             </button>
         </div>

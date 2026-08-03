@@ -4,6 +4,7 @@ import { apiFetch } from '../../lib/api';
 import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
+import { t as trans } from '../../lib/i18n';
 
 const TIMELINE_DOT = {
     done: 'bg-emerald-500',
@@ -12,25 +13,12 @@ const TIMELINE_DOT = {
     rejected: 'bg-red-600',
 };
 
-const CONFIRM_COPY = {
-    resolve: {
-        title: 'Tutup Layanan (Service Closed)?',
-        body: (id) => `Tiket ${id} akan ditandai selesai dan ditutup. Requester akan diminta memberi penilaian atas layanan. Tindakan ini tercatat di riwayat status.`,
-        button: 'Ya, Tutup Layanan',
-        color: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
-    },
-    escalate: {
-        title: 'Eskalasi ke Tim IT?',
-        body: (id) => `Tiket ${id} akan dieskalasi ke Tim IT Lanjutan untuk penanganan lebih dalam. Tindakan ini tercatat di riwayat status.`,
-        button: 'Ya, Eskalasi',
-        color: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
-    },
-    return: {
-        title: 'Kembalikan ke Requester?',
-        body: (id) => `Tiket ${id} akan dikembalikan ke requester untuk direvisi/dilengkapi. Requester akan menerima notifikasi dan bisa mengedit lalu mengirim ulang tiketnya. Tindakan ini tercatat di riwayat status.`,
-        button: 'Ya, Kembalikan',
-        color: 'bg-amber-600 hover:bg-amber-700',
-    },
+// Colours only — the wording lives in lang/{id,en}/support.php under
+// support.confirm.<action>, so both languages stay in one place.
+const CONFIRM_STYLE = {
+    resolve: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
+    escalate: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
+    return: 'bg-amber-600 hover:bg-amber-700',
 };
 
 function ReopenNoteBanner({ reopenNote }) {
@@ -40,7 +28,7 @@ function ReopenNoteBanner({ reopenNote }) {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 12a9.5 9.5 0 1 1-2.8-6.7M21.5 3v6h-6" /></svg>
             </span>
             <div className="min-w-0">
-                <p className="text-[13px] font-bold text-amber-800">Requester membuka kembali tiket ini</p>
+                <p className="text-[13px] font-bold text-amber-800">{trans('support.detail.reopened_banner')}</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-amber-900">{reopenNote.note}</p>
                 <p className="mt-1.5 text-[11px] text-amber-600 dark:text-warn-text">{reopenNote.at}</p>
             </div>
@@ -55,7 +43,7 @@ function EscalationNoteBanner({ note }) {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M5 12l7-7 7 7" /></svg>
             </span>
             <div className="min-w-0">
-                <p className="text-[13px] font-bold text-blue-800">Dieskalasi dari Support BPO</p>
+                <p className="text-[13px] font-bold text-blue-800">{trans('support.detail.escalated_from_bpo')}</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-blue-900 dark:text-accent-text">{note}</p>
             </div>
         </div>
@@ -82,7 +70,12 @@ function Field({ label, value }) {
 
 function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onConfirm }) {
     useLockBodyScroll();
-    const copy = CONFIRM_COPY[action];
+    const copy = {
+        title: trans(`support.confirm.${action}.title`),
+        body: trans(`support.confirm.${action}.body`, { id: ticketId }),
+        button: trans(`support.confirm.${action}.button`),
+        color: CONFIRM_STYLE[action],
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onCancel}>
@@ -93,25 +86,25 @@ function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onC
                     </span>
                     <div>
                         <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{copy.title}</h2>
-                        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">{copy.body(ticketId)}</p>
+                        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">{copy.body}</p>
                     </div>
                 </div>
 
-                <label className="mb-1.5 mt-4 block text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Catatan Anda</label>
+                <label className="mb-1.5 mt-4 block text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('support.detail.your_note')}</label>
                 <div className="rounded-xl bg-gray-50 dark:bg-panel-3 px-3.5 py-3 text-[13px] text-gray-700 dark:text-ink-2">{note}</div>
 
                 {error && <p className="mt-3 rounded-lg bg-red-50 dark:bg-bad-soft p-2.5 text-xs text-red-700 dark:text-bad-text">{error}</p>}
 
                 <div className="mt-5 flex justify-end gap-2.5">
                     <button onClick={onCancel} className="rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                        Tidak
+                        {trans('support.confirm.no')}
                     </button>
                     <button
                         onClick={onConfirm}
                         disabled={submitting}
                         className={`rounded-full px-4 py-2.5 text-[13px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 ${copy.color}`}
                     >
-                        {submitting ? 'Mengirim…' : copy.button}
+                        {submitting ? trans('support.confirm.sending') : copy.button}
                     </button>
                 </div>
             </div>
@@ -138,7 +131,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
             setComments((prev) => [...prev, comment]);
             setReply('');
         } catch (e) {
-            setError(e.message || 'Gagal mengirim pesan.');
+            setError(e.message || trans('support.detail.send_failed'));
         } finally {
             setSending(false);
         }
@@ -164,7 +157,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                 setConfirmAction(null);
             }
         } catch (e) {
-            setError(e.message || 'Gagal mengirim tindakan.');
+            setError(e.message || trans('support.detail.action_failed'));
         } finally {
             setSubmitting(false);
         }
@@ -176,7 +169,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
         <div className="flex flex-col gap-6">
             <a href={ticketsUrl} className="flex w-fit items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-ink-2 hover:text-gray-800 dark:hover:text-ink-1">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-                My Tickets
+                {trans('support.detail.back')}
             </a>
 
             {ticket.reopenNote && <ReopenNoteBanner reopenNote={ticket.reopenNote} />}
@@ -184,7 +177,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
 
             <Card>
                 <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="rounded-full bg-blue-50 dark:bg-accent-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-accent-text">Mode Support</span>
+                    <span className="rounded-full bg-blue-50 dark:bg-accent-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-accent-text">{trans('support.detail.mode')}</span>
                     <StatusBadge status={ticket.status} />
                     <PriorityBadge priority={ticket.priority} />
                 </div>
@@ -197,7 +190,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                     </span>
                     <span className="flex items-center gap-1.5">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-ink-3"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                        Dibuat {ticket.createdAt}
+                        {trans('support.detail.created_at', { at: ticket.createdAt })}
                     </span>
                 </div>
             </Card>
@@ -206,27 +199,27 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.7fr_1fr]">
                 <div className="flex flex-col gap-6">
-                    <Card title="Informasi Tiket">
-                        <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'Tidak ada deskripsi.'}</p>
+                    <Card title={trans('support.detail.ticket_info')}>
+                        <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || trans('support.detail.no_description')}</p>
                         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-2">
-                            <Field label="Requester" value={ticket.requester?.name} />
-                            <Field label="Unit Kerja" value={ticket.requester?.unit} />
-                            <Field label="Layanan" value={ticket.service} />
-                            <Field label="Kontak" value={ticket.requester?.email} />
+                            <Field label={trans('support.detail.requester')} value={ticket.requester?.name} />
+                            <Field label={trans('support.detail.unit')} value={ticket.requester?.unit} />
+                            <Field label={trans('support.detail.service')} value={ticket.service} />
+                            <Field label={trans('support.detail.contact')} value={ticket.requester?.email} />
                         </div>
                         {ticket.attachments?.length > 0 && (
                             <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4">
-                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Lampiran</p>
+                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('support.detail.attachments')}</p>
                                 <AttachmentViewer attachments={ticket.attachments} />
                             </div>
                         )}
                     </Card>
 
-                    <Card title="Forum Diskusi">
-                        <p className="mb-3 text-[12px] text-gray-400 dark:text-ink-3">Percakapan antara Requester, Approver, dan Support terekam di sini.</p>
+                    <Card title={trans('support.detail.forum')}>
+                        <p className="mb-3 text-[12px] text-gray-400 dark:text-ink-3">{trans('support.detail.forum_hint')}</p>
                         <div className="flex flex-col gap-3">
                             {comments.length === 0 && (
-                                <p className="rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">Belum ada diskusi.</p>
+                                <p className="rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">{trans('support.detail.forum_empty')}</p>
                             )}
                             {comments.map((c) => (
                                 <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${c.authorRole === 'Support' ? 'ml-auto bg-blue-600 dark:bg-blue-500 text-white' : 'bg-gray-50 dark:bg-panel-3 text-gray-800 dark:text-ink-1'}`}>
@@ -246,7 +239,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                                     value={reply}
                                     onChange={(e) => setReply(e.target.value)}
                                     rows={2}
-                                    placeholder="Tulis tanggapan untuk requester… (mis. minta detail transaksi, konfirmasi penyelesaian)"
+                                    placeholder={trans('support.detail.forum_placeholder')}
                                     className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-400"
                                 />
                                 <button
@@ -254,7 +247,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                                     disabled={sending || !reply.trim()}
                                     className="rounded-xl bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    {sending ? 'Mengirim…' : 'Kirim Tanggapan'}
+                                    {sending ? trans('support.detail.sending') : trans('support.detail.send_reply')}
                                 </button>
                             </div>
                         )}
@@ -262,13 +255,13 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                 </div>
 
                 <div className="flex flex-col gap-6">
-                    <Card title="Aksi Penanganan">
+                    <Card title={trans('support.detail.actions')}>
                         <div className="flex items-center justify-between text-[13px]">
-                            <span className="text-gray-400 dark:text-ink-3">Status saat ini</span>
+                            <span className="text-gray-400 dark:text-ink-3">{trans('support.detail.current_status')}</span>
                             <StatusBadge status={ticket.status} />
                         </div>
                         <div className="mt-3 flex items-center justify-between text-[13px]">
-                            <span className="text-gray-400 dark:text-ink-3">PIC</span>
+                            <span className="text-gray-400 dark:text-ink-3">{trans('support.detail.pic')}</span>
                             <span className="text-right font-semibold text-blue-600 dark:text-accent-text">
                                 {ticket.people?.pic?.name}
                                 <span className="block text-[11px] font-normal text-gray-400 dark:text-ink-3">{ticket.people?.pic?.role}</span>
@@ -277,25 +270,25 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
 
                         {ticket.escalated && escalateUrl && (
                             <div className="mt-3 border-t border-gray-100 dark:border-edge pt-3">
-                                <p className="text-[12px] text-gray-500 dark:text-ink-2">Tiket Sudah Dieskalasi ke Tim IT.</p>
+                                <p className="text-[12px] text-gray-500 dark:text-ink-2">{trans('support.detail.escalated_banner')}</p>
                                 <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-ok-soft px-3 py-2 text-[12px] font-semibold text-emerald-700 dark:text-ok-text">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                                    Sudah dieskalasi ke Tim IT Lanjutan
+                                    {trans('support.detail.escalated_check')}
                                 </div>
                             </div>
                         )}
 
                         {ticket.canAct ? (
                             <>
-                                <label className="mb-1.5 mt-4 block text-[13px] font-bold text-gray-800 dark:text-ink-1">Catatan (wajib)</label>
+                                <label className="mb-1.5 mt-4 block text-[13px] font-bold text-gray-800 dark:text-ink-1">{trans('support.detail.note_label')}</label>
                                 <textarea
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
                                     rows={4}
-                                    placeholder="Tulis catatan penanganan…"
+                                    placeholder={trans('support.detail.note_placeholder')}
                                     className="w-full resize-none rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-3 text-[13px] outline-none focus:border-blue-400"
                                 />
-                                {!noteFilled && <p className="mt-1.5 text-xs font-medium text-gray-400 dark:text-ink-3">Isi catatan untuk mengaktifkan tombol di bawah.</p>}
+                                {!noteFilled && <p className="mt-1.5 text-xs font-medium text-gray-400 dark:text-ink-3">{trans('support.detail.note_hint')}</p>}
 
                                 <div className="mt-4 flex flex-col gap-2.5">
                                     <button
@@ -304,7 +297,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                                         className="flex items-center justify-center gap-2 rounded-xl bg-gray-100 dark:bg-panel-3 px-4 py-2.5 text-[13px] font-bold text-gray-500 dark:text-ink-2 enabled:bg-blue-600 enabled:text-white enabled:hover:bg-blue-700 disabled:cursor-not-allowed"
                                     >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                                        Service Closed
+                                        {trans('support.detail.btn_resolve')}
                                     </button>
                                     {escalateUrl && (
                                         <button
@@ -313,7 +306,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                                             className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-edge-strong bg-gray-100 dark:bg-panel-3 px-4 py-2.5 text-[13px] font-bold text-gray-500 dark:text-ink-2 enabled:border-amber-200 enabled:bg-amber-50 enabled:text-amber-700 enabled:hover:bg-amber-100 disabled:cursor-not-allowed"
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M5 12l7-7 7 7" /></svg>
-                                            Eskalasi IT
+                                            {trans('support.detail.btn_escalate')}
                                         </button>
                                     )}
                                     <button
@@ -322,18 +315,18 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                                         className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-edge-strong bg-gray-100 dark:bg-panel-3 px-4 py-2.5 text-[13px] font-bold text-gray-500 dark:text-ink-2 enabled:border-red-200 enabled:bg-red-50 enabled:text-red-700 enabled:hover:bg-red-100 disabled:cursor-not-allowed"
                                     >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>
-                                        Returned
+                                        {trans('support.detail.btn_return')}
                                     </button>
                                 </div>
 
                                 <p className="mt-3 text-[11px] leading-relaxed text-gray-400 dark:text-ink-3">
-                                    Tindakan tercatat di riwayat status &amp; audit trail. Requester menerima notifikasi.
+                                    {trans('support.detail.actions_footnote')}
                                 </p>
                             </>
                         ) : null}
                     </Card>
 
-                    <Card title="SLA">
+                    <Card title={trans('support.detail.sla')}>
                         <SlaPanel
                             sla={ticket.sla}
                             rating={ticket.satisfactionRating}
@@ -342,7 +335,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                         />
                     </Card>
 
-                    <Card title="People">
+                    <Card title={trans('support.detail.people')}>
                         <div className="flex flex-col gap-3">
                             {[ticket.people?.requester, ticket.people?.approver, ...(ticket.people?.support ?? [])].filter(Boolean).map((p, i) => (
                                 <div key={`${p.name}-${i}`} className="flex items-center gap-2.5">
@@ -359,7 +352,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                         </div>
                     </Card>
 
-                    <Card title="Riwayat Status">
+                    <Card title={trans('support.detail.status_history')}>
                         <div className="flex flex-col">
                             {timeline.map((step, i) => (
                                 <div key={i} className="flex gap-3">

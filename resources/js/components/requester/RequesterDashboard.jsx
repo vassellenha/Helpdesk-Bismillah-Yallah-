@@ -1,4 +1,5 @@
 import CreatedVsResolvedChart from './CreatedVsResolvedChart';
+import { t as trans } from '../../lib/i18n';
 import SlaDistributionDonut from './SlaDistributionDonut';
 import SlaLimitTable from './SlaLimitTable';
 import NewTicketModal from '../NewTicketModal';
@@ -42,34 +43,34 @@ export default function RequesterDashboard({ user = {}, stats, chart = [], slaDo
 
             <div className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
                 <StatCard
-                    label="Active Tickets"
+                    label={trans('requester.dashboard.active_tickets')}
                     value={stats.active.count}
                     hint={stats.active.breakdown}
                     iconBg="bg-blue-50 dark:bg-accent-soft" iconColor="text-blue-600 dark:text-accent-text" path={CARD_ICONS.active}
                 />
                 <StatCard
-                    label="Awaiting Approval"
+                    label={trans('requester.dashboard.awaiting_approval')}
                     value={stats.awaitingApproval.count}
                     hint={stats.awaitingApproval.breakdown}
                     iconBg="bg-gray-100 dark:bg-panel-3" iconColor="text-gray-600 dark:text-ink-2" path={CARD_ICONS.awaitingApproval}
                 />
                 <StatCard
-                    label="Needs My Response"
+                    label={trans('requester.dashboard.needs_response')}
                     value={stats.needsResponse.count}
-                    hint={stats.needsResponse.count > 0 ? 'Waiting for Response' : 'All caught up'}
+                    hint={stats.needsResponse.count > 0 ? trans('requester.dashboard.hint_waiting_response') : trans('requester.dashboard.hint_all_caught_up')}
                     hintClass="font-semibold text-violet-600 dark:text-violet-text"
                     iconBg="bg-violet-50 dark:bg-violet-soft" iconColor="text-violet-700 dark:text-violet-text" path={CARD_ICONS.needsResponse}
                 />
                 <StatCard
-                    label="Resolved"
+                    label={trans('requester.dashboard.resolved')}
                     value={stats.resolved.count}
-                    hint="Awaiting your confirmation"
+                    hint={trans('requester.dashboard.hint_awaiting_confirmation')}
                     iconBg="bg-emerald-50 dark:bg-ok-soft" iconColor="text-emerald-600 dark:text-ok-text" path={CARD_ICONS.resolved}
                 />
                 <StatCard
-                    label="Closed"
+                    label={trans('requester.dashboard.closed')}
                     value={stats.closed.count}
-                    hint="Last 6 months"
+                    hint={trans('requester.dashboard.hint_last_6_months')}
                     iconBg="bg-gray-100 dark:bg-panel-3" iconColor="text-gray-500 dark:text-ink-2" path={CARD_ICONS.closed}
                 />
             </div>

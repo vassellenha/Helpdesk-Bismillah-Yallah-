@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
@@ -49,8 +50,8 @@ export default function SlaLimitTable({ rows = [], ticketsUrl = '/' }) {
         <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3.5 pt-4">
                 <div>
-                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Tickets Approaching SLA Limit</h2>
-                    <p className="text-xs text-gray-400 dark:text-ink-3">Sorted by least time remaining</p>
+                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.sla_table.title')}</h2>
+                    <p className="text-xs text-gray-400 dark:text-ink-3">{trans('requester.sla_table.subtitle')}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-3 py-2">
@@ -59,11 +60,11 @@ export default function SlaLimitTable({ rows = [], ticketsUrl = '/' }) {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             type="text"
-                            placeholder="Cari tiket…"
+                            placeholder={trans('requester.sla_table.search')}
                             className="w-36 border-none bg-transparent text-[13px] text-gray-900 dark:text-ink-1 outline-none placeholder:text-gray-400 dark:placeholder:text-ink-3"
                         />
                     </div>
-                    <a href={ticketsUrl} className="shrink-0 text-xs font-semibold text-blue-600 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">View all tickets →</a>
+                    <a href={ticketsUrl} className="shrink-0 text-xs font-semibold text-blue-600 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">{trans('requester.sla_table.view_all')}</a>
                 </div>
             </div>
             <div className="overflow-x-auto">
@@ -113,7 +114,7 @@ export default function SlaLimitTable({ rows = [], ticketsUrl = '/' }) {
                         ))}
                         {sorted.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-ink-3">No tickets are approaching their SLA limit.</td>
+                                <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-ink-3">{trans('requester.sla_table.empty')}</td>
                             </tr>
                         )}
                     </tbody>

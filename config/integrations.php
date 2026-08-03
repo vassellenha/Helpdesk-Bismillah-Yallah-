@@ -58,6 +58,19 @@ return [
         // stable payroll key; email can change when someone marries or moves.
         'match_by' => 'nip',
 
+        /*
+        | Second chance when match_by finds nobody. Without it, a single digit of
+        | NIP drift between the API and the helpdesk makes the sync treat an
+        | existing employee as brand new, then skip them on the email unique
+        | index — the feed appears to run while updating nobody.
+        |
+        | The match key itself is never written from a fallback match: NIP is the
+        | identity everything else keys off (including CurrentActor's personas),
+        | so a mismatch is reported for a human to settle rather than silently
+        | rewritten. Set to null to require an exact match_by hit.
+        */
+        'fallback_match_by' => 'email',
+
         // Raw API status value => our users.status enum. Anything unlisted
         // falls back to 'active' so a new status code never locks people out.
         'status_map' => [

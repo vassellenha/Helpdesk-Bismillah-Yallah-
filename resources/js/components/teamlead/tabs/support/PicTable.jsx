@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { t as trans } from '../../../../lib/i18n';
 
 const APP_COLORS = ['#dc2626', '#2563eb', '#059669', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
 
@@ -25,13 +26,13 @@ export default function PicTable({ rows = [] }) {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M3 20c0-3 2.7-5 6-5s6 2 6 5 M16.5 11a3 3 0 1 0-1.5-5.6 M21 20c0-2.6-1.6-4.4-4-4.9"/></svg>
                     </span>
                     <div>
-                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">PIC per Subjek Tiket</h2>
-                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">Penanggung jawab (support) yang mengerjakan tiap subjek layanan</p>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.support.pic_table')}</h2>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.support.pic_hint')}</p>
                     </div>
                 </div>
                 <span className="flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-panel-3 px-3 py-1.5 text-[11px] font-bold text-gray-500 dark:text-ink-2">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9 M9 21a3 3 0 0 0 6 0"/></svg>
-                    Read-only · diatur Administrator
+                    {trans('teamlead.support.pic_readonly')}
                 </span>
             </div>
 
@@ -43,7 +44,7 @@ export default function PicTable({ rows = [] }) {
                     <input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Cari subjek, PIC, aplikasi, atau sub-kategori…"
+                        placeholder={trans('teamlead.support.pic_search')}
                         className="w-full rounded-xl border border-gray-200 dark:border-edge-strong py-2.5 pl-10 pr-4 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400"
                     />
                 </div>
@@ -52,7 +53,7 @@ export default function PicTable({ rows = [] }) {
             <div className="overflow-x-auto">
                 <div className="min-w-[720px]">
                     <div className="grid grid-cols-[170px_150px_180px_1fr] gap-3 border-y border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-2.5 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                        <span>PIC</span><span>Layanan</span><span>Sub-Kategori</span><span>Subjek</span>
+                        <span>{trans('teamlead.columns.pic')}</span><span>{trans('teamlead.columns.service')}</span><span>{trans('teamlead.columns.subcategory')}</span><span>{trans('teamlead.columns.subject')}</span>
                     </div>
                     <div className="max-h-[380px] overflow-y-auto">
                         {filtered.map((r, i) => (
@@ -69,7 +70,7 @@ export default function PicTable({ rows = [] }) {
                                 <span className="truncate text-[12.5px] font-semibold text-gray-900 dark:text-ink-1">{r.subject}</span>
                             </div>
                         ))}
-                        {filtered.length === 0 && <div className="px-6 py-10 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada subjek yang cocok.</div>}
+                        {filtered.length === 0 && <div className="px-6 py-10 text-center text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.support.pic_empty')}</div>}
                     </div>
                 </div>
             </div>

@@ -16,30 +16,21 @@ import MonitoringTab from './tabs/MonitoringTab';
 import EscalationTab from './tabs/EscalationTab';
 import ReportingTab from './tabs/ReportingTab';
 import RiwayatTab from './tabs/RiwayatTab';
+import { t as trans } from '../../lib/i18n';
 
 const TABS = [
-    { key: 'operational', label: 'Operational', icon: 'M4 4h6v7H4Z M14 4h6v5h-6Z M14 13h6v7h-6Z M4 15h6v5H4Z' },
-    { key: 'sla', label: 'SLA', icon: 'M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z' },
-    { key: 'support', label: 'Support', icon: 'M4 13v-2a8 8 0 0 1 16 0v2 M4 14a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2Z M20 14a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-4' },
-    { key: 'management', label: 'Management', icon: 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z' },
-    { key: 'monitoring', label: 'SLA Monitoring', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 2' },
-    { key: 'escalation', label: 'Eskalasi', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 8v5 M12 16h.01' },
-    { key: 'reporting', label: 'Reporting', icon: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z M14 3v5h5 M9 13h6 M9 17h4' },
-    { key: 'riwayat', label: 'Riwayat', icon: 'M12 3a9 9 0 1 0 9 9 M12 3a9 9 0 0 0-9 9 M4 5v4h4 M12 8v4l3 2' },
+    { key: 'operational', labelKey: 'teamlead.nav.operational', icon: 'M4 4h6v7H4Z M14 4h6v5h-6Z M14 13h6v7h-6Z M4 15h6v5H4Z' },
+    { key: 'sla', labelKey: 'teamlead.nav.sla', icon: 'M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z' },
+    { key: 'support', labelKey: 'teamlead.nav.support', icon: 'M4 13v-2a8 8 0 0 1 16 0v2 M4 14a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2Z M20 14a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-4' },
+    { key: 'management', labelKey: 'teamlead.nav.management', icon: 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z' },
+    { key: 'monitoring', labelKey: 'teamlead.nav.monitoring', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 2' },
+    { key: 'escalation', labelKey: 'teamlead.nav.escalation', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 8v5 M12 16h.01' },
+    { key: 'reporting', labelKey: 'teamlead.nav.reporting', icon: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z M14 3v5h5 M9 13h6 M9 17h4' },
+    { key: 'riwayat', labelKey: 'teamlead.nav.riwayat', icon: 'M12 3a9 9 0 1 0 9 9 M12 3a9 9 0 0 0-9 9 M4 5v4h4 M12 8v4l3 2' },
 ];
 
-const TITLES = {
-    operational: ['Operational Dashboard', 'Distribusi, tren, dan volume tiket tim Support IT.'],
-    sla: ['SLA Dashboard', 'Kepatuhan, breach, dan performa SLA per prioritas.'],
-    support: ['Support Dashboard', 'Beban kerja tim serta teguran tiket via Email & WhatsApp.'],
-    management: ['Management Dashboard', 'Tren, isu teratas, aplikasi, dan performa layanan.'],
-    monitoring: ['SLA Monitoring', 'Pantauan tiket aktif dengan sisa waktu SLA.'],
-    escalation: ['Eskalasi', 'Tiket melewati SLA & eskalasi approval (dipantau).'],
-    reporting: ['Reporting', 'Generator laporan berkala dengan export.'],
-    riwayat: ['Riwayat Tindakan', 'Jejak audit semua tindakan korektif Team Lead.'],
-};
 
-const PERIODS = [['today', 'Today'], ['7d', '7 Hari'], ['30d', '30 Hari'], ['quarter', 'Kuartal']];
+const PERIODS = ['today', '7d', '30d', 'quarter'];
 const PERIOD_TABS = ['operational', 'sla', 'support', 'management'];
 
 export default function TeamLeadWorkspace(props) {
@@ -106,7 +97,7 @@ export default function TeamLeadWorkspace(props) {
             params.set('tab', active);
             window.history.replaceState(null, '', `?${params.toString()}`);
         } catch {
-            flash('Gagal memuat data untuk periode ini.');
+            flash(trans('teamlead.common.period_failed'));
         } finally {
             setRefreshing(false);
         }
@@ -114,12 +105,13 @@ export default function TeamLeadWorkspace(props) {
 
     function handleSuccess(res) {
         modal?.onSuccess?.(res);
-        flash(res?.message ?? 'Berhasil.');
+        flash(res?.message ?? trans('teamlead.common.done'));
         setModal(null);
         refresh();
     }
 
-    const [title, subtitle] = TITLES[active];
+    const title = trans(`teamlead.titles.${active}`);
+    const subtitle = trans(`teamlead.titles.${active}_sub`);
     const shared = { ...data, actions };
 
     return (
@@ -138,7 +130,7 @@ export default function TeamLeadWorkspace(props) {
                             }`}
                         >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={t.icon} /></svg>
-                            {t.label}
+                            {trans(t.labelKey)}
                         </button>
                     ))}
                 </nav>
@@ -159,15 +151,15 @@ export default function TeamLeadWorkspace(props) {
             <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 px-7 py-7">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-ink-3">Team Lead Workspace</p>
+                        <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-ink-3">{trans('teamlead.workspace')}</p>
                         <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">{title}</h1>
                         <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{subtitle}</p>
                     </div>
                     {PERIOD_TABS.includes(active) && (
                         <div className="flex items-center gap-2.5">
-                            <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Period</span>
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.period')}</span>
                             <div className="flex gap-1 rounded-xl bg-gray-100 dark:bg-panel-3 p-1">
-                                {PERIODS.map(([key, label]) => (
+                                {PERIODS.map((key) => (
                                     <button
                                         key={key}
                                         type="button"
@@ -175,7 +167,7 @@ export default function TeamLeadWorkspace(props) {
                                         disabled={refreshing}
                                         className={`rounded-lg px-3 py-1.5 text-[12.5px] font-bold transition disabled:cursor-wait ${period === key ? 'bg-white dark:bg-panel-selected text-gray-900 dark:text-ink-1 shadow-sm' : 'text-gray-500 dark:text-ink-2 hover:text-gray-700 dark:hover:text-ink-1'}`}
                                     >
-                                        {label}
+                                        {trans(`teamlead.periods.${key}`)}
                                     </button>
                                 ))}
                             </div>

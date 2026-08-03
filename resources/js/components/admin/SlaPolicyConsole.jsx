@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SlaPolicyModal from './SlaPolicyModal';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 // Always "Jam" — switching between Menit/Jam/Hari depending on how evenly a
@@ -52,7 +53,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
             const updated = await apiFetch(`/admin/sla-policies/${policy.id}/toggle`, { method: 'POST' });
             setPolicies((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
         } catch (e) {
-            setError(e.message || 'Gagal memperbarui status.');
+            setError(e.message || trans('admin.sla.status_failed'));
         }
     }
 
@@ -60,21 +61,21 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
         <div>
             <div className="mb-6 flex items-start justify-between gap-3">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">Konfigurasi SLA</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Atur target SLA, peringatan, notifikasi pelanggaran, dan eskalasi otomatis.</p>
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.sla.title')}</h1>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.sla.subtitle')}</p>
                 </div>
                 <button onClick={() => setModal('add')} className="shrink-0 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
-                    + Tambah SLA Policy
+                    {trans('admin.sla.add_policy')}
                 </button>
             </div>
 
             {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
             <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <Stat label="SLA POLICY AKTIF" value={activeCount} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
-                <Stat label="TICKET WITHIN SLA" value={`${ticketSlaBreakdown[0]?.percent ?? 0}%`} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
-                <Stat label="SLA WARNING" value={`${ticketSlaBreakdown[1]?.percent ?? 0}%`} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
-                <Stat label="SLA BREACH" value={`${ticketSlaBreakdown[2]?.percent ?? 0}%`} bg="bg-red-50 dark:bg-bad-soft" color="text-red-600 dark:text-bad-text" />
+                <Stat label={trans('admin.sla.stat_policy_active')} value={activeCount} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
+                <Stat label={trans('admin.sla.stat_within')} value={`${ticketSlaBreakdown[0]?.percent ?? 0}%`} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
+                <Stat label={trans('admin.sla.stat_warning')} value={`${ticketSlaBreakdown[1]?.percent ?? 0}%`} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
+                <Stat label={trans('admin.sla.stat_breach')} value={`${ticketSlaBreakdown[2]?.percent ?? 0}%`} bg="bg-red-50 dark:bg-bad-soft" color="text-red-600 dark:text-bad-text" />
             </div>
 
             <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
@@ -82,14 +83,14 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                     <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                         <thead>
                             <tr className="bg-gray-50 dark:bg-panel-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                <th className="px-5 py-3">Nama SLA</th>
-                                <th className="px-5 py-3">Prioritas</th>
-                                <th className="px-5 py-3">Response Time</th>
-                                <th className="px-5 py-3">Resolution Time</th>
-                                <th className="px-5 py-3">Escalated Time</th>
-                                <th className="px-5 py-3">SLA Warning</th>
-                                <th className="px-5 py-3">Status</th>
-                                <th className="px-5 py-3 text-right">Aksi</th>
+                                <th className="px-5 py-3">{trans('admin.sla.col_name')}</th>
+                                <th className="px-5 py-3">{trans('admin.sla.col_priority')}</th>
+                                <th className="px-5 py-3">{trans('admin.sla.col_response')}</th>
+                                <th className="px-5 py-3">{trans('admin.sla.col_resolution')}</th>
+                                <th className="px-5 py-3">{trans('admin.sla.col_escalated')}</th>
+                                <th className="px-5 py-3">{trans('admin.sla.col_warning')}</th>
+                                <th className="px-5 py-3">{trans('admin.common.status')}</th>
+                                <th className="px-5 py-3 text-right">{trans('admin.common.action')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-transparent">
@@ -106,7 +107,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                                     <td className="px-5 py-3">
                                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${p.status === 'active' ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text' : 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2'}`}>
                                             <span className={`h-1.5 w-1.5 rounded-full ${p.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                                            {p.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                                            {p.status === 'active' ? trans('admin.common.active') : trans('admin.common.inactive')}
                                         </span>
                                     </td>
                                     <td className="px-5 py-3 text-right">
@@ -134,7 +135,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                         <EditIcon /> Edit
                     </button>
                     <button onClick={() => toggleStatus(menu.policy)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
-                        <ToggleIcon /> {menu.policy.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
+                        <ToggleIcon /> {menu.policy.status === 'active' ? trans('admin.common.deactivate') : trans('admin.common.activate')}
                     </button>
                 </div>
             )}
@@ -142,9 +143,8 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
             <div className="mt-6 flex items-start gap-2 rounded-lg bg-blue-50 dark:bg-accent-soft p-4 text-sm text-blue-900 dark:text-accent-text">
                 <span className="mt-0.5 h-full w-1 shrink-0 rounded bg-blue-600 dark:bg-blue-500" />
                 <p>
-                    <strong className="block">Bagaimana SLA dihitung</strong>
-                    Sistem menghitung SLA secara otomatis sejak tiket dibuat. Notifikasi SLA Warning dikirim sebelum tenggat tercapai, dan notifikasi SLA
-                    Breach dikirim setelah tenggat terlewati, sekaligus memicu eskalasi otomatis sesuai aturan yang ditetapkan.
+                    <strong className="block">{trans('admin.sla.how_calculated')}</strong>
+                    {trans('admin.sla.how_body')}
                 </p>
             </div>
 
@@ -215,21 +215,21 @@ function PolicyDetailModal({ policy, onClose }) {
             <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-6 py-4">
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">Detail SLA Policy</h2>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">{trans('admin.sla.detail_title')}</h2>
                         <p className="mt-0.5 text-sm text-gray-500 dark:text-ink-2">{policy.policy_name}</p>
                     </div>
                     <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600">✕</button>
                 </div>
                 <div className="grid grid-cols-2 gap-4 px-6 py-5 text-sm">
-                    <Detail label="Prioritas" value={policy.priority} />
-                    <Detail label="Response Time" value={formatMinutes(policy.response_time_minutes)} />
-                    <Detail label="Resolution Time" value={formatMinutes(policy.resolution_time_minutes)} />
-                    <Detail label="Escalated Time" value={formatMinutes(policy.escalation_extension_minutes)} />
-                    <Detail label="Warning Threshold" value={`${policy.warning_threshold_percent}%`} />
-                    <Detail label="Status" value={policy.status === 'active' ? 'Aktif' : 'Nonaktif'} />
+                    <Detail label={trans('admin.sla.col_priority')} value={policy.priority} />
+                    <Detail label={trans('admin.sla.col_response')} value={formatMinutes(policy.response_time_minutes)} />
+                    <Detail label={trans('admin.sla.col_resolution')} value={formatMinutes(policy.resolution_time_minutes)} />
+                    <Detail label={trans('admin.sla.col_escalated')} value={formatMinutes(policy.escalation_extension_minutes)} />
+                    <Detail label={trans('admin.sla.warning_threshold')} value={`${policy.warning_threshold_percent}%`} />
+                    <Detail label={trans('admin.common.status')} value={policy.status === 'active' ? trans('admin.common.active') : trans('admin.common.inactive')} />
                 </div>
                 <div className="flex justify-end border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
-                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">Tutup</button>
+                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">{trans('admin.common.close')}</button>
                 </div>
             </div>
         </div>

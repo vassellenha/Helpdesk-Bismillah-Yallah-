@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { apiFetch } from '../../../lib/api';
+import { t as trans } from '../../../lib/i18n';
 
 const PRIORITY_PILL = {
     Critical: 'bg-red-50 dark:bg-bad-soft text-red-600 dark:text-bad-text',
@@ -61,8 +62,8 @@ function AppTrend({ appTrend = {} }) {
         <div className="flex h-full flex-col gap-4 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
                 <div>
-                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Tren per Aplikasi</h2>
-                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{focus ? `Menampilkan tren ${focus}` : 'Pilih aplikasi untuk fokus'}</p>
+                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.operational.by_app')}</h2>
+                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{focus ? trans('teamlead.operational.showing_trend', { app: focus }) : trans('teamlead.operational.pick_app')}</p>
                 </div>
                 <div className="flex items-center gap-2" ref={ref}>
                     <div className="relative">
@@ -70,7 +71,7 @@ function AppTrend({ appTrend = {} }) {
                             onClick={() => setOpen((v) => !v)}
                             className="flex max-w-[190px] items-center gap-2 rounded-full bg-gray-50 dark:bg-panel-3 px-3.5 py-2 text-[12px] font-bold text-gray-800 dark:text-ink-1 hover:bg-blue-50 dark:hover:bg-panel-hover"
                         >
-                            <span className="truncate">{focus ?? 'Semua aplikasi'}</span>
+                            <span className="truncate">{focus ?? trans('teamlead.operational.all_app')}</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M6 9l6 6 6-6"/></svg>
                         </button>
                         {open && (
@@ -83,7 +84,7 @@ function AppTrend({ appTrend = {} }) {
                                             onClick={() => { setFocus(name); setOpen(false); }}
                                             className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-[12.5px] transition ${activeItem ? 'bg-blue-50 dark:bg-accent-soft font-bold text-blue-700 dark:text-accent-text' : 'font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
                                         >
-                                            {name ?? 'Semua aplikasi'}
+                                            {name ?? trans('teamlead.operational.all_app')}
                                             {activeItem && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-11"/></svg>}
                                         </button>
                                     );
@@ -92,7 +93,7 @@ function AppTrend({ appTrend = {} }) {
                         )}
                     </div>
                     {focus && (
-                        <button onClick={() => setFocus(null)} className="rounded-full bg-blue-50 dark:bg-accent-soft px-3 py-2 text-[11px] font-bold text-blue-700 dark:text-accent-text hover:bg-blue-100 dark:hover:bg-panel-hover">Reset</button>
+                        <button onClick={() => setFocus(null)} className="rounded-full bg-blue-50 dark:bg-accent-soft px-3 py-2 text-[11px] font-bold text-blue-700 dark:text-accent-text hover:bg-blue-100 dark:hover:bg-panel-hover">{trans('teamlead.common.reset')}</button>
                     )}
                 </div>
             </div>
@@ -137,7 +138,7 @@ function AppTrend({ appTrend = {} }) {
                         <span className="font-extrabold text-gray-900 dark:text-ink-1">{s.total}</span>
                     </button>
                 ))}
-                {series.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada data.</p>}
+                {series.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.common.no_data')}</p>}
             </div>
         </div>
     );
@@ -156,13 +157,13 @@ function EscalationRecs({ rows = [], escalateUrl, onRaised }) {
                 body: JSON.stringify({ service: r.service, subcat: r.subcat, to: r.to }),
             });
             setDone((d) => ({ ...d, [r.name]: true }));
-            setToast(res?.message ?? 'Prioritas dinaikkan.');
+            setToast(res?.message ?? trans('teamlead.operational.raised'));
             setTimeout(() => setToast(null), 3200);
             // Refetch the dashboard so the new priority shows in SLA Monitoring
             // and everywhere else — not just when opening the ticket detail.
             onRaised?.();
         } catch (e) {
-            setToast(e.message || 'Gagal menaikkan prioritas.');
+            setToast(e.message || trans('teamlead.operational.raise_failed'));
             setTimeout(() => setToast(null), 3200);
         } finally {
             setBusy(null);
@@ -177,14 +178,14 @@ function EscalationRecs({ rows = [], escalateUrl, onRaised }) {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 16V9 M8.5 12.5 12 9l3.5 3.5"/></svg>
                     </span>
                     <div>
-                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Rekomendasi Eskalasi</h2>
-                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">Kategori tiket yang disarankan naik satu tingkat prioritas</p>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.operational.recommendation')}</h2>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.operational.recommendation_hint')}</p>
                     </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-amber-50 dark:bg-warn-soft px-3 py-1 text-[12px] font-bold text-amber-600 dark:text-warn-text">{rows.filter((r) => !done[r.name]).length} disarankan</span>
+                <span className="shrink-0 rounded-full bg-amber-50 dark:bg-warn-soft px-3 py-1 text-[12px] font-bold text-amber-600 dark:text-warn-text">{trans('teamlead.operational.suggested', { count: rows.filter((r) => !done[r.name]).length })}</span>
             </div>
             <div className="grid grid-cols-[1.6fr_56px_120px_110px] gap-3 border-y border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                <span>Kategori / Layanan</span><span className="text-center">Tiket</span><span>Prioritas</span><span className="text-right">Aksi</span>
+                <span>{trans('teamlead.operational.category_service')}</span><span className="text-center">{trans('teamlead.columns.ticket')}</span><span>{trans('teamlead.columns.priority')}</span><span className="text-right">{trans('teamlead.common.action')}</span>
             </div>
             {rows.map((r) => (
                 <div key={r.name} className="grid grid-cols-[1.6fr_56px_120px_110px] items-center gap-3 border-b border-gray-50 dark:border-transparent dark:even:bg-white/[0.03] px-6 py-4 last:border-0 hover:bg-gray-50/50 dark:hover:bg-panel-hover">
@@ -205,18 +206,18 @@ function EscalationRecs({ rows = [], escalateUrl, onRaised }) {
                         {done[r.name] ? (
                             <span className="flex items-center gap-1.5 text-[12px] font-bold text-emerald-600 dark:text-ok-text">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M8.5 12l2.5 2.5 4.5-5"/></svg>
-                                Dinaikkan
+                                {trans('teamlead.operational.raised_badge')}
                             </span>
                         ) : (
                             <button onClick={() => raise(r)} disabled={busy === r.name} className="flex items-center gap-1.5 rounded-xl bg-blue-600 dark:bg-blue-500 px-3.5 py-2 text-[12px] font-bold text-white shadow-sm hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-60">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M6 11l6-6 6 6"/></svg>
-                                {busy === r.name ? 'Memproses…' : 'Naikkan'}
+                                {busy === r.name ? trans('teamlead.common.processing') : trans('teamlead.operational.raise')}
                             </button>
                         )}
                     </div>
                 </div>
             ))}
-            {rows.length === 0 && <p className="px-6 py-10 text-center text-sm text-emerald-600 dark:text-ok-text">Tidak ada rekomendasi eskalasi. 🎉</p>}
+            {rows.length === 0 && <p className="px-6 py-10 text-center text-sm text-emerald-600 dark:text-ok-text">{trans('teamlead.operational.no_recommendation')}</p>}
             {toast && <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
         </div>
     );
@@ -231,25 +232,25 @@ function CreatedVsResolved({ ticketTrend = [] }) {
         <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
             <div className="flex items-start justify-between">
                 <div>
-                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Tiket Dibuat vs Diselesaikan</h2>
-                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">Tren bulanan · 6 bulan terakhir</p>
+                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.operational.created_vs_resolved')}</h2>
+                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.operational.monthly_trend')}</p>
                 </div>
                 <div className="flex gap-4 text-[12px] font-semibold text-gray-500 dark:text-ink-2">
-                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500" />Dibuat</span>
-                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Diselesaikan</span>
+                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500" />{trans('teamlead.columns.created')}</span>
+                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />{trans('teamlead.columns.resolved')}</span>
                 </div>
             </div>
             <div className="flex flex-wrap gap-2.5">
                 <div className="min-w-[90px] flex-1 rounded-xl bg-blue-50/60 px-3.5 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Dibuat</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.columns.created')}</p>
                     <p className="text-lg font-extrabold text-blue-700 dark:text-accent-text">{created.toLocaleString('id-ID')}</p>
                 </div>
                 <div className="min-w-[90px] flex-1 rounded-xl bg-emerald-50/60 px-3.5 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Diselesaikan</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.columns.resolved')}</p>
                     <p className="text-lg font-extrabold text-emerald-600 dark:text-ok-text">{resolved.toLocaleString('id-ID')}</p>
                 </div>
                 <div className="min-w-[90px] flex-1 rounded-xl bg-gray-50 dark:bg-panel-3 px-3.5 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Rasio Selesai</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.operational.resolve_ratio')}</p>
                     <p className="text-lg font-extrabold text-gray-900 dark:text-ink-1">{rate}%</p>
                 </div>
             </div>
@@ -266,8 +267,8 @@ function CreatedVsResolved({ ticketTrend = [] }) {
                         <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--chart-axis)' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 11, fill: 'var(--chart-axis)' }} axisLine={false} tickLine={false} allowDecimals={false} width={34} />
                         <Tooltip contentStyle={{ borderRadius: 8, borderColor: 'var(--chart-tooltip-border)', backgroundColor: 'var(--chart-tooltip-bg)', color: 'var(--chart-tooltip-text)', fontSize: 12 }} />
-                        <Area type="monotone" dataKey="created" name="Dibuat" stroke="var(--chart-blue)" strokeWidth={2.5} fill="url(#tlCreatedOp)" />
-                        <Line type="monotone" dataKey="resolved" name="Diselesaikan" stroke="var(--chart-green)" strokeWidth={2.5} strokeDasharray="6 4" dot={false} />
+                        <Area type="monotone" dataKey="created" name={trans('teamlead.columns.created')} stroke="var(--chart-blue)" strokeWidth={2.5} fill="url(#tlCreatedOp)" />
+                        <Line type="monotone" dataKey="resolved" name={trans('teamlead.columns.resolved')} stroke="var(--chart-green)" strokeWidth={2.5} strokeDasharray="6 4" dot={false} />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
@@ -279,8 +280,8 @@ function CategoryTree({ tree = [] }) {
     return (
         <div className="flex flex-col gap-5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
             <div className="flex items-baseline justify-between">
-                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Tiket per Kategori</h2>
-                <span className="text-[11px] text-gray-400 dark:text-ink-3">Kategori › Sub-kategori</span>
+                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.operational.by_category')}</h2>
+                <span className="text-[11px] text-gray-400 dark:text-ink-3">{trans('teamlead.operational.category_path')}</span>
             </div>
             <div className="flex flex-col gap-5">
                 {tree.map((c) => (
@@ -308,7 +309,7 @@ function CategoryTree({ tree = [] }) {
                         </div>
                     </div>
                 ))}
-                {tree.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">Belum ada data.</p>}
+                {tree.length === 0 && <p className="text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.common.no_data')}</p>}
             </div>
         </div>
     );

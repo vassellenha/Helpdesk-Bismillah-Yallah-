@@ -2,22 +2,23 @@ import { useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './Modal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 
 // Split around the phone input, which needs its own +62 prefix markup.
 const FIELDS_BEFORE_PHONE = [
-    ['name', 'Nama Lengkap', 'Nama lengkap pengguna'],
-    ['nip', 'NIP', 'Nomor Induk Pegawai'],
-    ['email', 'Email Korporat', 'nama@adhi.co.id'],
+    ['name', 'full_name'],
+    ['nip', 'nip'],
+    ['email', 'email'],
 ];
 
 const FIELDS_AFTER_PHONE = [
-    ['address', 'Alamat', 'Alamat lengkap pengguna'],
-    ['unit', 'Unit Kerja', 'Unit / divisi'],
-    ['jabatan', 'Jabatan', 'Jabatan pengguna'],
-    ['kode_departemen', 'Kode Departemen', 'Kode departemen (jika ada)'],
-    ['kode_divisi', 'Kode Divisi', 'Kode divisi (jika ada)'],
-    ['kode_proyek', 'Kode Proyek', 'Kode proyek (jika ada)'],
-    ['nama_proyek', 'Nama Proyek', 'Nama proyek (jika ada)'],
+    ['address', 'address'],
+    ['unit', 'unit'],
+    ['jabatan', 'jabatan'],
+    ['kode_departemen', 'kode_departemen'],
+    ['kode_divisi', 'kode_divisi'],
+    ['kode_proyek', 'kode_proyek'],
+    ['nama_proyek', 'nama_proyek'],
 ];
 
 const ROLE_DESCRIPTIONS = {
@@ -64,7 +65,7 @@ export default function AddUserModal({ roles, onClose, onSave }) {
             const created = await apiFetch('/admin/users', { method: 'POST', body: JSON.stringify({ ...form, role_ids: roleIds }) });
             onSave(created);
         } catch (e) {
-            setError(e.message || 'Gagal menambahkan user.');
+            setError(e.message || trans('admin.user_form.add_failed'));
         } finally {
             setSaving(false);
         }
@@ -72,56 +73,56 @@ export default function AddUserModal({ roles, onClose, onSave }) {
 
     return (
         <Modal onClose={onClose} maxWidth="max-w-lg">
-            <ModalHeader title="Tambah User" subtitle="Lengkapi data pengguna dan penugasan role." onClose={onClose} />
+            <ModalHeader title={trans('admin.user_form.add_title')} subtitle={trans('admin.user_form.add_subtitle')} onClose={onClose} />
 
             <div className="space-y-4 overflow-y-auto px-6 py-5">
                 {error && <p className="rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
-                {FIELDS_BEFORE_PHONE.map(([key, label, placeholder]) => (
-                    <Field key={key} label={label}>
+                {FIELDS_BEFORE_PHONE.map(([key, k, fixed]) => (
+                    <Field key={key} label={trans(`admin.user_form.${k}`)}>
                         <input
                             value={form[key]}
                             onChange={(e) => set(key, e.target.value)}
-                            placeholder={placeholder}
+                            placeholder={fixed ?? trans(`admin.user_form.${k}_hint`)}
                             className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                         />
                     </Field>
                 ))}
 
-                <Field label="Username">
+                <Field label={trans('admin.user_form.username')}>
                     <input
                         value={form.username}
                         onChange={(e) => { setUsernameEdited(true); set('username', e.target.value); }}
-                        placeholder="Otomatis mengikuti email"
+                        placeholder={trans('admin.user_form.username_hint')}
                         className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                     />
-                    <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">Dikosongkan berarti memakai email korporat.</p>
+                    <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">{trans('admin.user_form.username_note')}</p>
                 </Field>
 
-                <Field label="Nomor Telepon">
+                <Field label={trans('admin.user_form.phone')}>
                     <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 focus-within:border-blue-400 focus-within:bg-white dark:focus-within:bg-panel-hover">
                         <span className="flex items-center px-3 text-sm text-gray-500 dark:text-ink-2">+62</span>
                         <input
                             value={form.phone}
                             onChange={(e) => set('phone', e.target.value)}
-                            placeholder="Contoh: 0812xxxxxxx"
+                            placeholder={trans('admin.user_form.phone_hint')}
                             className="w-full bg-transparent px-1 py-2.5 text-sm focus:outline-none"
                         />
                     </div>
                 </Field>
 
-                {FIELDS_AFTER_PHONE.map(([key, label, placeholder]) => (
-                    <Field key={key} label={label}>
+                {FIELDS_AFTER_PHONE.map(([key, k, fixed]) => (
+                    <Field key={key} label={trans(`admin.user_form.${k}`)}>
                         <input
                             value={form[key]}
                             onChange={(e) => set(key, e.target.value)}
-                            placeholder={placeholder}
+                            placeholder={fixed ?? trans(`admin.user_form.${k}_hint`)}
                             className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                         />
                     </Field>
                 ))}
 
-                <Field label="Role">
+                <Field label={trans('admin.user_form.role')}>
                     <div className="space-y-2">
                         {roles.filter((r) => r.status_raw === 'active').map((r) => (
                             <label
@@ -139,18 +140,18 @@ export default function AddUserModal({ roles, onClose, onSave }) {
                                 />
                                 <span>
                                     <span className="block font-semibold text-gray-900 dark:text-ink-1">{r.name}</span>
-                                    <span className="text-xs text-gray-500 dark:text-ink-2">{ROLE_DESCRIPTIONS[r.name] ?? 'Role kustom.'}</span>
+                                    <span className="text-xs text-gray-500 dark:text-ink-2">{trans(`admin.role_desc.${r.name}`, {}, trans('admin.user_form.custom_role'))}</span>
                                 </span>
                             </label>
                         ))}
                     </div>
                 </Field>
 
-                <Field label="Akses Helpdesk">
+                <Field label={trans('admin.user_form.helpdesk_access')}>
                     <SelectMenu
                         value={form.helpdesk_access}
                         onChange={(v) => set('helpdesk_access', v)}
-                        options={[{ value: 'enabled', label: 'Aktif' }, { value: 'disabled', label: 'Nonaktif' }]}
+                        options={[{ value: 'enabled', label: trans('admin.common.active') }, { value: 'disabled', label: trans('admin.common.inactive') }]}
                     />
                     <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">
                         Status kepegawaian diisi otomatis dari API perusahaan saat sinkronisasi berikutnya.
@@ -159,13 +160,13 @@ export default function AddUserModal({ roles, onClose, onSave }) {
             </div>
 
             <ModalFooter>
-                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
+                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">{trans('admin.common.cancel')}</button>
                 <button
                     onClick={save}
                     disabled={saving || !form.name || !form.email || roleIds.length === 0}
                     className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                    {saving ? 'Menyimpan...' : 'Simpan'}
+                    {saving ? trans('admin.common.saving') : trans('admin.common.save')}
                 </button>
             </ModalFooter>
         </Modal>

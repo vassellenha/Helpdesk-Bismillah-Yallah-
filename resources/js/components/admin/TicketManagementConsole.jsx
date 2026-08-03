@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 import RatingStars from '../RatingStars';
 
 const STATUS_STYLES = {
@@ -34,18 +35,32 @@ const SLA_TEXT_STYLES = {
     none: 'text-gray-400 dark:text-ink-3',
 };
 
-const PERIODS = ['Semua', 'Hari Ini', '7 Hari', '30 Hari', 'Bulan Ini'];
+// Stable period keys — the switch below and the pill labels must not drift
+// apart when the locale changes.
+// Language-independent filter sentinels: these are compared against real
+// status/priority/category/requester/PIC values coming from the server.
+const ALL = { status: '__all_status', priority: '__all_priority', category: '__all_category', requester: '__all_requester', pic: '__all_pic' };
+const UNASSIGNED = '__unassigned';
+
+const PERIODS = ['all', 'today', '7d', '30d', 'month'];
+const PERIOD_LABEL = {
+    all: 'admin.tickets.period_all',
+    today: 'admin.tickets.period_today',
+    '7d': 'admin.tickets.period_7d',
+    '30d': 'admin.tickets.period_30d',
+    month: 'admin.tickets.period_month',
+};
 
 export default function TicketManagementConsole({ tickets: initialTickets, stats, filterOptions, exportUrl }) {
     const [tickets, setTickets] = useState(initialTickets);
     const [ratingBusy, setRatingBusy] = useState(null); // ticketNo currently saving
     const [search, setSearch] = useState('');
-    const [period, setPeriod] = useState('Semua');
-    const [statusFilter, setStatusFilter] = useState('Semua Status');
-    const [priorityFilter, setPriorityFilter] = useState('Semua Priority');
-    const [categoryFilter, setCategoryFilter] = useState('Semua Kategori');
-    const [requesterFilter, setRequesterFilter] = useState('Semua Requester');
-    const [picFilter, setPicFilter] = useState('Semua PIC');
+    const [period, setPeriod] = useState('all');
+    const [statusFilter, setStatusFilter] = useState(ALL.status);
+    const [priorityFilter, setPriorityFilter] = useState(ALL.priority);
+    const [categoryFilter, setCategoryFilter] = useState(ALL.category);
+    const [requesterFilter, setRequesterFilter] = useState(ALL.requester);
+    const [picFilter, setPicFilter] = useState(ALL.pic);
     const [menu, setMenu] = useState(null); // { ticket, top, left }
     const [detailTicket, setDetailTicket] = useState(null);
     const menuRef = useRef(null);
@@ -69,12 +84,12 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                     .filter(Boolean)
                     .some((v) => v.toLowerCase().includes(q));
 
-            const matchesStatus = statusFilter === 'Semua Status' || t.status === statusFilter;
-            const matchesPriority = priorityFilter === 'Semua Priority' || t.priority === priorityFilter;
-            const matchesCategory = categoryFilter === 'Semua Kategori' || t.issueCategory === categoryFilter;
-            const matchesRequester = requesterFilter === 'Semua Requester' || t.requesterName === requesterFilter;
+            const matchesStatus = statusFilter === ALL.status || t.status === statusFilter;
+            const matchesPriority = priorityFilter === ALL.priority || t.priority === priorityFilter;
+            const matchesCategory = categoryFilter === ALL.category || t.issueCategory === categoryFilter;
+            const matchesRequester = requesterFilter === ALL.requester || t.requesterName === requesterFilter;
             const matchesPic =
-                picFilter === 'Semua PIC' || (picFilter === 'Menunggu Assignment' ? !t.pic : t.pic === picFilter);
+                picFilter === ALL.pic || (picFilter === UNASSIGNED ? !t.pic : t.pic === picFilter);
 
             const matchesPeriod = period === 'Semua' || withinPeriod(new Date(t.createdAtIso), now, period);
 
@@ -85,11 +100,11 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
     function resetFilters() {
         setSearch('');
         setPeriod('Semua');
-        setStatusFilter('Semua Status');
-        setPriorityFilter('Semua Priority');
-        setCategoryFilter('Semua Kategori');
-        setRequesterFilter('Semua Requester');
-        setPicFilter('Semua PIC');
+        setStatusFilter(ALL.status);
+        setPriorityFilter(ALL.priority);
+        setCategoryFilter(ALL.category);
+        setRequesterFilter(ALL.requester);
+        setPicFilter(ALL.pic);
     }
 
     function openMenu(e, ticket) {
@@ -115,7 +130,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
             const res = await apiFetch(`/admin/ticket-management/${ticket.ticketNo}/rating-toggle`, { method: 'PATCH' });
             setTickets((prev) => prev.map((t) => (t.ticketNo === ticket.ticketNo ? { ...t, ratingActive: res.ratingActive } : t)));
         } catch (e) {
-            alert(e.message || 'Gagal mengubah status rating.');
+            alert(e.message || trans('admin.tickets.rating_failed'));
         } finally {
             setRatingBusy(null);
         }
@@ -125,7 +140,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
         <div>
             <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">Ticket Management</h1>
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.tickets.title')}</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Seluruh transaksi tiket Incident, Service Request, dan Role Access.</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -136,12 +151,12 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
             </div>
 
             <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
-                <Stat icon={<TicketIcon />} value={stats.total} label="TOTAL TICKET" bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
-                <Stat icon={<ArchiveIcon />} value={stats.open} label="OPEN" bg="bg-gray-100 dark:bg-panel-3" color="text-gray-600 dark:text-ink-2" />
-                <Stat icon={<DotIcon />} value={stats.waitingApproval} label="WAITING APPROVAL" bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
-                <Stat icon={<GearIcon />} value={stats.inProgress} label="IN PROGRESS" bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
-                <Stat icon={<CheckIcon />} value={stats.resolvedToday} label="RESOLVED TODAY" bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
-                <Stat icon={<WarningIcon />} value={stats.overSla} label="OVER SLA" bg="bg-red-50 dark:bg-bad-soft" color="text-red-600 dark:text-bad-text" />
+                <Stat icon={<TicketIcon />} value={stats.total} label={trans('admin.tickets.stat_total')} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
+                <Stat icon={<ArchiveIcon />} value={stats.open} label={trans('admin.tickets.stat_open')} bg="bg-gray-100 dark:bg-panel-3" color="text-gray-600 dark:text-ink-2" />
+                <Stat icon={<DotIcon />} value={stats.waitingApproval} label={trans('admin.tickets.stat_waiting_approval')} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
+                <Stat icon={<GearIcon />} value={stats.inProgress} label={trans('admin.tickets.stat_in_progress')} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
+                <Stat icon={<CheckIcon />} value={stats.resolvedToday} label={trans('admin.tickets.stat_resolved_today')} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
+                <Stat icon={<WarningIcon />} value={stats.overSla} label={trans('admin.tickets.stat_over_sla')} bg="bg-red-50 dark:bg-bad-soft" color="text-red-600 dark:text-bad-text" />
             </div>
 
             <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
@@ -149,7 +164,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Cari Ticket ID, layanan, requester, atau kategori"
+                        placeholder={trans('admin.tickets.search')}
                         className="w-full max-w-md rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex items-center rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1 text-sm">
@@ -159,39 +174,39 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                                 onClick={() => setPeriod(p)}
                                 className={`rounded-md px-3 py-1.5 font-medium ${period === p ? 'bg-gray-900 dark:bg-panel-selected text-white' : 'text-gray-500 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
                             >
-                                {p}
+                                {trans(PERIOD_LABEL[p])}
                             </button>
                         ))}
                     </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 dark:border-edge px-4 py-3">
-                    <FilterSelect value={statusFilter} onChange={setStatusFilter} allLabel="Semua Status" options={filterOptions.statuses} />
-                    <FilterSelect value={priorityFilter} onChange={setPriorityFilter} allLabel="Semua Priority" options={filterOptions.priorities} />
-                    <FilterSelect value={categoryFilter} onChange={setCategoryFilter} allLabel="Semua Kategori" options={filterOptions.issueCategories} />
-                    <FilterSelect value={requesterFilter} onChange={setRequesterFilter} allLabel="Semua Requester" options={filterOptions.requesters} />
-                    <FilterSelect value={picFilter} onChange={setPicFilter} allLabel="Semua PIC" options={[...filterOptions.pics, 'Menunggu Assignment']} />
+                    <FilterSelect value={statusFilter} onChange={setStatusFilter} allLabel={trans('admin.tickets.all_status')} allValue={ALL.status} options={filterOptions.statuses} />
+                    <FilterSelect value={priorityFilter} onChange={setPriorityFilter} allLabel={trans('admin.tickets.all_priority')} allValue={ALL.priority} options={filterOptions.priorities} />
+                    <FilterSelect value={categoryFilter} onChange={setCategoryFilter} allLabel={trans('admin.tickets.all_category')} allValue={ALL.category} options={filterOptions.issueCategories} />
+                    <FilterSelect value={requesterFilter} onChange={setRequesterFilter} allLabel={trans('admin.tickets.all_requester')} allValue={ALL.requester} options={filterOptions.requesters} />
+                    <FilterSelect value={picFilter} onChange={setPicFilter} allLabel={trans('admin.tickets.all_pic')} allValue={ALL.pic} options={[...filterOptions.pics, UNASSIGNED]} />
                     <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">
                         Reset Filter
                     </button>
                 </div>
 
-                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">Menampilkan {filtered.length} dari {tickets.length} ticket</p>
+                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">{trans('admin.tickets.showing', { shown: filtered.length, total: tickets.length })}</p>
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                         <thead>
                             <tr className="bg-gray-50 dark:bg-panel-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                <th className="px-5 py-3">Ticket ID</th>
-                                <th className="px-5 py-3">Layanan</th>
-                                <th className="px-5 py-3">Requester</th>
-                                <th className="px-5 py-3">Priority</th>
-                                <th className="px-5 py-3">PIC</th>
-                                <th className="px-5 py-3">Status</th>
-                                <th className="px-5 py-3">SLA</th>
-                                <th className="px-5 py-3">Rating</th>
-                                <th className="px-5 py-3">Tanggal</th>
-                                <th className="px-5 py-3 text-right">Aksi</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_id')}</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_service')}</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_requester')}</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_priority')}</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_pic')}</th>
+                                <th className="px-5 py-3">{trans('admin.common.status')}</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_sla')}</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_rating')}</th>
+                                <th className="px-5 py-3">{trans('admin.tickets.col_date')}</th>
+                                <th className="px-5 py-3 text-right">{trans('admin.common.action')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-transparent">
@@ -214,7 +229,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                                         </span>
                                     </td>
                                     <td className="px-5 py-3 text-gray-700 dark:text-ink-2">
-                                        {t.pic ?? <span className="font-medium text-amber-600 dark:text-warn-text">Menunggu Assignment</span>}
+                                        {t.pic ?? <span className="font-medium text-amber-600 dark:text-warn-text">{trans('admin.tickets.unassigned')}</span>}
                                     </td>
                                     <td className="px-5 py-3">
                                         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[t.status] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20'}`}>
@@ -235,7 +250,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={10} className="px-5 py-8 text-center text-gray-400 dark:text-ink-3">Tidak ada ticket yang cocok dengan filter ini.</td>
+                                    <td colSpan={10} className="px-5 py-8 text-center text-gray-400 dark:text-ink-3">{trans('admin.tickets.empty')}</td>
                                 </tr>
                             )}
                         </tbody>
@@ -263,24 +278,24 @@ function withinPeriod(date, now, period) {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     switch (period) {
-        case 'Hari Ini':
+        case 'today':
             return date >= startOfToday;
         case '7 Hari':
             return date >= new Date(startOfToday.getTime() - 6 * 86400000);
         case '30 Hari':
             return date >= new Date(startOfToday.getTime() - 29 * 86400000);
-        case 'Bulan Ini':
+        case 'month':
             return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
         default:
             return true;
     }
 }
 
-function FilterSelect({ value, onChange, allLabel, options }) {
+function FilterSelect({ value, onChange, allLabel, allValue, options }) {
     const opts = useMemo(() => [
-        { value: allLabel, label: allLabel },
-        ...options.map((o) => ({ value: o, label: o })),
-    ], [allLabel, options]);
+        { value: allValue, label: allLabel },
+        ...options.map((o) => ({ value: o, label: o === UNASSIGNED ? trans('admin.tickets.unassigned') : o })),
+    ], [allLabel, allValue, options]);
 
     return <SelectMenu value={value} onChange={onChange} options={opts} />;
 }
@@ -334,19 +349,19 @@ function TicketDetailModal({ ticket: t, onClose }) {
                 </div>
 
                 <div className="overflow-y-auto px-6 py-5">
-                    <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-ink-1">Informasi Ticket</h3>
+                    <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.ticket_info')}</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="grid grid-cols-2 gap-3">
-                            <Detail label="Ticket ID" value={t.ticketNo} />
-                            <Detail label="Kategori" value={t.issueCategory} />
-                            <Detail label="Layanan" value={[t.service, t.subcategory, t.subject].filter(Boolean).join(' • ')} span />
-                            <Detail label="Requester" value={t.requesterName} />
-                            <Detail label="Tanggal" value={t.createdAt} />
-                            <Detail label="Priority" value={<PriorityBadge priority={t.priority} />} />
+                            <Detail label={trans('admin.tickets.col_id')} value={t.ticketNo} />
+                            <Detail label={trans('admin.tickets.col_category')} value={t.issueCategory} />
+                            <Detail label={trans('admin.tickets.col_service')} value={[t.service, t.subcategory, t.subject].filter(Boolean).join(' • ')} span />
+                            <Detail label={trans('admin.tickets.col_requester')} value={t.requesterName} />
+                            <Detail label={trans('admin.tickets.col_date')} value={t.createdAt} />
+                            <Detail label={trans('admin.tickets.col_priority')} value={<PriorityBadge priority={t.priority} />} />
                             <Detail label="SLA" value={<span className={SLA_TEXT_STYLES[t.sla.kind]}>{t.sla.label}</span>} />
-                            <Detail label="Status" value={<StatusBadge status={t.status} />} />
+                            <Detail label={trans('admin.common.status')} value={<StatusBadge status={t.status} />} />
                             <Detail
-                                label="Rating Requester"
+                                label={trans('admin.tickets.requester_rating')}
                                 span
                                 value={t.rating ? (
                                     <span className="flex items-center gap-1.5">
@@ -354,17 +369,17 @@ function TicketDetailModal({ ticket: t, onClose }) {
                                         <span>{t.rating}/5</span>
                                         {!t.ratingActive && <span className="text-xs text-gray-400 dark:text-ink-3">· dikecualikan dari rata-rata</span>}
                                     </span>
-                                ) : 'Belum dinilai'}
+                                ) : trans('admin.tickets.not_rated')}
                             />
                         </div>
                         <div className="rounded-lg bg-gray-50 dark:bg-panel-3 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Status Tiket</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('admin.tickets.ticket_status')}</p>
                             <div className="mt-2"><StatusBadge status={t.status} /></div>
                             <p className="mt-2 text-xs text-gray-500 dark:text-ink-2">
                                 Assignment PIC dilakukan oleh Team Lead domain terkait — Administrator hanya dapat memantau.
                             </p>
 
-                            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Timeline</p>
+                            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('admin.tickets.timeline')}</p>
                             <ol className="mt-2 flex flex-col">
                                 {t.timeline.map((step, i) => (
                                     <li key={i} className="flex gap-3">
@@ -383,25 +398,25 @@ function TicketDetailModal({ ticket: t, onClose }) {
                         </div>
                     </div>
 
-                    <h3 className="mb-3 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">Informasi Requester</h3>
+                    <h3 className="mb-3 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.requester_info')}</h3>
                     <div className="grid grid-cols-2 gap-3">
-                        <Detail label="Nama" value={t.requester?.name ?? '—'} />
-                        <Detail label="NIK" value={t.requester?.nik ?? '—'} />
-                        <Detail label="Email" value={t.requester?.email ?? '—'} />
-                        <Detail label="Jabatan" value={t.requester?.jabatan ?? '—'} />
-                        <Detail label="Unit Kerja" value={t.requester?.unit ?? '—'} span />
+                        <Detail label={trans('admin.tickets.name')} value={t.requester?.name ?? '—'} />
+                        <Detail label={trans('admin.tickets.nik')} value={t.requester?.nik ?? '—'} />
+                        <Detail label={trans('admin.tickets.email')} value={t.requester?.email ?? '—'} />
+                        <Detail label={trans('admin.tickets.jabatan')} value={t.requester?.jabatan ?? '—'} />
+                        <Detail label={trans('admin.tickets.unit')} value={t.requester?.unit ?? '—'} span />
                     </div>
 
-                    <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">Deskripsi</h3>
+                    <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.description')}</h3>
                     <p className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3 text-sm text-gray-700 dark:text-ink-2">{t.description || '—'}</p>
 
                     {(t.attachments ?? []).length > 0 && (
                         <>
-                            <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">Lampiran</h3>
+                            <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.attachments')}</h3>
                             <div className="flex flex-col gap-2">
                                 {t.attachments.map((a) => (a.missing ? (
                                     <p key={a.id} className="rounded-lg border border-gray-200 dark:border-edge-strong p-3 text-sm text-gray-400 dark:text-ink-3">
-                                        📎 {a.name} · <span className="italic">berkas tidak ditemukan di penyimpanan</span>
+                                        📎 {a.name} · <span className="italic">{trans('admin.tickets.file_missing')}</span>
                                     </p>
                                 ) : (
                                     <a
@@ -418,18 +433,18 @@ function TicketDetailModal({ ticket: t, onClose }) {
                         </>
                     )}
 
-                    <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">Informasi Approval</h3>
+                    <h3 className="mb-2 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.approval_info')}</h3>
                     <p className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3 text-sm text-gray-700 dark:text-ink-2">{t.approvalInfo}</p>
 
-                    <h3 className="mb-3 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">Penanganan</h3>
+                    <h3 className="mb-3 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.handling')}</h3>
                     <div className="grid grid-cols-2 gap-3">
-                        <Detail label="PIC Utama" value={t.pic ?? 'Menunggu Assignment'} />
-                        <Detail label="Status" value={<StatusBadge status={t.status} />} />
+                        <Detail label={trans('admin.tickets.main_pic')} value={t.pic ?? trans('admin.tickets.unassigned')} />
+                        <Detail label={trans('admin.common.status')} value={<StatusBadge status={t.status} />} />
                     </div>
                 </div>
 
                 <div className="flex justify-end border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
-                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">Tutup</button>
+                    <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">{trans('admin.common.close')}</button>
                 </div>
             </div>
         </div>

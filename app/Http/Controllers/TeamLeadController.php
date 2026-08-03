@@ -239,7 +239,11 @@ class TeamLeadController extends Controller
         if (! empty($data['to'])) {
             $query->whereDate('created_at', '<=', $data['to']);
         }
-        if (! empty($data['unit']) && $data['unit'] !== 'Semua Unit') {
+        // ALL_UNITS is the language-independent sentinel the UI sends. The old
+        // Indonesian label is still accepted so a bookmarked export URL keeps
+        // working; a translated label must never be read as a real unit name.
+        $noUnitFilter = in_array($data['unit'] ?? null, [null, '', self::ALL_UNITS, 'Semua Unit'], true);
+        if (! $noUnitFilter) {
             $query->whereHas('requester', fn ($q) => $q->where('unit', $data['unit']));
         }
 
@@ -248,7 +252,7 @@ class TeamLeadController extends Controller
         $report = $this->buildReport($data['type'], $tickets, $agents);
 
         $periodLabel = trim((empty($data['from']) ? '' : $data['from']).(empty($data['to']) ? '' : ' s/d '.$data['to'])) ?: 'Semua periode';
-        $unitLabel = $data['unit'] ?? 'Semua Unit';
+        $unitLabel = $noUnitFilter ? __('teamlead.reporting.all_unit') : $data['unit'];
         $base = 'laporan-'.$data['type'].'-'.now()->format('Ymd');
 
         if ($data['format'] === 'excel') {
@@ -892,7 +896,7 @@ class TeamLeadController extends Controller
     private function opStats(Collection $tickets): array
     {
         return [
-            ['label' => 'Total Tiket', 'value' => $tickets->count(), 'icon' => self::I_TICKET, 'bg' => 'bg-blue-50', 'fg' => 'text-blue-600'],
+            ['label' => __('teamlead.columns.total_tickets'), 'value' => $tickets->count(), 'icon' => self::I_TICKET, 'bg' => 'bg-blue-50', 'fg' => 'text-blue-600'],
             ['label' => 'Open', 'value' => $tickets->where('status', 'Open')->count(), 'icon' => self::I_INBOX, 'bg' => 'bg-gray-100', 'fg' => 'text-gray-500'],
             ['label' => 'Assigned', 'value' => $tickets->where('status', 'Assigned')->count(), 'icon' => self::I_USER, 'bg' => 'bg-sky-50', 'fg' => 'text-sky-600'],
             ['label' => 'In Progress', 'value' => $tickets->whereIn('status', ['In Progress', 'Waiting for Response'])->count(), 'icon' => self::I_CLOCK, 'bg' => 'bg-amber-50', 'fg' => 'text-amber-600'],
@@ -1171,6 +1175,9 @@ class TeamLeadController extends Controller
             ->all();
     }
 
+    /** Sentinel for "no unit filter" — never a real unit name, never translated. */
+    public const ALL_UNITS = '__all';
+
     public const REPORT_TYPES = [
         'sla_compliance' => 'SLA Compliance',
         'sla_breach' => 'SLA Breach',
@@ -1196,7 +1203,7 @@ class TeamLeadController extends Controller
         return match ($type) {
             'sla_breach' => [
                 'title' => 'SLA Breach Report',
-                'columns' => [$col('Tiket'), $col('Subjek'), $col('Aplikasi'), $col('Prioritas'), $col('Overdue', 'right')],
+                'columns' => [$col(__('teamlead.report_cols.ticket')), $col(__('teamlead.report_cols.subject')), $col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.priority')), $col(__('teamlead.report_cols.overdue'), 'right')],
                 'rows' => $tickets->whereIn('status', Ticket::ACTIVE_STATUSES)
                     ->filter(fn (Ticket $t) => $t->sla_kind === 'breach')
                     ->sortBy('sla_minutes_remaining')
@@ -1205,14 +1212,14 @@ class TeamLeadController extends Controller
             ],
             'support_perf' => [
                 'title' => 'Support Performance Report',
-                'columns' => [$col('Agen'), $col('Beban Aktif', 'right'), $col('Selesai', 'right'), $col('Avg Resolusi', 'right'), $col('SLA', 'right')],
+                'columns' => [$col(__('teamlead.report_cols.agent')), $col(__('teamlead.report_cols.active_load'), 'right'), $col(__('teamlead.report_cols.done'), 'right'), $col(__('teamlead.report_cols.avg_resolution'), 'right'), $col(__('teamlead.report_cols.sla'), 'right')],
                 'rows' => collect($this->agentOptions($agents, $tickets))
                     ->map(fn (array $a) => [$a['name'], (string) $a['load'], (string) $a['resolved'], $a['avgResolution'], $a['slaPct'] === null ? '—' : $a['slaPct'].'%'])
                     ->all(),
             ],
             'ticket_summary' => [
                 'title' => 'Ticket Summary Report',
-                'columns' => [$col('Aplikasi'), $col('Incident', 'right'), $col('Service', 'right'), $col('Access', 'right'), $col('Total', 'right')],
+                'columns' => [$col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.incident'), 'right'), $col(__('teamlead.report_cols.service'), 'right'), $col(__('teamlead.report_cols.access'), 'right'), $col(__('teamlead.report_cols.total'), 'right')],
                 'rows' => $counted->filter(fn (Ticket $t) => $t->service_name)->groupBy('service_name')
                     ->map(fn (Collection $g, string $app) => [
                         $app,
@@ -1224,7 +1231,7 @@ class TeamLeadController extends Controller
             ],
             'top_incident' => [
                 'title' => 'Top Incident Report',
-                'columns' => [$col('#'), $col('Isu'), $col('Aplikasi'), $col('Jumlah', 'right')],
+                'columns' => [$col('#'), $col(__('teamlead.report_cols.issue')), $col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.count'), 'right')],
                 'rows' => $counted->groupBy(fn (Ticket $t) => $t->subject_name ?? $t->title)
                     ->map(fn (Collection $g, string $name) => ['name' => $name, 'apps' => $g->pluck('service_name')->filter()->unique()->take(2)->implode(' · ') ?: '—', 'count' => $g->count()])
                     ->sortByDesc('count')->take(10)->values()
@@ -1232,7 +1239,7 @@ class TeamLeadController extends Controller
             ],
             default => [
                 'title' => 'SLA Compliance Report',
-                'columns' => [$col('Sub-Kategori'), $col('Aplikasi'), $col('Total', 'right'), $col('Breach', 'right'), $col('Compliance', 'right')],
+                'columns' => [$col(__('teamlead.report_cols.subcategory')), $col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.total'), 'right'), $col(__('teamlead.report_cols.breach'), 'right'), $col(__('teamlead.report_cols.compliance'), 'right')],
                 'rows' => $counted->groupBy(fn (Ticket $t) => $t->subcategory_name ?? $t->issue_category ?? 'Lainnya')
                     ->map(function (Collection $g, string $sub) use ($breached) {
                         $total = $g->count();

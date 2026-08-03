@@ -37,7 +37,12 @@ class SyncEmployees extends Command
             ['Field dipertahankan (API kosong)', $summary['kept_empty']],
             ['Field dipertahankan (override Admin)', $summary['kept_admin_override']],
             ['Tidak ada di sumber', count($summary['not_in_source'])],
+            ['Kunci tidak cocok', count($summary['key_mismatch'])],
         ]);
+
+        foreach ($summary['key_mismatch'] as $note) {
+            $this->line("  <fg=magenta>kunci beda</> {$note}");
+        }
 
         foreach ($summary['not_in_source'] as $name) {
             $this->line("  <fg=yellow>di luar sumber</> {$name} — tidak ada di respons API, dibiarkan apa adanya");

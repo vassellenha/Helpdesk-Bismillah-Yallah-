@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import SlaPanel from '../SlaPanel';
@@ -12,25 +13,11 @@ const TIMELINE_DOT = {
     rejected: 'bg-red-600',
 };
 
-const CONFIRM_COPY = {
-    approved: {
-        title: 'Setujui permohonan ini?',
-        body: (id) => `Tiket ${id} akan disetujui dan diteruskan ke tahap berikutnya (Support).`,
-        button: 'Ya, Setujui',
-        color: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
-    },
-    revision_requested: {
-        title: 'Minta perbaikan?',
-        body: (id) => `Tiket ${id} akan dikembalikan ke requester untuk diperbaiki sesuai catatan Anda.`,
-        button: 'Ya, Minta Perbaikan',
-        color: 'bg-amber-600 hover:bg-amber-700',
-    },
-    rejected: {
-        title: 'Tolak permohonan ini?',
-        body: (id) => `Tiket ${id} akan ditolak dan ditutup. Requester akan menerima notifikasi.`,
-        button: 'Ya, Tolak',
-        color: 'bg-red-600 hover:bg-red-700',
-    },
+// Colour stays here (presentation); every string comes from lang/*/approver.php.
+const CONFIRM_STYLE = {
+    approved: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
+    revision_requested: 'bg-amber-600 hover:bg-amber-700',
+    rejected: 'bg-red-600 hover:bg-red-700',
 };
 
 function Card({ title, children, className = '' }) {
@@ -53,7 +40,12 @@ function Field({ label, value }) {
 
 function ConfirmModal({ decision, ticketId, note, submitting, error, onCancel, onConfirm }) {
     useLockBodyScroll();
-    const copy = CONFIRM_COPY[decision];
+    const copy = {
+        title: trans(`approver.confirm.${decision}.title`),
+        body: trans(`approver.confirm.${decision}.body`, { id: ticketId }),
+        button: trans(`approver.confirm.${decision}.button`),
+        color: CONFIRM_STYLE[decision],
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onCancel}>
@@ -64,25 +56,25 @@ function ConfirmModal({ decision, ticketId, note, submitting, error, onCancel, o
                     </span>
                     <div>
                         <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{copy.title}</h2>
-                        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">{copy.body(ticketId)}</p>
+                        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">{copy.body}</p>
                     </div>
                 </div>
 
-                <label className="mb-1.5 mt-4 block text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Catatan Anda</label>
+                <label className="mb-1.5 mt-4 block text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('approver.detail.your_note')}</label>
                 <div className="rounded-xl bg-gray-50 dark:bg-panel-3 px-3.5 py-3 text-[13px] text-gray-700 dark:text-ink-2">{note}</div>
 
                 {error && <p className="mt-3 rounded-lg bg-red-50 dark:bg-bad-soft p-2.5 text-xs text-red-700 dark:text-bad-text">{error}</p>}
 
                 <div className="mt-5 flex justify-end gap-2.5">
                     <button onClick={onCancel} className="rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                        Tidak
+                        {trans('approver.confirm.no')}
                     </button>
                     <button
                         onClick={onConfirm}
                         disabled={submitting}
                         className={`rounded-full px-4 py-2.5 text-[13px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 ${copy.color}`}
                     >
-                        {submitting ? 'Mengirim…' : copy.button}
+                        {submitting ? trans('approver.confirm.sending') : copy.button}
                     </button>
                 </div>
             </div>
@@ -151,7 +143,7 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
 
             <Card>
                 <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="rounded-full bg-blue-50 dark:bg-accent-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-accent-text">Mode Approval</span>
+                    <span className="rounded-full bg-blue-50 dark:bg-accent-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-accent-text">{trans('approver.detail.mode')}</span>
                     <StatusBadge status={ticket.status} />
                     <PriorityBadge priority={ticket.priority} />
                 </div>
@@ -173,27 +165,27 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.7fr_1fr]">
                 <div className="flex flex-col gap-6">
-                    <Card title="Informasi Tiket">
+                    <Card title={trans('approver.detail.ticket_info')}>
                         <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'Tidak ada deskripsi.'}</p>
                         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-2">
-                            <Field label="Requester" value={ticket.requester?.name} />
-                            <Field label="Unit Kerja" value={ticket.requester?.unit} />
-                            <Field label="Layanan Katalog" value={ticket.layananKatalog} />
-                            <Field label="Kontak" value={ticket.requester?.email} />
+                            <Field label={trans('approver.detail.requester')} value={ticket.requester?.name} />
+                            <Field label={trans('approver.detail.unit')} value={ticket.requester?.unit} />
+                            <Field label={trans('approver.detail.catalog_service')} value={ticket.layananKatalog} />
+                            <Field label={trans('approver.detail.contact')} value={ticket.requester?.email} />
                         </div>
                         {ticket.attachments?.length > 0 && (
                             <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4">
-                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Lampiran</p>
+                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('approver.detail.attachments')}</p>
                                 <AttachmentViewer attachments={ticket.attachments} />
                             </div>
                         )}
                     </Card>
 
-                    <Card title="Forum Diskusi">
+                    <Card title={trans('approver.detail.forum')}>
                         <p className="mb-3 text-[12px] text-gray-400 dark:text-ink-3">Percakapan antara Requester, Approver, dan Support terekam di sini.</p>
                         <div className="flex flex-col gap-3">
                             {comments.length === 0 && (
-                                <p className="rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">Belum ada diskusi.</p>
+                                <p className="rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">{trans('approver.detail.forum_empty')}</p>
                             )}
                             {comments.map((c) => (
                                 <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${c.authorRole === 'Approver' ? 'ml-auto bg-blue-600 dark:bg-blue-500 text-white' : 'bg-gray-50 dark:bg-panel-3 text-gray-800 dark:text-ink-1'}`}>
@@ -213,7 +205,7 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                                     value={reply}
                                     onChange={(e) => setReply(e.target.value)}
                                     rows={2}
-                                    placeholder="Tulis pertanyaan atau feedback untuk requester…"
+                                    placeholder={trans('approver.detail.forum_placeholder')}
                                     className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-400"
                                 />
                                 <button
@@ -221,7 +213,7 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                                     disabled={sending || !reply.trim()}
                                     className="rounded-xl bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    {sending ? 'Mengirim…' : 'Kirim'}
+                                    {sending ? trans('approver.confirm.sending') : 'Kirim'}
                                 </button>
                             </div>
                         )}
@@ -230,9 +222,9 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
 
                 <div className="flex flex-col gap-6">
                     {ticket.canDecide ? (
-                        <Card title="Panel Keputusan">
+                        <Card title={trans('approver.detail.decision_panel')}>
                             <p className="mb-3 text-[12px] leading-relaxed text-gray-400 dark:text-ink-3">Keputusan Anda sebagai Approver — {ticket.requester?.unit ?? ''}.</p>
-                            <label className="mb-1.5 block text-[13px] font-bold text-gray-800 dark:text-ink-1">Catatan / Feedback</label>
+                            <label className="mb-1.5 block text-[13px] font-bold text-gray-800 dark:text-ink-1">{trans('approver.detail.note_label')}</label>
                             <textarea
                                 value={note}
                                 onChange={(e) => {
@@ -240,10 +232,10 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                                     if (e.target.value.trim()) setNoteError(false);
                                 }}
                                 rows={4}
-                                placeholder="Wajib diisi sebelum menyetujui, meminta perbaikan, atau menolak"
+                                placeholder={trans('approver.detail.note_placeholder')}
                                 className={`w-full resize-none rounded-xl border px-3.5 py-3 text-[13px] outline-none focus:border-blue-400 ${noteError ? 'border-red-400' : 'border-gray-200 dark:border-edge-strong'}`}
                             />
-                            {noteError && <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-bad-text">Catatan wajib diisi sebelum melanjutkan.</p>}
+                            {noteError && <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-bad-text">{trans('approver.detail.note_required')}</p>}
 
                             <div className="mt-4 flex flex-col gap-2.5">
                                 <button
@@ -274,17 +266,17 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                             </p>
                         </Card>
                     ) : ticket.lastDecision ? (
-                        <Card title="Keputusan Anda">
+                        <Card title={trans('approver.detail.your_decision')}>
                             <p className="text-[13px] font-bold text-gray-900 dark:text-ink-1">{ticket.lastDecision.decisionLabel}</p>
                             <p className="mt-1 text-[11px] text-gray-400 dark:text-ink-3">{ticket.lastDecision.at}</p>
                             <p className="mt-3 rounded-lg bg-gray-50 dark:bg-panel-3 p-3 text-[13px] text-gray-700 dark:text-ink-2">{ticket.lastDecision.note}</p>
                             {ticket.lastDecision.forwardedTo && (
-                                <p className="mt-3 text-[11px] text-gray-400 dark:text-ink-3">Diteruskan ke: <span className="font-semibold text-gray-600 dark:text-ink-2">{ticket.lastDecision.forwardedTo}</span></p>
+                                <p className="mt-3 text-[11px] text-gray-400 dark:text-ink-3">{trans('approver.detail.forwarded_to')}<span className="font-semibold text-gray-600 dark:text-ink-2">{ticket.lastDecision.forwardedTo}</span></p>
                             )}
                         </Card>
                     ) : null}
 
-                    <Card title="SLA">
+                    <Card title={trans('approver.detail.sla')}>
                         <SlaPanel
                             sla={ticket.sla}
                             rating={ticket.satisfactionRating}
@@ -293,7 +285,7 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                         />
                     </Card>
 
-                    <Card title="Riwayat Status">
+                    <Card title={trans('approver.detail.status_history')}>
                         <div className="flex flex-col">
                             {timeline.map((step, i) => (
                                 <div key={i} className="flex gap-3">

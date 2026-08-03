@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBadge, PriorityBadge } from '../../StatusBadge';
+import { t as trans } from '../../../lib/i18n';
+
+// Language-independent sentinel for 'no filter' — a translated word here would
+// stop matching real data values the moment the locale changes.
+const ALL = '__all';
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 const TYPES = ['Incident', 'Service Request', 'Access Request'];
@@ -13,9 +18,9 @@ const TYPE_BADGE = {
 
 function fmtAge(iso) {
     const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-    if (mins >= 1440) return `${Math.floor(mins / 1440)}h ${Math.floor((mins % 1440) / 60)}j lalu`;
-    if (mins >= 60) return `${Math.floor(mins / 60)}j ${mins % 60}m lalu`;
-    return `${mins}m lalu`;
+    if (mins >= 1440) return trans('teamlead.monitoring.ago_days', { d: Math.floor(mins / 1440), h: Math.floor((mins % 1440) / 60) });
+    if (mins >= 60) return trans('teamlead.monitoring.ago_hours', { h: Math.floor(mins / 60), m: mins % 60 });
+    return trans('teamlead.monitoring.ago_mins', { m: mins });
 }
 
 // Live per-second SLA countdown from the server's minutes-remaining snapshot.
@@ -28,7 +33,7 @@ function liveSla(slaMinutes, elapsedSec) {
     const s = a % 60;
     const pad = (n) => (n < 10 ? '0' : '') + n;
     const body = h > 0 ? `${h}j ${pad(m)}m` : `${m}m ${pad(s)}s`;
-    return { overdue: total < 0, text: total < 0 ? `Terlambat ${body}` : `${body} lagi` };
+    return { overdue: total < 0, text: total < 0 ? trans('teamlead.monitoring.overdue', { time: body }) : trans('teamlead.monitoring.remaining', { time: body }) };
 }
 
 function Chip({ active, onClick, children }) {
@@ -46,7 +51,7 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
     const [live, setLive] = useState(true);
     const [warnOpen, setWarnOpen] = useState(true);
     const [filterOpen, setFilterOpen] = useState(false);
-    const [f, setF] = useState({ priority: 'Semua', status: 'Semua', type: 'Semua', subcat: 'Semua', app: 'Semua', unit: 'Semua' });
+    const [f, setF] = useState({ priority: ALL, status: ALL, type: ALL, subcat: ALL, app: ALL, unit: ALL });
     const [appQuery, setAppQuery] = useState('');
     const [page, setPage] = useState(1);
     const mount = useRef(Date.now());
@@ -81,17 +86,17 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
         [rows],
     );
 
-    const activeFilters = Object.values(f).filter((v) => v !== 'Semua').length;
+    const activeFilters = Object.values(f).filter((v) => v !== ALL).length;
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
         let out = rows.filter((r) => {
-            if (f.priority !== 'Semua' && r.priority !== f.priority) return false;
-            if (f.status !== 'Semua' && r.status !== f.status) return false;
-            if (f.type !== 'Semua' && r.type !== f.type) return false;
-            if (f.subcat !== 'Semua' && r.subcategory !== f.subcat) return false;
-            if (f.app !== 'Semua' && r.service !== f.app) return false;
-            if (f.unit !== 'Semua' && r.unit !== f.unit) return false;
+            if (f.priority !== ALL && r.priority !== f.priority) return false;
+            if (f.status !== ALL && r.status !== f.status) return false;
+            if (f.type !== ALL && r.type !== f.type) return false;
+            if (f.subcat !== ALL && r.subcategory !== f.subcat) return false;
+            if (f.app !== ALL && r.service !== f.app) return false;
+            if (f.unit !== ALL && r.unit !== f.unit) return false;
             if (q && !`${r.id} ${r.subject} ${r.service} ${r.agent}`.toLowerCase().includes(q)) return false;
             return true;
         });
@@ -119,8 +124,8 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.4 5.6a8 8 0 0 1 1.9 8.9c-.5 1.2-.3 2.6.5 3.6l.2.3H3l.2-.3c.8-1 1-2.4.5-3.6a8 8 0 0 1 14.7-8.9Z M10 21h4"/></svg>
                     </span>
                     <div className="min-w-[200px]">
-                        <p className="text-sm font-bold text-amber-800">SLA Warning — {warnTickets.length} tiket kritis mendekati batas waktu</p>
-                        <p className="mt-0.5 text-[12.5px] text-amber-700 dark:text-warn-text">Tiket Critical / High dengan sisa waktu &lt; 30 menit. Segera tinjau atau alihkan tugas.</p>
+                        <p className="text-sm font-bold text-amber-800">{trans('teamlead.monitoring.warn_title', { count: warnTickets.length })}</p>
+                        <p className="mt-0.5 text-[12.5px] text-amber-700 dark:text-warn-text">{trans('teamlead.monitoring.warn_body')}</p>
                     </div>
                     <div className="flex flex-1 flex-wrap items-center gap-1.5">
                         {warnTickets.slice(0, 12).map((t) => (
@@ -135,41 +140,41 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                 <div className="relative flex-1 min-w-[240px] max-w-md" ref={filterRef}>
                     <button onClick={() => setFilterOpen((v) => !v)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold transition ${activeFilters || filterOpen ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'bg-white dark:bg-panel-2 text-gray-700 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16 M7 12h10 M10 18h4"/></svg>
-                        {activeFilters ? `Filter · ${activeFilters}` : 'Filter'}
+                        {activeFilters ? trans('teamlead.monitoring.filter_count', { count: activeFilters }) : trans('teamlead.monitoring.filter')}
                     </button>
                     {filterOpen && (
                         <div className="absolute left-0 top-12 z-30 flex w-[400px] max-w-[92vw] flex-col gap-4 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-xl">
-                            <FilterGroup label="Priority" value={f.priority} options={PRIORITIES} onSelect={(v) => setFilter('priority', v)} />
-                            <FilterGroup label="Status" value={f.status} options={statuses} onSelect={(v) => setFilter('status', v)} />
-                            <FilterGroup label="Jenis Tiket" value={f.type} options={TYPES} onSelect={(v) => setFilter('type', v)} />
-                            <FilterGroup label="Sub-Kategori" value={f.subcat} options={subcats} onSelect={(v) => setFilter('subcat', v)} scroll />
+                            <FilterGroup label={trans('teamlead.columns.priority')} value={f.priority} options={PRIORITIES} onSelect={(v) => setFilter('priority', v)} />
+                            <FilterGroup label={trans('teamlead.columns.status')} value={f.status} options={statuses} onSelect={(v) => setFilter('status', v)} />
+                            <FilterGroup label={trans('teamlead.monitoring.type')} value={f.type} options={TYPES} onSelect={(v) => setFilter('type', v)} />
+                            <FilterGroup label={trans('teamlead.columns.subcategory')} value={f.subcat} options={subcats} onSelect={(v) => setFilter('subcat', v)} scroll />
                             <div className="flex flex-col gap-2">
-                                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Aplikasi · {apps.length}</p>
-                                <input value={appQuery} onChange={(e) => setAppQuery(e.target.value)} placeholder="Ketik nama aplikasi…" className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-[12.5px] outline-none focus:border-blue-400" />
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.monitoring.app_count', { count: apps.length })}</p>
+                                <input value={appQuery} onChange={(e) => setAppQuery(e.target.value)} placeholder={trans('teamlead.monitoring.app_placeholder')} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-[12.5px] outline-none focus:border-blue-400" />
                                 <div className="flex max-h-[150px] flex-col gap-0.5 overflow-y-auto">
-                                    {['Semua', ...apps.filter((a) => a.toLowerCase().includes(appQuery.toLowerCase()))].map((a) => (
+                                    {[ALL, ...apps.filter((a) => a.toLowerCase().includes(appQuery.toLowerCase()))].map((a) => (
                                         <button key={a} onClick={() => setFilter('app', a)} className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-[12.5px] ${f.app === a ? 'bg-blue-50 dark:bg-accent-soft font-bold text-blue-700 dark:text-accent-text' : 'font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
-                                            {a === 'Semua' ? 'Semua Aplikasi' : a}
+                                            {a === ALL ? trans('teamlead.common.all_app') : a}
                                             {f.app === a && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-11"/></svg>}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <FilterGroup label="Unit Kerja" value={f.unit} options={units} onSelect={(v) => setFilter('unit', v)} scroll />
-                            <button onClick={() => { setF({ priority: 'Semua', status: 'Semua', type: 'Semua', subcat: 'Semua', app: 'Semua', unit: 'Semua' }); setAppQuery(''); }} className="self-start text-[12.5px] font-bold text-blue-600 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">Reset semua filter</button>
+                            <FilterGroup label={trans('teamlead.monitoring.unit')} value={f.unit} options={units} onSelect={(v) => setFilter('unit', v)} scroll />
+                            <button onClick={() => { setF({ priority: ALL, status: ALL, type: ALL, subcat: ALL, app: ALL, unit: ALL }); setAppQuery(''); }} className="self-start text-[12.5px] font-bold text-blue-600 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">{trans('teamlead.monitoring.reset_all')}</button>
                         </div>
                     )}
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari ID, subjek, PIC…" className="w-52 rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={trans('teamlead.monitoring.search')} className="w-52 rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
                     <button onClick={() => setLive((v) => !v)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold ${live ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-600 dark:text-ok-text' : 'bg-white dark:bg-panel-2 text-gray-500 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong'}`}>
                         <span className={`h-2 w-2 rounded-full ${live ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]' : 'bg-gray-400'}`} />
-                        {live ? 'Live · tiap detik' : 'Dijeda'}
+                        {live ? trans('teamlead.monitoring.live') : trans('teamlead.monitoring.paused')}
                     </button>
                     <button onClick={() => setSortNB((v) => !v)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold ${sortNB ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'bg-white dark:bg-panel-2 text-gray-700 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16 M6 12h12 M9 17h6"/></svg>
-                        {sortNB ? 'Sorted: Nearest Breach' : 'Sort by Nearest Breach'}
+                        {sortNB ? trans('teamlead.monitoring.sorted_nearest') : trans('teamlead.monitoring.sort_nearest')}
                     </button>
                 </div>
             </div>
@@ -179,15 +184,15 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                     <table className="w-full min-w-[1040px] text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                                <th className="px-4 py-3.5 pl-6 text-left">ID Tiket</th>
-                                <th className="px-4 py-3.5 text-left">Layanan</th>
-                                <th className="px-4 py-3.5 text-left">Sub-Kategori</th>
-                                <th className="px-4 py-3.5 text-left">Subjek</th>
-                                <th className="px-4 py-3.5 text-left">Prioritas</th>
-                                <th className="px-4 py-3.5 text-left">Waktu Buat</th>
-                                <th className="px-4 py-3.5 text-left">Sisa SLA</th>
-                                <th className="px-4 py-3.5 text-left">Status · PIC</th>
-                                <th className="px-4 py-3.5 pr-6 text-right">Aksi</th>
+                                <th className="px-4 py-3.5 pl-6 text-left">{trans('teamlead.columns.ticket_id')}</th>
+                                <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.service')}</th>
+                                <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.subcategory')}</th>
+                                <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.subject')}</th>
+                                <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.priority')}</th>
+                                <th className="px-4 py-3.5 text-left">{trans('teamlead.monitoring.created_at')}</th>
+                                <th className="px-4 py-3.5 text-left">{trans('teamlead.monitoring.sla_left')}</th>
+                                <th className="px-4 py-3.5 text-left">{trans('teamlead.monitoring.status_pic')}</th>
+                                <th className="px-4 py-3.5 pr-6 text-right">{trans('teamlead.common.action')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -218,26 +223,26 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                                         <td className="px-4 py-4 pr-6 text-right">
                                             <button onClick={(e) => { e.stopPropagation(); actions.reassign?.(row, (res) => patch(row.id, { agent: res.agent.name, agentId: res.agent.id })); }} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold text-blue-600 dark:text-accent-text ring-1 ring-blue-300 hover:bg-blue-50 dark:hover:bg-panel-hover">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 8h13 M16 5l4 3-4 3 M17 16H4 M8 13l-4 3 4 3"/></svg>
-                                                Alihkan
+                                                {trans('teamlead.monitoring.reassign')}
                                             </button>
                                         </td>
                                     </tr>
                                 );
                             })}
-                            {filtered.length === 0 && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada tiket dengan filter ini.</td></tr>}
+                            {filtered.length === 0 && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.monitoring.empty')}</td></tr>}
                         </tbody>
                     </table>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 dark:border-edge px-5 py-3">
-                    <p className="text-xs text-gray-500 dark:text-ink-2">{startIdx}–{endIdx} dari {filtered.length} tiket</p>
+                    <p className="text-xs text-gray-500 dark:text-ink-2">{trans('teamlead.monitoring.showing', { from: startIdx, to: endIdx, total: filtered.length })}</p>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-panel-3 px-3.5 py-2 text-[12.5px] font-bold text-gray-700 dark:text-ink-2 transition hover:bg-gray-200 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-40">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
-                            Sebelumnya
+                            {trans('teamlead.monitoring.prev')}
                         </button>
-                        <span className="px-1 text-[12.5px] font-semibold text-gray-500 dark:text-ink-2">Hal {safePage} / {totalPages}</span>
+                        <span className="px-1 text-[12.5px] font-semibold text-gray-500 dark:text-ink-2">{trans('teamlead.monitoring.page', { page: safePage, total: totalPages })}</span>
                         <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="flex items-center gap-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 px-3.5 py-2 text-[12.5px] font-bold text-white transition hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40">
-                            Berikutnya
+                            {trans('teamlead.monitoring.next')}
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
                         </button>
                     </div>
@@ -252,7 +257,7 @@ function FilterGroup({ label, value, options, onSelect, scroll }) {
         <div className="flex flex-col gap-2">
             <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>
             <div className={`flex flex-wrap gap-2 ${scroll ? 'max-h-[110px] overflow-y-auto' : ''}`}>
-                <Chip active={value === 'Semua'} onClick={() => onSelect('Semua')}>Semua</Chip>
+                <Chip active={value === ALL} onClick={() => onSelect(ALL)}>{trans('teamlead.common.all')}</Chip>
                 {options.map((o) => <Chip key={o} active={value === o} onClick={() => onSelect(o)}>{o}</Chip>)}
             </div>
         </div>

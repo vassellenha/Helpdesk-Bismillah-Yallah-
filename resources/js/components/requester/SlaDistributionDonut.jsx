@@ -1,4 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import { t as trans } from '../../lib/i18n';
 
 const SEGMENTS = [
     { key: 'onTrack', label: 'On Track', color: 'var(--chart-green)' },
@@ -13,7 +14,7 @@ export default function SlaDistributionDonut({ donut = { total: 0, onTrack: 0, w
     return (
         <div className="flex h-full flex-col gap-4">
             <div>
-                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">SLA Distribution</h2>
+                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.charts.sla_distribution')}</h2>
                 <p className="text-xs text-gray-400 dark:text-ink-3">Tickets with an SLA clock running (excludes those awaiting approval)</p>
             </div>
             <div className="flex flex-1 items-center gap-5">
@@ -29,7 +30,7 @@ export default function SlaDistributionDonut({ donut = { total: 0, onTrack: 0, w
                     </ResponsiveContainer>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                         <span className="text-2xl font-extrabold leading-none text-gray-900 dark:text-ink-1">{donut.total}</span>
-                        <span className="text-[10px] text-gray-400 dark:text-ink-3">SLA active</span>
+                        <span className="text-[10px] text-gray-400 dark:text-ink-3">{trans('requester.charts.sla_active')}</span>
                     </div>
                 </div>
                 <div className="flex flex-1 flex-col gap-3">

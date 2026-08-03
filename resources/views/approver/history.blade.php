@@ -1,6 +1,6 @@
 @extends('layouts.approver')
 
-@section('title', 'My Tickets')
+@section('title', __('approver.history.title'))
 
 @section('content')
 <div

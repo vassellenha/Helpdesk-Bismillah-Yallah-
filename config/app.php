@@ -78,9 +78,13 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // The interface is Indonesian; English is the translation being filled in
+    // per role. Falling back to Indonesian rather than English means a key that
+    // has not been translated yet shows readable Indonesian instead of leaking
+    // English into an otherwise Indonesian screen.
+    'locale' => env('APP_LOCALE', 'id'),
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'id'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 

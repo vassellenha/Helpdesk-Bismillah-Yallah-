@@ -34,43 +34,56 @@ class AuditTrailController extends Controller
         ]);
     }
 
+    /**
+     * Stored module codes never change; only their display label is translated.
+     * An unknown code falls through to itself rather than to a lang key, so a
+     * new module added elsewhere still reads sensibly before it is translated.
+     */
     private function moduleLabel(string $module): string
     {
-        return match ($module) {
-            'service_catalog' => 'Service Catalog',
-            'sla_configuration' => 'Konfigurasi SLA',
-            'user_role_management' => 'User & Role Management',
-            'ticket_approval' => 'Approval Tiket',
-            'ticket_support' => 'Penanganan Support',
-            'team_lead' => 'Team Lead',
-            'ticket_management' => 'Ticket Management',
-            'integration' => 'Integrasi',
-            default => $module,
+        $key = match ($module) {
+            'service_catalog' => 'catalog',
+            'sla_configuration' => 'sla',
+            'user_role_management' => 'users',
+            'ticket_approval' => 'approval',
+            'ticket_support' => 'support',
+            'team_lead' => 'teamlead',
+            'ticket_management' => 'tickets',
+            'integration' => 'integration',
+            default => null,
         };
+
+        return $key === null ? $module : __('admin.audit.module_name.'.$key);
     }
 
     private function actionLabel(string $action): string
     {
-        return match ($action) {
-            'create' => 'Tambah',
-            'update' => 'Edit',
-            'activate' => 'Aktifkan',
-            'deactivate' => 'Nonaktifkan',
-            'assign_support' => 'Ubah Support',
-            'change_level' => 'Ubah Level',
-            'change_role' => 'Ubah Role',
-            'approve' => 'Setujui',
-            'request_revision' => 'Minta Perbaikan',
-            'reject' => 'Tolak',
-            'resolve' => 'Tutup Layanan',
-            'escalate' => 'Eskalasi',
-            'remind' => 'Kirim Teguran',
-            'reassign' => 'Alihkan Tiket',
-            'raise_priority' => 'Naikkan Prioritas',
-            'remind_rating' => 'Teguran Rating',
-            'return' => 'Dikembalikan',
-            'sync' => 'Sinkronisasi',
-            default => $action,
+        $key = match ($action) {
+            'create' => 'create',
+            'update' => 'edit',
+            'activate' => 'activate',
+            'deactivate' => 'deactivate',
+            'assign_support' => 'update_support',
+            'change_level' => 'update_level',
+            'change_role' => 'update_role',
+            'approve' => 'approve',
+            'request_revision' => 'revision',
+            'reject' => 'reject',
+            'resolve' => 'resolve',
+            'escalate' => 'escalate',
+            'remind' => 'remind',
+            'reassign' => 'reassign',
+            'raise_priority' => 'raise',
+            'remind_rating' => 'rating_remind',
+            'return' => 'returned',
+            'sync' => 'sync',
+            default => null,
         };
+
+        if ($key === null) {
+            return $action;
+        }
+
+        return $key === 'edit' ? __('admin.audit.edit') : __('admin.audit.action.'.$key);
     }
 }

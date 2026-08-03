@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') · {{ config('helpdesk.product') }}</title>
     @viteReactRefresh
+    @include('partials.translations', ['groups' => ['support']])
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
@@ -19,14 +20,14 @@
                     class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold transition-all duration-200 ease-out {{ request()->routeIs('dashboard.support') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
-                    Dashboard
+                    {{ __('support.nav.dashboard') }}
                 </a>
                 <a
                     href="{{ route('support.tickets') }}"
                     class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold transition-all duration-200 ease-out {{ request()->routeIs('support.tickets*') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z"/><path d="M14 5v14"/></svg>
-                    My Tickets
+                    {{ __('support.nav.my_tickets') }}
                 </a>
             </nav>
 

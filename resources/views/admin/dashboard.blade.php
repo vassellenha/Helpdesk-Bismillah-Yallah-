@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard Administrator')
+@section('title', __('admin.dashboard.title'))
 
 @php
     $stats = [
@@ -13,7 +13,7 @@
 @endphp
 
 @section('content')
-<h1 class="text-3xl font-extrabold text-gray-900 dark:text-ink-1">Dashboard Administrator</h1>
+<h1 class="text-3xl font-extrabold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.title')</h1>
 
 <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
     @foreach ($stats as $s)
@@ -30,16 +30,16 @@
 <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
     <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm lg:col-span-2">
         <div class="border-b border-gray-100 dark:border-edge p-5">
-            <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">Aktivitas Audit Terbaru</h2>
-            <p class="text-sm text-gray-400 dark:text-ink-3">Perubahan konfigurasi terkini oleh administrator</p>
+            <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.recent_audit')</h2>
+            <p class="text-sm text-gray-400 dark:text-ink-3">@lang('admin.dashboard.recent_audit_hint')</p>
         </div>
         <table class="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
             <thead>
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                    <th class="px-5 py-3">Waktu</th>
-                    <th class="px-5 py-3">Pengguna</th>
-                    <th class="px-5 py-3">Aktivitas</th>
-                    <th class="px-5 py-3">Modul</th>
+                    <th class="px-5 py-3">@lang('admin.common.time')</th>
+                    <th class="px-5 py-3">@lang('admin.common.user')</th>
+                    <th class="px-5 py-3">@lang('admin.common.activity')</th>
+                    <th class="px-5 py-3">@lang('admin.common.module')</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50 dark:divide-transparent">
@@ -56,18 +56,18 @@
             </tbody>
         </table>
         <div class="border-t border-gray-100 dark:border-edge p-4 text-center">
-            <a href="{{ route('admin.audit-trail') }}" class="text-sm font-semibold text-blue-700 dark:text-accent-text hover:text-blue-800">Lihat Semua Audit Trail →</a>
+            <a href="{{ route('admin.audit-trail') }}" class="text-sm font-semibold text-blue-700 dark:text-accent-text hover:text-blue-800">@lang('admin.dashboard.view_all_audit')</a>
         </div>
     </div>
 
     <div class="space-y-6">
         <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-            <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">Distribusi Tiket per Kategori</h2>
+            <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.category_distribution')</h2>
             <div class="mt-4" data-react="TicketCategoryDonut" data-props="{{ json_encode(['data' => $categoryDistribution, 'total' => $totalTicketCount]) }}"></div>
         </div>
 
         <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-            <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">Status SLA</h2>
+            <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.sla_status')</h2>
             <div class="mt-4 flex h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
                 @foreach ($slaStatus as $s)
                     <div style="width: {{ $s['percent'] }}%; background-color: {{ $s['color'] }}"></div>
@@ -90,7 +90,7 @@
 
 <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
     <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">Tren Pelanggaran SLA per Prioritas</h2>
+        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.sla_trend')</h2>
         <p class="mb-3 text-sm text-gray-400 dark:text-ink-3">Analisis pelanggaran SLA berdasarkan prioritas tiket dalam 6 bulan terakhir.</p>
         <div data-react="SlaTrendChart" data-props="{{ json_encode(['data' => $slaTrend]) }}"></div>
         <p class="mt-4 rounded-lg bg-amber-50 dark:bg-warn-soft p-3 text-xs text-amber-800 dark:text-warn-text">
@@ -99,7 +99,7 @@
     </div>
 
     <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">Waktu Rata-Rata Penyelesaian per Kategori Layanan</h2>
+        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.avg_resolution')</h2>
         <p class="mb-3 text-sm text-gray-400 dark:text-ink-3">Membandingkan rata-rata waktu penyelesaian untuk melihat kategori layanan yang paling lambat ditangani.</p>
         <div data-react="AvgResolutionBar" data-props="{{ json_encode(['data' => $avgResolution]) }}"></div>
     </div>
@@ -107,7 +107,7 @@
 
 <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
     <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">Tren Tiket Berdasarkan Kategori</h2>
+        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.ticket_trend')</h2>
         <p class="mb-3 text-sm text-gray-400 dark:text-ink-3">Perbandingan jumlah tiket Incident, Service Request, dan Access Request dalam 6 bulan terakhir.</p>
         <div data-react="TicketTrendChart" data-props="{{ json_encode(['data' => $ticketTrend]) }}"></div>
         <p class="mt-4 rounded-lg bg-amber-50 dark:bg-warn-soft p-3 text-xs text-amber-800 dark:text-warn-text">
@@ -116,7 +116,7 @@
     </div>
 
     <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">Top 5 Service Catalog Paling Banyak Digunakan</h2>
+        <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.top_catalog')</h2>
         <p class="mb-3 text-sm text-gray-400 dark:text-ink-3">Analisis layanan yang paling sering diajukan pengguna pada bulan berjalan.</p>
         <div data-react="TopServiceBarChart" data-props="{{ json_encode(['data' => $topServiceCatalog]) }}"></div>
         <p class="mt-4 rounded-lg bg-amber-50 dark:bg-warn-soft p-3 text-xs text-amber-800 dark:text-warn-text">

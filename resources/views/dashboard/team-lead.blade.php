@@ -1,6 +1,6 @@
 @extends('layouts.team-lead')
 
-@section('title', 'Team Lead Dashboard')
+@section('title', __('teamlead.titles.operational'))
 
 @section('content')
 <div

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Audit Trail Viewer')
+@section('title', __('admin.audit.title'))
 
 @section('content')
 <div

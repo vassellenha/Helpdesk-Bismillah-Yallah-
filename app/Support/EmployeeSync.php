@@ -38,6 +38,7 @@ class EmployeeSync
     {
         $config = config('integrations.employee_directory');
         $matchBy = $config['match_by'] ?? 'nip';
+        $fallbackBy = $config['fallback_match_by'] ?? null;
         $overwriteWithEmpty = (bool) ($config['overwrite_with_empty'] ?? false);
 
         $rows = self::directory()->fetch();
@@ -61,6 +62,10 @@ class EmployeeSync
             // alone (unless deactivate_missing is on), which is indistinguishable
             // from "nothing to do" unless it is counted.
             'not_in_source' => [],
+            // Employees found only via the fallback key because the API's
+            // match_by value disagrees with ours. They still sync; the key
+            // itself is left alone and listed here for a human to settle.
+            'key_mismatch' => [],
             'changes' => [],
             'skipped' => [],
             'dry_run' => $dryRun,
@@ -85,11 +90,35 @@ class EmployeeSync
                 continue;
             }
 
-            $seen[] = $key;
             $user = User::where($matchBy, $key)->first();
 
-            // A different person already owns this email — writing it would
-            // break the unique index, so surface it instead of failing hard.
+            // Second chance on the fallback key. Without this a single digit of
+            // NIP drift turns an existing employee into a "new" one, which then
+            // dies on the email unique index — the whole feed runs and updates
+            // nobody, which is exactly what a real API mismatch looks like.
+            if (! $user && $fallbackBy && ! blank($attrs[$fallbackBy] ?? null)) {
+                $user = User::where($fallbackBy, $attrs[$fallbackBy])->first();
+
+                if ($user) {
+                    $summary['key_mismatch'][] = sprintf(
+                        '%s: %s di API "%s", di helpdesk "%s" — dicocokkan lewat %s, %s tidak diubah.',
+                        $user->name, $matchBy, $key, $user->{$matchBy}, $fallbackBy, $matchBy
+                    );
+
+                    // Never rewrite the identity we match on. Everything else keys
+                    // off it — CurrentActor's personas included — so a rewrite
+                    // would break lookups elsewhere and leave the next sync unable
+                    // to find this person at all. Report it; let a human settle it.
+                    unset($attrs[$matchBy]);
+                }
+            }
+
+            // Track the local key when we matched an existing account, so an
+            // employee reached via fallback is not also reported as "not in source".
+            $seen[] = $user ? $user->{$matchBy} : $key;
+
+            // A genuinely different person already owns this email — writing it
+            // would break the unique index, so surface it instead of failing hard.
             if (! blank($attrs['email'] ?? null)) {
                 $emailOwner = User::where('email', $attrs['email'])
                     ->when($user, fn ($q) => $q->whereKeyNot($user->getKey()))
@@ -334,7 +363,7 @@ class EmployeeSync
         $description = $summary['fetched'] === 0
             ? 'Sinkronisasi data pegawai GAGAL: tidak ada data diterima dari sumber.'
             : sprintf(
-                'Sinkronisasi data pegawai: %d diterima, %d dibuat, %d diperbarui, %d tetap, %d dilewati, %d field dipertahankan (API kosong), %d field dipertahankan (override Admin), %d di luar sumber.',
+                'Sinkronisasi data pegawai: %d diterima, %d dibuat, %d diperbarui, %d tetap, %d dilewati, %d field dipertahankan (API kosong), %d field dipertahankan (override Admin), %d di luar sumber, %d kunci tidak cocok.',
                 $summary['fetched'],
                 $summary['created'],
                 $summary['updated'],
@@ -343,6 +372,7 @@ class EmployeeSync
                 $summary['kept_empty'],
                 $summary['kept_admin_override'],
                 count($summary['not_in_source']),
+                count($summary['key_mismatch']),
             );
 
         AuditTrail::record($actor, [

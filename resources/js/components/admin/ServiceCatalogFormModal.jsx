@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './Modal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
+import { t as trans } from '../../lib/i18n';
 
 const ISSUE_CATEGORIES = ['Incident', 'Service Request', 'Access Request'];
 
@@ -10,9 +11,9 @@ const ISSUE_CATEGORIES = ['Incident', 'Service Request', 'Access Request'];
 // either team from a combined pool". Level 1 means a single person handles
 // it alone, from whichever team is chosen.
 const LEVEL_OPTIONS = [
-    { key: 'l1-bpo', level: 1, label: 'Level 1 — Support BPO' },
-    { key: 'l1-it', level: 1, label: 'Level 1 — Support IT' },
-    { key: 'l2-both', level: 2, label: 'Level 2 — Support BPO & IT' },
+    { key: 'l1-bpo', level: 1, labelKey: 'admin.catalog.level1_bpo' },
+    { key: 'l1-it', level: 1, labelKey: 'admin.catalog.level1_it' },
+    { key: 'l2-both', level: 2, labelKey: 'admin.catalog.level2_both' },
 ];
 
 function deriveLevelKey(level, hasBpoAgent, hasItAgent) {
@@ -98,7 +99,7 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
             }
             onSaved(saved);
         } catch (e) {
-            setError(e.message || 'Gagal menyimpan layanan.');
+            setError(e.message || trans('admin.catalog.save_failed'));
         } finally {
             setSaving(false);
         }
@@ -107,49 +108,49 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
     return (
         <Modal onClose={onClose} maxWidth="max-w-lg">
             <ModalHeader
-                title={isEdit ? 'Edit Layanan' : 'Tambah Layanan'}
-                subtitle="Definisikan Issue Category, Layanan, Sub Category, dan Subject."
+                title={isEdit ? trans('admin.catalog.edit_title') : trans('admin.catalog.add_title')}
+                subtitle={trans('admin.catalog.form_subtitle')}
                 onClose={onClose}
             />
 
             <div className="space-y-4 overflow-y-auto px-6 py-5">
                 {error && <p className="rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
-                <Field label="Issue Category">
+                <Field label={trans('admin.catalog.col_issue')}>
                     <SelectMenu value={form.issue_category} onChange={(v) => set('issue_category', v)} options={ISSUE_CATEGORIES.map((c) => ({ value: c, label: c }))} />
                 </Field>
 
-                <Field label="Layanan">
-                    <input value={form.layanan} onChange={(e) => set('layanan', e.target.value)} placeholder="mis. SAP, VPN, Printer" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
+                <Field label={trans('admin.catalog.col_service')}>
+                    <input value={form.layanan} onChange={(e) => set('layanan', e.target.value)} placeholder={trans('admin.catalog.service_hint')} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
-                <Field label="Sub Category">
-                    <input value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)} placeholder="mis. Login SAP" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
+                <Field label={trans('admin.catalog.col_subcategory')}>
+                    <input value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)} placeholder={trans('admin.catalog.subject_hint')} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
-                <Field label="Subject">
-                    <input value={form.subject} onChange={(e) => set('subject', e.target.value)} placeholder="mis. Password Expired" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
+                <Field label={trans('admin.catalog.col_subject')}>
+                    <input value={form.subject} onChange={(e) => set('subject', e.target.value)} placeholder={trans('admin.catalog.subcategory_hint')} className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                 </Field>
 
-                <Field label="Requires Approval">
+                <Field label={trans('admin.catalog.requires_approval')}>
                     <SelectMenu
                         value={form.requires_approval}
                         onChange={(v) => set('requires_approval', v)}
-                        options={[{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }]}
+                        options={[{ value: 'false', label: trans('admin.integration.no') }, { value: 'true', label: trans('admin.integration.yes') }]}
                     />
                 </Field>
 
-                <Field label="Level">
+                <Field label={trans('admin.catalog.col_level')}>
                     <SelectMenu
                         value={form.levelKey}
                         onChange={selectLevel}
-                        options={LEVEL_OPTIONS.map((opt) => ({ value: opt.key, label: opt.label }))}
+                        options={LEVEL_OPTIONS.map((opt) => ({ value: opt.key, label: trans(opt.labelKey) }))}
                     />
                 </Field>
 
                 <div className={selectedLevel.key === 'l2-both' ? 'grid grid-cols-2 gap-4' : ''}>
                     {showBpoField && (
-                        <Field label="Support BPO">
+                        <Field label={trans('admin.catalog.support_bpo')}>
                             <SelectMenu
                                 value={String(form.support_agent_id ?? '')}
                                 onChange={(v) => set('support_agent_id', v)}
@@ -158,7 +159,7 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
                         </Field>
                     )}
                     {showItField && (
-                        <Field label="Support IT">
+                        <Field label={trans('admin.catalog.support_it')}>
                             <SelectMenu
                                 value={String(form.it_agent_id ?? '')}
                                 onChange={(v) => set('it_agent_id', v)}
@@ -168,19 +169,19 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
                     )}
                 </div>
 
-                <Field label="Status">
+                <Field label={trans('admin.common.status')}>
                     <SelectMenu
                         value={form.status}
                         onChange={(v) => set('status', v)}
-                        options={[{ value: 'active', label: 'Aktif' }, { value: 'inactive', label: 'Nonaktif' }]}
+                        options={[{ value: 'active', label: trans('admin.common.active') }, { value: 'inactive', label: trans('admin.common.inactive') }]}
                     />
                 </Field>
             </div>
 
             <ModalFooter>
-                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">Batal</button>
+                <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-5 py-2 text-sm font-medium text-blue-700 dark:text-accent-text hover:bg-white dark:hover:bg-panel-hover">{trans('admin.common.cancel')}</button>
                 <button onClick={save} disabled={saving || !form.layanan || !form.subcategory || !form.subject} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">
-                    {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                    {saving ? trans('admin.common.saving') : trans('admin.common.save_changes')}
                 </button>
             </ModalFooter>
         </Modal>

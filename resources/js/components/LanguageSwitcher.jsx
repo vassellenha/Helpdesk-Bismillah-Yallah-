@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../lib/api';
 
 // Inline SVG, not emoji flags — Windows' emoji font renders 🇮🇩/🇺🇸 as plain
 // "ID"/"US" letter tiles instead of an actual flag, so this is the only way
@@ -24,25 +25,28 @@ function FlagUS({ className }) {
     );
 }
 
+// `code` matches SetLocale::SUPPORTED — the value the server stores.
 const LANGUAGES = [
-    { code: 'ID', Flag: FlagID, label: 'Bahasa Indonesia' },
-    { code: 'EN', Flag: FlagUS, label: 'English' },
+    { code: 'id', Flag: FlagID, label: 'Bahasa Indonesia' },
+    { code: 'en', Flag: FlagUS, label: 'English' },
 ];
 
 /**
- * UI-only for now — picks a language and remembers it, but nothing on the
- * page actually retranslates yet. Wiring real i18n (Blade + every React
- * component) is a separate, much larger piece of work.
+ * Language picker, mounted in all six role layouts.
+ *
+ * The choice is stored server-side (session, via /locale) rather than in
+ * localStorage: half the interface is server-rendered Blade, which can only be
+ * translated if the server knows the locale before it renders. The page is
+ * reloaded after switching so both halves come back in the new language at once.
+ *
+ * Screens still being migrated to lang/ stay Indonesian until their strings are
+ * extracted — the switch is real, the coverage is being filled in per role.
  */
 export default function LanguageSwitcher() {
     const [open, setOpen] = useState(false);
-    const [lang, setLang] = useState('ID');
+    const [lang, setLang] = useState(() => (typeof window !== 'undefined' && window.__LOCALE__) || 'id');
+    const [saving, setSaving] = useState(false);
     const ref = useRef(null);
-
-    useEffect(() => {
-        const saved = localStorage.getItem('helpdesk_locale');
-        if (saved === 'ID' || saved === 'EN') setLang(saved);
-    }, []);
 
     useEffect(() => {
         function onClickOutside(e) {
@@ -52,10 +56,22 @@ export default function LanguageSwitcher() {
         return () => document.removeEventListener('mousedown', onClickOutside);
     }, []);
 
-    function select(code) {
-        setLang(code);
-        localStorage.setItem('helpdesk_locale', code);
-        setOpen(false);
+    async function select(code) {
+        if (code === lang || saving) {
+            setOpen(false);
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await apiFetch('/locale', { method: 'POST', body: JSON.stringify({ locale: code }) });
+            // Full reload, not a state update: the Blade-rendered half of the
+            // page was already sent in the old language and cannot re-render.
+            window.location.reload();
+        } catch {
+            setSaving(false);
+            setOpen(false);
+        }
     }
 
     const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];

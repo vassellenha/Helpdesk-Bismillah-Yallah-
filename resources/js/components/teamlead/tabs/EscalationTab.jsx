@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { StatusBadge, PriorityBadge } from '../../StatusBadge';
 import { MetricCard, ICON } from '../ui';
+import { t as trans } from '../../../lib/i18n';
 
 function BpoTable({ rows, actions }) {
     const [query, setQuery] = useState('');
@@ -15,22 +16,22 @@ function BpoTable({ rows, actions }) {
                 <div className="flex items-center gap-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-accent-soft text-blue-600 dark:text-accent-text"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V9 M8 12l4-4 4 4 M8 4h8"/></svg></span>
                     <div>
-                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Eskalasi BPO → Tim IT <span className="ml-1 rounded-full bg-gray-100 dark:bg-panel-3 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:text-ink-2">dipantau</span></h2>
-                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">Tiket yang dieskalasi Support BPO ke Support IT karena perlu penanganan lanjutan (view-only).</p>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.escalation.bpo_table')} <span className="ml-1 rounded-full bg-gray-100 dark:bg-panel-3 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:text-ink-2">{trans('teamlead.escalation.monitored')}</span></h2>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.escalation.bpo_desc')}</p>
                     </div>
                 </div>
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari tiket, agen, aplikasi…" className="w-56 rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={trans('teamlead.escalation.search')} className="w-56 rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[920px] text-sm">
                     <thead>
                         <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                            <th className="px-4 py-3.5 pl-6 text-left">No. Tiket</th>
-                            <th className="px-4 py-3.5 text-left">Subjek &amp; Alasan</th>
-                            <th className="px-4 py-3.5 text-left">Prioritas</th>
-                            <th className="px-4 py-3.5 text-left">Dari (BPO) → Ke (IT)</th>
-                            <th className="px-4 py-3.5 text-left">Dieskalasi</th>
-                            <th className="px-4 py-3.5 pr-6 text-left">Status</th>
+                            <th className="px-4 py-3.5 pl-6 text-left">{trans('teamlead.columns.ticket_no')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.escalation.subject_reason')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.priority')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.escalation.from_to')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.escalation.escalated_at')}</th>
+                            <th className="px-4 py-3.5 pr-6 text-left">{trans('teamlead.columns.status')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -53,7 +54,7 @@ function BpoTable({ rows, actions }) {
                                 <td className="px-4 py-4 pr-6"><StatusBadge status={e.status} /></td>
                             </tr>
                         ))}
-                        {filtered.length === 0 && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-emerald-600 dark:text-ok-text">Belum ada tiket yang dieskalasi BPO ke Tim IT. 🎉</td></tr>}
+                        {filtered.length === 0 && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-emerald-600 dark:text-ok-text">{trans('teamlead.escalation.no_bpo')}</td></tr>}
                     </tbody>
                 </table>
             </div>
@@ -67,20 +68,20 @@ function BreachTable({ rows, actions }) {
             <div className="flex items-center gap-3 p-5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 dark:bg-bad-soft text-red-600 dark:text-bad-text"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span>
                 <div>
-                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">Eskalasi SLA Breach <span className="ml-1 rounded-full bg-red-50 dark:bg-bad-soft px-2 py-0.5 text-[11px] font-semibold text-red-600 dark:text-bad-text">{rows.length} dipantau</span></h2>
-                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">Tiket aktif yang sudah melewati SLA — dipantau supervisor (view-only).</p>
+                    <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.escalation.breach_table')} <span className="ml-1 rounded-full bg-red-50 dark:bg-bad-soft px-2 py-0.5 text-[11px] font-semibold text-red-600 dark:text-bad-text">{trans('teamlead.escalation.monitored_count', { count: rows.length })}</span></h2>
+                    <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.escalation.breach_desc')}</p>
                 </div>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[680px] text-sm">
                     <thead>
                         <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                            <th className="px-4 py-3.5 pl-6 text-left">No. Tiket</th>
-                            <th className="px-4 py-3.5 text-left">Subjek</th>
-                            <th className="px-4 py-3.5 text-left">Aplikasi</th>
-                            <th className="px-4 py-3.5 text-left">Prioritas</th>
-                            <th className="px-4 py-3.5 text-left">Keterlambatan</th>
-                            <th className="px-4 py-3.5 pr-6 text-left">PIC</th>
+                            <th className="px-4 py-3.5 pl-6 text-left">{trans('teamlead.columns.ticket_no')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.subject')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.app')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.priority')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.escalation.delay')}</th>
+                            <th className="px-4 py-3.5 pr-6 text-left">{trans('teamlead.columns.pic')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -94,7 +95,7 @@ function BreachTable({ rows, actions }) {
                                 <td className="px-4 py-4 pr-6 text-gray-700 dark:text-ink-2">{r.agent}</td>
                             </tr>
                         ))}
-                        {rows.length === 0 && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-emerald-600 dark:text-ok-text">Tidak ada tiket breach. 🎉</td></tr>}
+                        {rows.length === 0 && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-emerald-600 dark:text-ok-text">{trans('teamlead.escalation.no_breach')}</td></tr>}
                     </tbody>
                 </table>
             </div>
@@ -114,13 +115,13 @@ export default function EscalationTab({ escalations = [], breachEscalations = []
     return (
         <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                <MetricCard label="Eskalasi BPO → IT" value={stats.total} icon={ICON.escalate} iconBg="bg-blue-50 dark:bg-accent-soft" iconColor="text-blue-600 dark:text-accent-text" sub={`${stats.active} sedang ditangani`} />
-                <MetricCard label="SLA Breach Aktif" value={stats.breach} icon={ICON.warning} iconBg="bg-red-50 dark:bg-bad-soft" iconColor="text-red-600 dark:text-bad-text" sub="Sudah lewat batas" />
-                <MetricCard label="Eskalasi Selesai" value={escalations.filter((e) => e.done).length} icon={ICON.check} iconBg="bg-emerald-50 dark:bg-ok-soft" iconColor="text-emerald-600 dark:text-ok-text" />
+                <MetricCard label={trans('teamlead.escalation.bpo_to_it')} value={stats.total} icon={ICON.escalate} iconBg="bg-blue-50 dark:bg-accent-soft" iconColor="text-blue-600 dark:text-accent-text" sub={trans('teamlead.escalation.handling', { count: stats.active })} />
+                <MetricCard label={trans('teamlead.escalation.breach_active')} value={stats.breach} icon={ICON.warning} iconBg="bg-red-50 dark:bg-bad-soft" iconColor="text-red-600 dark:text-bad-text" sub={trans('teamlead.escalation.breach_hint')} />
+                <MetricCard label={trans('teamlead.escalation.completed')} value={escalations.filter((e) => e.done).length} icon={ICON.check} iconBg="bg-emerald-50 dark:bg-ok-soft" iconColor="text-emerald-600 dark:text-ok-text" />
             </div>
 
             <div className="flex gap-1.5 self-start rounded-xl bg-gray-100 dark:bg-panel-3 p-1">
-                {[['bpo', `BPO → IT · ${stats.total}`], ['breach', `SLA Breach · ${stats.breach}`]].map(([k, l]) => (
+                {[['bpo', trans('teamlead.escalation.tab_bpo', { count: stats.total })], ['breach', trans('teamlead.escalation.tab_breach', { count: stats.breach })]].map(([k, l]) => (
                     <button key={k} onClick={() => setView(k)} className={`rounded-lg px-4 py-2 text-[13px] font-bold transition ${view === k ? 'bg-white dark:bg-panel-2 text-gray-900 dark:text-ink-1 shadow-sm' : 'text-gray-500 dark:text-ink-2'}`}>{l}</button>
                 ))}
             </div>
