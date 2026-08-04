@@ -9,13 +9,6 @@ import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 
-const TIMELINE_DOT = {
-    done: 'bg-emerald-500',
-    current: 'bg-blue-600 dark:bg-blue-500',
-    pending: 'bg-gray-200',
-    rejected: 'bg-red-600',
-};
-
 function Card({ title, children, className = '' }) {
     return (
         <div className={`rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm ${className}`}>
@@ -329,9 +322,8 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     );
 }
 
-export default function TicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], flow: initialFlow = null, dataUrl, commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
+export default function TicketDetail({ ticket: initialTicket, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
-    const [timeline, setTimeline] = useState(initialTimeline);
     const [flow, setFlow] = useState(initialFlow);
     const status = ticket.status;
     const canConfirmClose = ticket.canConfirmClose;
@@ -351,7 +343,6 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
             const fresh = await apiFetch(dataUrl);
             setTicket(fresh.ticket);
             setComments(fresh.comments);
-            setTimeline(fresh.timeline);
             setFlow(fresh.flow);
         } catch {
             // Keep the last-known data on a failed refresh.
@@ -428,6 +419,10 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.7fr_1fr]">
                 <div className="flex flex-col gap-6">
+                    <Card title={trans('requester.detail.status_history')}>
+                        <TicketFlow flow={flow} />
+                    </Card>
+
                     <Card title="Informasi Tiket">
                         <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'No description was provided.'}</p>
                         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-3">
@@ -515,26 +510,6 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </Card>
-
-                    <Card title={trans('requester.detail.status_history')}>
-                        <TicketFlow flow={flow} />
-                        <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
-                        <div className="flex flex-col">
-                            {timeline.map((step, i) => (
-                                <div key={i} className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${TIMELINE_DOT[step.state]}`} />
-                                        {i < timeline.length - 1 && <span className="w-px flex-1 bg-gray-200" />}
-                                    </div>
-                                    <div className={`pb-4 ${step.state === 'pending' ? 'opacity-50' : ''}`}>
-                                        <p className="text-[13px] font-semibold text-gray-900 dark:text-ink-1">{step.label}</p>
-                                        {step.who && <p className="text-[11px] text-gray-400 dark:text-ink-3">{step.who}</p>}
-                                        {step.at && <p className="text-[11px] text-gray-400 dark:text-ink-3">{step.at}</p>}
-                                    </div>
-                                </div>
-                            ))}
                         </div>
                     </Card>
                 </div>

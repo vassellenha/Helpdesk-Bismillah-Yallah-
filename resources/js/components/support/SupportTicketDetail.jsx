@@ -7,13 +7,6 @@ import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import { t as trans } from '../../lib/i18n';
 
-const TIMELINE_DOT = {
-    done: 'bg-emerald-500',
-    current: 'bg-blue-600 dark:bg-blue-500',
-    pending: 'bg-gray-200',
-    rejected: 'bg-red-600',
-};
-
 // Colours only — the wording lives in lang/{id,en}/support.php under
 // support.confirm.<action>, so both languages stay in one place.
 const CONFIRM_STYLE = {
@@ -113,9 +106,8 @@ function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onC
     );
 }
 
-export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], flow: initialFlow = null, dataUrl, commentsUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
+export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
-    const [timeline, setTimeline] = useState(initialTimeline);
     const [flow, setFlow] = useState(initialFlow);
     const [comments, setComments] = useState(initialComments);
     const [reply, setReply] = useState('');
@@ -155,7 +147,6 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                 const fresh = await apiFetch(dataUrl);
                 setTicket(fresh.ticket);
                 setComments(fresh.comments);
-                setTimeline(fresh.timeline);
                 setFlow(fresh.flow);
                 setConfirmAction(null);
             }
@@ -357,22 +348,6 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
 
                     <Card title={trans('support.detail.status_history')}>
                         <TicketFlow flow={flow} />
-                        <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
-                        <div className="flex flex-col">
-                            {timeline.map((step, i) => (
-                                <div key={i} className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${TIMELINE_DOT[step.state]}`} />
-                                        {i < timeline.length - 1 && <span className="w-px flex-1 bg-gray-200" />}
-                                    </div>
-                                    <div className={`pb-4 ${step.state === 'pending' ? 'opacity-50' : ''}`}>
-                                        <p className="text-[13px] font-semibold text-gray-900 dark:text-ink-1">{step.label}</p>
-                                        {step.who && <p className="text-[11px] text-gray-400 dark:text-ink-3">{step.who}</p>}
-                                        {step.at && <p className="text-[11px] text-gray-400 dark:text-ink-3">{step.at}</p>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
                     </Card>
                 </div>
             </div>

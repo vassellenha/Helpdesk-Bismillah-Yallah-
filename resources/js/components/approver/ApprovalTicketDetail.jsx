@@ -7,13 +7,6 @@ import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
-const TIMELINE_DOT = {
-    done: 'bg-emerald-500',
-    current: 'bg-blue-600 dark:bg-blue-500',
-    pending: 'bg-gray-200',
-    rejected: 'bg-red-600',
-};
-
 // Colour stays here (presentation); every string comes from lang/*/approver.php.
 const CONFIRM_STYLE = {
     approved: 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400',
@@ -83,9 +76,8 @@ function ConfirmModal({ decision, ticketId, note, submitting, error, onCancel, o
     );
 }
 
-export default function ApprovalTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], flow: initialFlow = null, dataUrl, commentsUrl, decideUrl, ticketsUrl }) {
+export default function ApprovalTicketDetail({ ticket: initialTicket, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, decideUrl, ticketsUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
-    const [timeline, setTimeline] = useState(initialTimeline);
     const [flow, setFlow] = useState(initialFlow);
     const [comments, setComments] = useState(initialComments);
     const [reply, setReply] = useState('');
@@ -127,7 +119,6 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
             const fresh = await apiFetch(dataUrl);
             setTicket(fresh.ticket);
             setComments(fresh.comments);
-            setTimeline(fresh.timeline);
             setFlow(fresh.flow);
             setConfirmDecision(null);
         } catch (e) {
@@ -290,21 +281,6 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
 
                     <Card title={trans('approver.detail.status_history')}>
                         <TicketFlow flow={flow} />
-                        <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
-                        <div className="flex flex-col">
-                            {timeline.map((step, i) => (
-                                <div key={i} className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${TIMELINE_DOT[step.state]}`} />
-                                        {i < timeline.length - 1 && <span className="w-px flex-1 bg-gray-200" />}
-                                    </div>
-                                    <div className={`pb-4 ${step.state === 'pending' ? 'opacity-50' : ''}`}>
-                                        <p className="text-[13px] font-semibold text-gray-900 dark:text-ink-1">{step.label}</p>
-                                        {(step.who || step.at) && <p className="text-[11px] text-gray-400 dark:text-ink-3">{[step.who, step.at].filter(Boolean).join(' · ')}</p>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
                     </Card>
                 </div>
             </div>
