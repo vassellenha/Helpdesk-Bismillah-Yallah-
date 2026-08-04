@@ -10,6 +10,7 @@ use App\Models\TicketComment;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use App\Support\TicketPeople;
+use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class TicketDetailController extends Controller
             'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('requester.tickets.data', $ticket),
             'commentsUrl' => route('requester.tickets.comments.store', $ticket),
             'reopenUrl' => route('requester.tickets.reopen', $ticket),
@@ -61,6 +63,7 @@ class TicketDetailController extends Controller
             'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'flow' => TicketFlow::stages($ticket),
         ]);
     }
 

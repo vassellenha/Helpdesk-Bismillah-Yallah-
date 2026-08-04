@@ -80,6 +80,7 @@ return [
     ],
 
     'detail' => [
+        'status_history' => 'Status History',
         'service' => 'Service',
         'category' => 'Category',
         'subject' => 'Subject',

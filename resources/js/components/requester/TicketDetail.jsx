@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
+import TicketFlow from '../TicketFlow';
 import NewTicketModal from '../NewTicketModal';
 import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
@@ -328,9 +329,10 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     );
 }
 
-export default function TicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], dataUrl, commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
+export default function TicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], flow: initialFlow = null, dataUrl, commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
     const [timeline, setTimeline] = useState(initialTimeline);
+    const [flow, setFlow] = useState(initialFlow);
     const status = ticket.status;
     const canConfirmClose = ticket.canConfirmClose;
     const [comments, setComments] = useState(initialComments);
@@ -350,6 +352,7 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
             setTicket(fresh.ticket);
             setComments(fresh.comments);
             setTimeline(fresh.timeline);
+            setFlow(fresh.flow);
         } catch {
             // Keep the last-known data on a failed refresh.
         }
@@ -515,7 +518,9 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                         </div>
                     </Card>
 
-                    <Card title="Status Timeline">
+                    <Card title={trans('requester.detail.status_history')}>
+                        <TicketFlow flow={flow} />
+                        <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
                         <div className="flex flex-col">
                             {timeline.map((step, i) => (
                                 <div key={i} className="flex gap-3">

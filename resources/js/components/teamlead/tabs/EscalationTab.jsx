@@ -3,6 +3,33 @@ import { StatusBadge, PriorityBadge } from '../../StatusBadge';
 import { MetricCard, ICON } from '../ui';
 import { t as trans } from '../../../lib/i18n';
 
+const STAR_PATH = 'm12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z';
+
+/**
+ * Compact rating for the escalation table. Three distinct outcomes, because
+ * collapsing them would hide real information: the ticket is still running,
+ * it closed but nobody rated it, or it closed with a score. A greyed star
+ * marks a rating the Admin excluded from the agent's average.
+ */
+function RatingCell({ done, rating, ratingActive }) {
+    if (!done) {
+        return <span className="text-[11.5px] text-gray-300 dark:text-ink-3">—</span>;
+    }
+    if (rating === null || rating === undefined) {
+        return <span className="text-[11px] text-gray-400 dark:text-ink-3">{trans('teamlead.support.no_reviews')}</span>;
+    }
+
+    return (
+        <span
+            className={`inline-flex items-center gap-1 text-[12.5px] font-bold ${ratingActive ? 'text-amber-600 dark:text-warn-text' : 'text-gray-400 dark:text-ink-3'}`}
+            title={trans(ratingActive ? 'teamlead.flow.rating_included' : 'teamlead.flow.rating_excluded')}
+        >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d={STAR_PATH} /></svg>
+            {Number(rating).toFixed(1)}
+        </span>
+    );
+}
+
 function BpoTable({ rows, actions }) {
     const [query, setQuery] = useState('');
     const filtered = useMemo(() => {
@@ -23,7 +50,7 @@ function BpoTable({ rows, actions }) {
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={trans('teamlead.escalation.search')} className="w-56 rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[920px] text-sm">
+                <table className="w-full min-w-[1010px] text-sm">
                     <thead>
                         <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                             <th className="px-4 py-3.5 pl-6 text-left">{trans('teamlead.columns.ticket_no')}</th>
@@ -31,7 +58,8 @@ function BpoTable({ rows, actions }) {
                             <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.priority')}</th>
                             <th className="px-4 py-3.5 text-left">{trans('teamlead.escalation.from_to')}</th>
                             <th className="px-4 py-3.5 text-left">{trans('teamlead.escalation.escalated_at')}</th>
-                            <th className="px-4 py-3.5 pr-6 text-left">{trans('teamlead.columns.status')}</th>
+                            <th className="px-4 py-3.5 text-left">{trans('teamlead.columns.status')}</th>
+                            <th className="px-4 py-3.5 pr-6 text-left">{trans('teamlead.columns.rating')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -51,10 +79,11 @@ function BpoTable({ rows, actions }) {
                                     </span>
                                 </td>
                                 <td className="px-4 py-4 text-[12px] text-gray-500 dark:text-ink-2">{e.escalatedAt}</td>
-                                <td className="px-4 py-4 pr-6"><StatusBadge status={e.status} /></td>
+                                <td className="px-4 py-4"><StatusBadge status={e.status} /></td>
+                                <td className="px-4 py-4 pr-6"><RatingCell done={e.done} rating={e.rating} ratingActive={e.ratingActive} /></td>
                             </tr>
                         ))}
-                        {filtered.length === 0 && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-emerald-600 dark:text-ok-text">{trans('teamlead.escalation.no_bpo')}</td></tr>}
+                        {filtered.length === 0 && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-emerald-600 dark:text-ok-text">{trans('teamlead.escalation.no_bpo')}</td></tr>}
                     </tbody>
                 </table>
             </div>

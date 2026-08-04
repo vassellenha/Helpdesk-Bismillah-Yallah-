@@ -378,6 +378,15 @@ return [
 
     'tickets' => [
         'title' => 'Ticket Management',
+        'pic_note' => 'Assignment PIC dilakukan oleh Team Lead domain terkait — Administrator hanya dapat memantau.',
+        'rating_excluded_note' => '· dikecualikan dari rata-rata',
+        'subtitle' => 'Seluruh transaksi tiket Incident, Service Request, dan Role Access.',
+        'pic_note' => 'Assignment PIC dilakukan oleh Team Lead domain terkait — Administrator hanya dapat memantau.',
+        'rating_excluded_note' => '· dikecualikan dari rata-rata',
+        'subtitle' => 'Seluruh transaksi tiket Incident, Service Request, dan Role Access.',
+        'pic_note' => 'Assignment PIC dilakukan oleh Team Lead domain terkait — Administrator hanya dapat memantau.',
+        'rating_excluded_note' => '· dikecualikan dari rata-rata',
+        'subtitle' => 'Seluruh transaksi tiket Incident, Service Request, dan Role Access.',
         'subtitle' => 'Pantau seluruh ticket helpdesk, filter, dan lihat detail penanganannya.',
         'showing' => 'Menampilkan :shown dari :total ticket',
         'period_all' => 'Semua',

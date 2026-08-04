@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
+import TicketFlow from '../TicketFlow';
 import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
@@ -112,9 +113,10 @@ function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onC
     );
 }
 
-export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], dataUrl, commentsUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
+export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], flow: initialFlow = null, dataUrl, commentsUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
     const [timeline, setTimeline] = useState(initialTimeline);
+    const [flow, setFlow] = useState(initialFlow);
     const [comments, setComments] = useState(initialComments);
     const [reply, setReply] = useState('');
     const [sending, setSending] = useState(false);
@@ -154,6 +156,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                 setTicket(fresh.ticket);
                 setComments(fresh.comments);
                 setTimeline(fresh.timeline);
+                setFlow(fresh.flow);
                 setConfirmAction(null);
             }
         } catch (e) {
@@ -353,6 +356,8 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                     </Card>
 
                     <Card title={trans('support.detail.status_history')}>
+                        <TicketFlow flow={flow} />
+                        <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
                         <div className="flex flex-col">
                             {timeline.map((step, i) => (
                                 <div key={i} className="flex gap-3">

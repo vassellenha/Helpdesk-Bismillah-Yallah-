@@ -9,6 +9,7 @@
         'ticket' => $ticket,
         'comments' => $comments,
         'timeline' => $timeline,
+        'flow' => $flow,
         'dataUrl' => $dataUrl,
         'commentsUrl' => $commentsUrl,
         'decideUrl' => $decideUrl,

@@ -5,6 +5,11 @@ import { useEffect, useRef, useState } from 'react';
  * can't be restyled cross-browser (stuck with the OS's default blue
  * highlight/font), which looks inconsistent next to the rest of the app.
  */
+/**
+ * The open menu is height-capped and scrolls: some lists (applications, work
+ * units, requesters) run to dozens of entries and would otherwise render taller
+ * than the viewport, with no way to reach the bottom of the list.
+ */
 export default function SelectMenu({ value, onChange, options }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -33,7 +38,7 @@ export default function SelectMenu({ value, onChange, options }) {
             </button>
 
             {open && (
-                <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-full min-w-[180px] overflow-hidden rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-1 shadow-lg">
+                <div className="absolute right-0 top-[calc(100%+4px)] z-30 max-h-[280px] w-full min-w-[180px] overflow-y-auto rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-1 shadow-lg">
                     {options.map((o) => (
                         <button
                             key={o.value}

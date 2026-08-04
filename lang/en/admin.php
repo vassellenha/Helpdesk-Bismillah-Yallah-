@@ -373,6 +373,15 @@ return [
 
     'tickets' => [
         'title' => 'Ticket Management',
+        'pic_note' => 'PIC assignment is done by the relevant domain Team Lead — the Administrator can only monitor.',
+        'rating_excluded_note' => '· excluded from the average',
+        'subtitle' => 'Every Incident, Service Request, and Role Access ticket transaction.',
+        'pic_note' => 'PIC assignment is done by the relevant domain Team Lead — the Administrator can only monitor.',
+        'rating_excluded_note' => '· excluded from the average',
+        'subtitle' => 'Every Incident, Service Request, and Role Access ticket transaction.',
+        'pic_note' => 'PIC assignment is done by the relevant domain Team Lead — the Administrator can only monitor.',
+        'rating_excluded_note' => '· excluded from the average',
+        'subtitle' => 'Every Incident, Service Request, and Role Access ticket transaction.',
         'subtitle' => 'Monitor every helpdesk ticket, filter them, and inspect how each one was handled.',
         'showing' => 'Showing :shown of :total tickets',
         'period_all' => 'All',

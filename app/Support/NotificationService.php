@@ -29,6 +29,18 @@ class NotificationService
     }
 
     /**
+     * Whether the ticket has actually been handed to Support yet.
+     *
+     * Mirrors the guard the Support controllers use to answer 403/422, so a
+     * notification can never point at a ticket its recipient is forbidden to
+     * open. Keep the two in step: this is the same list, read from the model.
+     */
+    public static function releasedToSupport(Ticket $ticket): bool
+    {
+        return ! in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true);
+    }
+
+    /**
      * Routes a notification to whichever real person is actually PIC on
      * this ticket right now (`assigned_agent_id` → support_agents.user_id),
      * not a fixed persona — a Subject can route to any of several IT/BPO
@@ -36,9 +48,18 @@ class NotificationService
      * Support" only makes sense per-ticket, never as one hardcoded user.
      * Silently no-ops if the ticket has no PIC yet or that agent has no
      * linked login — just a defensive guard, not an error condition.
+     *
+     * Also no-ops while the ticket hasn't been released to Support yet.
+     * `assigned_agent_id` is frozen at creation time, so a ticket sitting
+     * with an Approver already names a PIC — notifying them here would ring
+     * a bell for a ticket the Support controllers answer 403 for.
      */
     public static function notifyAssignedAgent(Ticket $ticket, string $type, string $title, string $message): ?TicketNotification
     {
+        if (! self::releasedToSupport($ticket)) {
+            return null;
+        }
+
         $agent = $ticket->assignedAgent;
         if (! $agent || ! $agent->user_id) {
             return null;
@@ -64,7 +85,11 @@ class NotificationService
     public static function notifyDiscussionParticipants(Ticket $ticket, User $author, string $authorRole, string $message): void
     {
         $preview = Str::limit($message, 120);
-        $agentUserId = $ticket->assignedAgent?->user_id;
+
+        // The PIC only joins the conversation once the ticket actually reaches
+        // Support. Before that the thread belongs to the Requester and Approver,
+        // and the (already frozen) agent must not be pulled into it.
+        $agentUserId = self::releasedToSupport($ticket) ? $ticket->assignedAgent?->user_id : null;
 
         collect([$ticket->requester, $ticket->approver, $agentUserId ? User::find($agentUserId) : null])
             ->filter()

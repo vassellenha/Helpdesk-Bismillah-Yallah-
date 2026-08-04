@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
+import TicketFlow from '../TicketFlow';
 import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
@@ -82,9 +83,10 @@ function ConfirmModal({ decision, ticketId, note, submitting, error, onCancel, o
     );
 }
 
-export default function ApprovalTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], dataUrl, commentsUrl, decideUrl, ticketsUrl }) {
+export default function ApprovalTicketDetail({ ticket: initialTicket, comments: initialComments = [], timeline: initialTimeline = [], flow: initialFlow = null, dataUrl, commentsUrl, decideUrl, ticketsUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
     const [timeline, setTimeline] = useState(initialTimeline);
+    const [flow, setFlow] = useState(initialFlow);
     const [comments, setComments] = useState(initialComments);
     const [reply, setReply] = useState('');
     const [sending, setSending] = useState(false);
@@ -126,6 +128,7 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
             setTicket(fresh.ticket);
             setComments(fresh.comments);
             setTimeline(fresh.timeline);
+            setFlow(fresh.flow);
             setConfirmDecision(null);
         } catch (e) {
             setError(e.message || 'Gagal mengirim keputusan.');
@@ -286,6 +289,8 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                     </Card>
 
                     <Card title={trans('approver.detail.status_history')}>
+                        <TicketFlow flow={flow} />
+                        <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
                         <div className="flex flex-col">
                             {timeline.map((step, i) => (
                                 <div key={i} className="flex gap-3">

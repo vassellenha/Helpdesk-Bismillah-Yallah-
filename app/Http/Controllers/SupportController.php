@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use App\Support\TicketPeople;
+use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -125,6 +126,7 @@ class SupportController extends Controller
             'ticket' => $this->presentTicket($ticket, $agent),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('support.tickets.data', $ticket),
             'commentsUrl' => route('support.tickets.comments.store', $ticket),
             'resolveUrl' => route('support.tickets.resolve', $ticket),
@@ -151,6 +153,7 @@ class SupportController extends Controller
             'ticket' => $this->presentTicket($ticket, $agent),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'flow' => TicketFlow::stages($ticket),
         ]);
     }
 

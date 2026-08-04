@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBadge, PriorityBadge } from '../../StatusBadge';
+import SelectMenu from '../../SelectMenu';
 import { t as trans } from '../../../lib/i18n';
 
 // Language-independent sentinel for 'no filter' — a translated word here would
@@ -36,27 +37,16 @@ function liveSla(slaMinutes, elapsedSec) {
     return { overdue: total < 0, text: total < 0 ? trans('teamlead.monitoring.overdue', { time: body }) : trans('teamlead.monitoring.remaining', { time: body }) };
 }
 
-function Chip({ active, onClick, children }) {
-    return (
-        <button onClick={onClick} className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${active ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text ring-1 ring-blue-300' : 'bg-white dark:bg-panel-2 text-gray-700 dark:text-ink-2 ring-1 ring-gray-200 dark:ring-edge-strong hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
-            {children}
-        </button>
-    );
-}
-
-export default function MonitoringTab({ monitorRows = [], actions = {}, remindUrlBase }) {
+export default function MonitoringTab({ monitorRows = [], monitorFilters = {}, actions = {}, remindUrlBase }) {
     const [rows, setRows] = useState(monitorRows);
     const [query, setQuery] = useState('');
     const [sortNB, setSortNB] = useState(false);
     const [live, setLive] = useState(true);
     const [warnOpen, setWarnOpen] = useState(true);
-    const [filterOpen, setFilterOpen] = useState(false);
-    const [f, setF] = useState({ priority: ALL, status: ALL, type: ALL, subcat: ALL, app: ALL, unit: ALL });
-    const [appQuery, setAppQuery] = useState('');
+    const [f, setF] = useState({ priority: ALL, status: ALL, type: ALL, subcat: ALL, app: ALL, unit: ALL, pic: ALL });
     const [page, setPage] = useState(1);
     const mount = useRef(Date.now());
     const [, setTick] = useState(0);
-    const filterRef = useRef(null);
 
     // Sync when the parent refetches (e.g. after a corrective action) so the
     // list reflects fresh priorities/PICs without a page reload.
@@ -68,18 +58,24 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
         return () => clearInterval(id);
     }, [live]);
 
-    useEffect(() => {
-        function onOutside(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false); }
-        document.addEventListener('mousedown', onOutside);
-        return () => document.removeEventListener('mousedown', onOutside);
-    }, []);
+    function resetFilters() {
+        setF({ priority: ALL, status: ALL, type: ALL, subcat: ALL, app: ALL, unit: ALL, pic: ALL });
+    }
 
     const elapsed = live ? Math.floor((Date.now() - mount.current) / 1000) : 0;
 
-    const subcats = useMemo(() => [...new Set(rows.map((r) => r.subcategory).filter((x) => x && x !== '—'))].sort(), [rows]);
-    const apps = useMemo(() => [...new Set(rows.map((r) => r.service).filter((x) => x && x !== '—'))].sort(), [rows]);
-    const units = useMemo(() => [...new Set(rows.map((r) => r.unit).filter((x) => x && x !== '—'))].sort(), [rows]);
-    const statuses = useMemo(() => [...new Set(rows.map((r) => r.status))].sort(), [rows]);
+    // Option lists come from the server (every scoped ticket in the period), not
+    // from the rows on screen — otherwise a filter value disappears the moment no
+    // visible ticket happens to carry it. Falls back to deriving from rows so the
+    // tab still works if an older payload arrives without monitorFilters.
+    const derive = (key) => [...new Set(rows.map((r) => r[key]).filter((x) => x && x !== '—'))].sort();
+    const subcats = useMemo(() => monitorFilters.subcats ?? derive('subcategory'), [monitorFilters, rows]);
+    const apps = useMemo(() => monitorFilters.apps ?? derive('service'), [monitorFilters, rows]);
+    const units = useMemo(() => monitorFilters.units ?? derive('unit'), [monitorFilters, rows]);
+    const statuses = useMemo(() => monitorFilters.statuses ?? derive('status'), [monitorFilters, rows]);
+    const priorities = monitorFilters.priorities ?? PRIORITIES;
+    const types = monitorFilters.types ?? TYPES;
+    const pics = useMemo(() => monitorFilters.pics ?? derive('agent'), [monitorFilters, rows]);
 
     const warnTickets = useMemo(
         () => rows.filter((r) => ['Critical', 'High'].includes(r.priority) && r.slaMinutes !== null && r.slaMinutes < 30),
@@ -97,6 +93,7 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
             if (f.subcat !== ALL && r.subcategory !== f.subcat) return false;
             if (f.app !== ALL && r.service !== f.app) return false;
             if (f.unit !== ALL && r.unit !== f.unit) return false;
+            if (f.pic !== ALL && r.agent !== f.pic) return false;
             if (q && !`${r.id} ${r.subject} ${r.service} ${r.agent}`.toLowerCase().includes(q)) return false;
             return true;
         });
@@ -136,46 +133,42 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                 </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="relative flex-1 min-w-[240px] max-w-md" ref={filterRef}>
-                    <button onClick={() => setFilterOpen((v) => !v)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold transition ${activeFilters || filterOpen ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'bg-white dark:bg-panel-2 text-gray-700 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16 M7 12h10 M10 18h4"/></svg>
-                        {activeFilters ? trans('teamlead.monitoring.filter_count', { count: activeFilters }) : trans('teamlead.monitoring.filter')}
-                    </button>
-                    {filterOpen && (
-                        <div className="absolute left-0 top-12 z-30 flex w-[400px] max-w-[92vw] flex-col gap-4 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-xl">
-                            <FilterGroup label={trans('teamlead.columns.priority')} value={f.priority} options={PRIORITIES} onSelect={(v) => setFilter('priority', v)} />
-                            <FilterGroup label={trans('teamlead.columns.status')} value={f.status} options={statuses} onSelect={(v) => setFilter('status', v)} />
-                            <FilterGroup label={trans('teamlead.monitoring.type')} value={f.type} options={TYPES} onSelect={(v) => setFilter('type', v)} />
-                            <FilterGroup label={trans('teamlead.columns.subcategory')} value={f.subcat} options={subcats} onSelect={(v) => setFilter('subcat', v)} scroll />
-                            <div className="flex flex-col gap-2">
-                                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.monitoring.app_count', { count: apps.length })}</p>
-                                <input value={appQuery} onChange={(e) => setAppQuery(e.target.value)} placeholder={trans('teamlead.monitoring.app_placeholder')} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-[12.5px] outline-none focus:border-blue-400" />
-                                <div className="flex max-h-[150px] flex-col gap-0.5 overflow-y-auto">
-                                    {[ALL, ...apps.filter((a) => a.toLowerCase().includes(appQuery.toLowerCase()))].map((a) => (
-                                        <button key={a} onClick={() => setFilter('app', a)} className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-[12.5px] ${f.app === a ? 'bg-blue-50 dark:bg-accent-soft font-bold text-blue-700 dark:text-accent-text' : 'font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
-                                            {a === ALL ? trans('teamlead.common.all_app') : a}
-                                            {f.app === a && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l4 4 10-11"/></svg>}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <FilterGroup label={trans('teamlead.monitoring.unit')} value={f.unit} options={units} onSelect={(v) => setFilter('unit', v)} scroll />
-                            <button onClick={() => { setF({ priority: ALL, status: ALL, type: ALL, subcat: ALL, app: ALL, unit: ALL }); setAppQuery(''); }} className="self-start text-[12.5px] font-bold text-blue-600 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">{trans('teamlead.monitoring.reset_all')}</button>
-                        </div>
-                    )}
+            {/* Filter bar sejajar dengan Admin Ticket Management: satu baris dropdown
+                yang selalu terlihat, bukan popover — jumlah filter aktif dan
+                pilihannya bisa dibaca tanpa membuka apa pun dulu. */}
+            <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-gray-100 dark:border-edge p-4 lg:flex-row lg:items-center lg:justify-between">
+                    <input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder={trans('teamlead.monitoring.search')}
+                        className="w-full max-w-md rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400"
+                    />
+                    <div className="flex shrink-0 items-center gap-2.5">
+                        <button onClick={() => setLive((v) => !v)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold ${live ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-600 dark:text-ok-text' : 'bg-white dark:bg-panel-2 text-gray-500 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong'}`}>
+                            <span className={`h-2 w-2 rounded-full ${live ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]' : 'bg-gray-400'}`} />
+                            {live ? trans('teamlead.monitoring.live') : trans('teamlead.monitoring.paused')}
+                        </button>
+                        <button onClick={() => setSortNB((v) => !v)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold ${sortNB ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'bg-white dark:bg-panel-2 text-gray-700 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16 M6 12h12 M9 17h6"/></svg>
+                            {sortNB ? trans('teamlead.monitoring.sorted_nearest') : trans('teamlead.monitoring.sort_nearest')}
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={trans('teamlead.monitoring.search')} className="w-52 rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
-                    <button onClick={() => setLive((v) => !v)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold ${live ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-600 dark:text-ok-text' : 'bg-white dark:bg-panel-2 text-gray-500 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong'}`}>
-                        <span className={`h-2 w-2 rounded-full ${live ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]' : 'bg-gray-400'}`} />
-                        {live ? trans('teamlead.monitoring.live') : trans('teamlead.monitoring.paused')}
-                    </button>
-                    <button onClick={() => setSortNB((v) => !v)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold ${sortNB ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'bg-white dark:bg-panel-2 text-gray-700 dark:text-ink-2 shadow-sm ring-1 ring-gray-200 dark:ring-edge-strong hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16 M6 12h12 M9 17h6"/></svg>
-                        {sortNB ? trans('teamlead.monitoring.sorted_nearest') : trans('teamlead.monitoring.sort_nearest')}
-                    </button>
+                <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+                    <FilterSelect value={f.priority} onChange={(v) => setFilter('priority', v)} allLabel={trans('teamlead.monitoring.all_priority')} options={priorities} />
+                    <FilterSelect value={f.status} onChange={(v) => setFilter('status', v)} allLabel={trans('teamlead.monitoring.all_status')} options={statuses} />
+                    <FilterSelect value={f.type} onChange={(v) => setFilter('type', v)} allLabel={trans('teamlead.monitoring.all_type')} options={types} />
+                    <FilterSelect value={f.subcat} onChange={(v) => setFilter('subcat', v)} allLabel={trans('teamlead.monitoring.all_subcategory')} options={subcats} />
+                    <FilterSelect value={f.app} onChange={(v) => setFilter('app', v)} allLabel={trans('teamlead.common.all_app')} options={apps} />
+                    <FilterSelect value={f.unit} onChange={(v) => setFilter('unit', v)} allLabel={trans('teamlead.monitoring.all_unit')} options={units} />
+                    <FilterSelect value={f.pic} onChange={(v) => setFilter('pic', v)} allLabel={trans('teamlead.monitoring.all_pic')} options={pics} />
+                    {activeFilters > 0 && (
+                        <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">
+                            {trans('teamlead.monitoring.reset_all')}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -218,7 +211,7 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
                                         </td>
                                         <td className="px-4 py-4">
                                             <StatusBadge status={row.status} />
-                                            <p className="mt-1 text-[11px] text-gray-400 dark:text-ink-3">{row.agent}</p>
+                                            <p className="mt-1 text-[11px] text-gray-400 dark:text-ink-3">{row.agent ?? trans('teamlead.monitoring.unassigned')}</p>
                                         </td>
                                         <td className="px-4 py-4 pr-6 text-right">
                                             <button onClick={(e) => { e.stopPropagation(); actions.reassign?.(row, (res) => patch(row.id, { agent: res.agent.name, agentId: res.agent.id })); }} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold text-blue-600 dark:text-accent-text ring-1 ring-blue-300 hover:bg-blue-50 dark:hover:bg-panel-hover">
@@ -252,14 +245,16 @@ export default function MonitoringTab({ monitorRows = [], actions = {}, remindUr
     );
 }
 
-function FilterGroup({ label, value, options, onSelect, scroll }) {
-    return (
-        <div className="flex flex-col gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>
-            <div className={`flex flex-wrap gap-2 ${scroll ? 'max-h-[110px] overflow-y-auto' : ''}`}>
-                <Chip active={value === ALL} onClick={() => onSelect(ALL)}>{trans('teamlead.common.all')}</Chip>
-                {options.map((o) => <Chip key={o} active={value === o} onClick={() => onSelect(o)}>{o}</Chip>)}
-            </div>
-        </div>
+/**
+ * Dropdown filter dengan opsi "Semua ..." di posisi pertama. Nilai sentinel
+ * ALL sengaja tidak diterjemahkan — ia dibandingkan dengan nilai asli dari
+ * server, bukan ditampilkan.
+ */
+function FilterSelect({ value, onChange, allLabel, options }) {
+    const opts = useMemo(
+        () => [{ value: ALL, label: allLabel }, ...options.map((o) => ({ value: o, label: o }))],
+        [allLabel, options],
     );
+
+    return <SelectMenu value={value} onChange={onChange} options={opts} />;
 }

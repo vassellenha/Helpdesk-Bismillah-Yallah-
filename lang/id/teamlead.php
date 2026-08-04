@@ -214,6 +214,13 @@ return [
     ],
 
     'monitoring' => [
+        'all_pic' => 'Semua PIC',
+        'unassigned' => 'Belum ada PIC',
+        'all_priority' => 'Semua Prioritas',
+        'all_status' => 'Semua Status',
+        'all_type' => 'Semua Jenis Tiket',
+        'all_subcategory' => 'Semua Sub-Kategori',
+        'all_unit' => 'Semua Unit Kerja',
         'warn_title' => 'SLA Warning — :count tiket kritis mendekati batas waktu',
         'warn_body' => 'Tiket Critical / High dengan sisa waktu < 30 menit. Segera tinjau atau alihkan tugas.',
         'filter_count' => 'Filter · :count',
@@ -346,6 +353,29 @@ return [
         'reminded' => 'Teguran terkirim.',
         'reassigned' => 'Tiket dialihkan.',
         'priority_updated' => 'Prioritas diperbarui.',
+    ],
+
+    'flow' => [
+        'no_approval' => 'Tanpa Approval',
+        'manager' => 'Manager',
+        'bpo_owner' => 'BPO / Owner Aplikasi',
+        'it_support' => 'IT Support',
+        'handling' => 'Penanganan',
+        'incident' => 'Incident',
+        'l1' => 'Approval L1',
+        'l2' => 'Approval L2',
+        'note_draft' => 'Masih draft — belum dikirim requester.',
+        'note_waiting' => 'Menunggu keputusan :step.',
+        'note_returned' => 'Dikembalikan ke requester untuk diperbaiki.',
+        'note_rejected' => 'Ditolak approver — tiket tidak diteruskan ke IT.',
+        'note_handling' => 'Sudah diterima IT Support, sedang ditangani.',
+        'note_done' => 'Selesai ditangani IT Support.',
+        'by' => ':name',
+        'rating' => 'Rating Requester',
+        'no_rating' => 'Requester belum memberi rating.',
+        'rating_excluded' => 'Tidak dihitung ke rata-rata',
+        'rating_included' => 'Dihitung ke rata-rata',
+        'closed_no_action' => 'Tiket sudah ditutup — tidak bisa dialihkan lagi.',
     ],
 
     'remind' => [

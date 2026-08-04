@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditTrail;
+use App\Models\SupportAgent;
 use App\Models\Ticket;
 use App\Support\CurrentActor;
 use App\Support\DummyData;
+use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -65,7 +67,10 @@ class TicketManagementController extends Controller
                 'priorities' => ['Critical', 'High', 'Medium', 'Low'],
                 'issueCategories' => $tickets->pluck('issue_category')->filter()->unique()->sort()->values(),
                 'requesters' => $tickets->pluck('requester_name')->filter()->unique()->sort()->values(),
-                'pics' => $tickets->map(fn (Ticket $t) => $this->picLabel($t))->filter()->unique()->sort()->values(),
+                // Every active support agent, BPO and IT alike — not just the ones
+                // who happen to hold a ticket right now, which made an agent vanish
+                // from the filter the moment their queue emptied.
+                'pics' => SupportAgent::where('is_active', true)->orderBy('name')->pluck('name')->unique()->values(),
             ],
             'exportUrl' => route('admin.ticket-management.export'),
         ]);
@@ -170,6 +175,10 @@ class TicketManagementController extends Controller
             'requesterName' => $t->requester_name ?? $t->requester?->name ?? '-',
             'priority' => $t->priority,
             'pic' => $this->picLabel($t),
+            // The label can read "BPO name & IT name", so the filter matches
+            // against the individual names instead of that combined string —
+            // otherwise picking one agent silently skips every shared subject.
+            'picNames' => $this->picNames($t),
             'status' => $t->status,
             'sla' => $this->slaPresent($t),
             'rating' => $t->satisfaction_rating,
@@ -183,6 +192,7 @@ class TicketManagementController extends Controller
             'attachments' => $t->attachmentsPayload(),
             'approvalInfo' => $this->approvalInfo($t),
             'timeline' => TicketTimeline::steps($t),
+            'flow' => TicketFlow::stages($t),
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'nik' => $t->requester->nip,
@@ -264,6 +274,26 @@ class TicketManagementController extends Controller
      * names together, and either name updates immediately if Admin changes
      * Support in the Service Catalog, with no per-ticket sync needed.
      */
+    /**
+     * The PICs of a ticket as separate names.
+     *
+     * A catalog subject can name both a BPO and an IT agent, and picLabel()
+     * joins those into one "A & B" string for display. Filtering has to work
+     * per agent, so it needs the parts rather than the joined label.
+     *
+     * @return array<int,string>
+     */
+    private function picNames(Ticket $t): array
+    {
+        $subject = $t->catalogSubject;
+        if (! $subject) {
+            return [];
+        }
+
+        return collect([$subject->supportAgent?->name, $subject->itAgent?->name])
+            ->filter()->unique()->values()->all();
+    }
+
     private function picLabel(Ticket $t): ?string
     {
         $subject = $t->catalogSubject;

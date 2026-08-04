@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use App\Support\TeguranNotifier;
+use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -158,6 +159,7 @@ class TeamLeadController extends Controller
                 ->sortByDesc('created_at')
                 ->map(fn (Ticket $t) => $this->presentWarningRow($t))
                 ->values(),
+            'monitorFilters' => $this->monitorFilters($tickets),
             'opStats' => $this->opStats($tickets),
             'appTrend' => $this->appTrend($tickets),
             'escalationRecs' => $this->escalationRecs($active),
@@ -334,6 +336,7 @@ class TeamLeadController extends Controller
             ],
             'approvalFlow' => $this->approvalFlow($ticket),
             'timeline' => TicketTimeline::steps($ticket),
+            'flow' => TicketFlow::stages($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => [
                 'id' => $c->id,
                 'authorName' => $c->author_name,
@@ -348,29 +351,107 @@ class TeamLeadController extends Controller
 
     /**
      * Approval chain implied by the ticket type (Incident has none; Service
-     * needs a Manager; Access needs Manager → BPO). Tickets that reached
-     * Support render prior steps as done and "IT Support" as the active step.
+     * needs a Manager; Access needs Manager → BPO), with each step resolved to
+     * where the ticket actually is right now.
+     *
+     * Status is the authority, not the approval records: a Closed ticket is
+     * finished whether or not TicketApproval rows exist for it (seeded and
+     * imported tickets often have none). The records only enrich a step with
+     * who decided it and when. The previous version derived the active step
+     * from `status === 'Waiting for Approval'` alone, so every other status —
+     * including Draft, Resolved and Closed — rendered "IT Support" as still
+     * in progress.
      */
     private function approvalFlow(Ticket $ticket): array
     {
         $chain = match ($ticket->issue_category) {
-            'Access Request' => [['Manager', 'Approval L1'], ['BPO / Owner Aplikasi', 'Approval L2'], ['IT Support', 'Penanganan']],
-            'Service Request' => [['Manager', 'Approval L1'], ['IT Support', 'Penanganan']],
-            default => [['Tanpa Approval', 'Incident'], ['IT Support', 'Penanganan']],
+            'Access Request' => [
+                [__('teamlead.flow.manager'), __('teamlead.flow.l1')],
+                [__('teamlead.flow.bpo_owner'), __('teamlead.flow.l2')],
+                [__('teamlead.flow.it_support'), __('teamlead.flow.handling')],
+            ],
+            'Service Request' => [
+                [__('teamlead.flow.manager'), __('teamlead.flow.l1')],
+                [__('teamlead.flow.it_support'), __('teamlead.flow.handling')],
+            ],
+            default => [
+                [__('teamlead.flow.no_approval'), __('teamlead.flow.incident')],
+                [__('teamlead.flow.it_support'), __('teamlead.flow.handling')],
+            ],
         };
 
-        $activeIdx = in_array($ticket->status, ['Waiting for Approval'], true) ? 0 : count($chain) - 1;
+        $handlingIdx = count($chain) - 1;
+        $decisions = $ticket->approvals()->with('approver:id,name')->get();
+        $approved = $decisions->where('decision', 'approved')->values();
+        $blocker = $decisions->whereIn('decision', ['rejected', 'revision_requested'])->last();
 
-        return [
-            'type' => $ticket->issue_category ?? 'Incident',
-            'note' => ($ticket->issue_category && $ticket->issue_category !== 'Incident')
-                ? 'Butuh approval sebelum ditangani IT'
-                : 'Tanpa approval — langsung ditangani IT',
-            'steps' => collect($chain)->map(fn (array $c, int $i) => [
+        $finished = in_array($ticket->status, Ticket::DONE_STATUSES, true);
+        $withSupport = in_array($ticket->status, ['Open', 'Assigned', 'In Progress', 'Waiting for Response'], true);
+        $stopIdx = $approved->count();
+
+        $stateFor = function (int $i) use ($ticket, $handlingIdx, $stopIdx, $finished, $withSupport): string {
+            if ($i === $handlingIdx) {
+                return $finished ? 'done' : ($withSupport ? 'current' : 'pending');
+            }
+
+            // Reaching Support at all means every approval step above it passed.
+            if ($finished || $withSupport) {
+                return 'done';
+            }
+
+            return match (true) {
+                $i < $stopIdx => 'done',
+                $i > $stopIdx => 'pending',
+                $ticket->status === 'Rejected' => 'rejected',
+                $ticket->status === 'Returned' => 'returned',
+                $ticket->status === 'Waiting for Approval' => 'current',
+                default => 'pending', // Draft — never submitted
+            };
+        };
+
+        $steps = collect($chain)->map(function (array $c, int $i) use ($ticket, $handlingIdx, $approved, $blocker, $stateFor, $finished) {
+            $state = $stateFor($i);
+
+            if ($i === $handlingIdx) {
+                // `assigned_agent_id` is frozen at creation, so naming the PIC on
+                // a step the ticket has not reached would read as "already with IT".
+                $by = $state === 'pending' ? null : $ticket->assignedAgent?->name;
+                $at = $finished ? optional($ticket->resolved_at)->format('d M Y · H:i') : null;
+            } else {
+                $record = $approved[$i] ?? (in_array($state, ['rejected', 'returned'], true) ? $blocker : null);
+                $by = $record?->approver?->name;
+                $at = optional($record?->created_at)->format('d M Y · H:i');
+            }
+
+            return [
                 'name' => $c[0],
                 'sub' => $c[1],
-                'state' => $i < $activeIdx ? 'done' : ($i === $activeIdx ? 'current' : 'pending'),
-            ])->all(),
+                'state' => $state,
+                'by' => $by,
+                'at' => $at,
+            ];
+        })->all();
+
+        $currentName = collect($steps)->firstWhere('state', 'current')['name'] ?? $chain[0][0];
+
+        return [
+            'type' => $ticket->issue_category ?? __('teamlead.flow.incident'),
+            'note' => match (true) {
+                $finished => __('teamlead.flow.note_done'),
+                $withSupport => __('teamlead.flow.note_handling'),
+                $ticket->status === 'Rejected' => __('teamlead.flow.note_rejected'),
+                $ticket->status === 'Returned' => __('teamlead.flow.note_returned'),
+                $ticket->status === 'Waiting for Approval' => __('teamlead.flow.note_waiting', ['step' => $currentName]),
+                default => __('teamlead.flow.note_draft'),
+            },
+            'noteState' => match (true) {
+                $finished => 'done',
+                $ticket->status === 'Rejected' => 'rejected',
+                $ticket->status === 'Returned' => 'returned',
+                $withSupport, $ticket->status === 'Waiting for Approval' => 'current',
+                default => 'pending',
+            },
+            'steps' => $steps,
         ];
     }
 
@@ -436,6 +517,12 @@ class TeamLeadController extends Controller
             'channels' => 'nullable|array',
             'channels.*' => 'in:inapp,email,whatsapp',
         ]);
+
+        abort_if(
+            in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true),
+            422,
+            'Tiket ini belum diteruskan ke Support, jadi PIC-nya belum bisa ditegur.'
+        );
 
         $agent = $ticket->assignedAgent;
         abort_unless($agent !== null, 422, 'Tiket ini belum punya PIC support untuk ditegur.');
@@ -509,10 +596,19 @@ class TeamLeadController extends Controller
     /**
      * Reassigns the ticket to a different support agent. New Team-Lead-only
      * endpoint — the Support/Requester ticket logic is left untouched.
+     *
+     * Refuses once the ticket is finished: handing a Closed ticket to another
+     * agent gives them work that no longer exists, and it would move the
+     * rating already recorded against the previous PIC.
      */
     public function reassign(Request $request, Ticket $ticket): JsonResponse
     {
         $this->assertInScope($ticket);
+        abort_if(
+            in_array($ticket->status, Ticket::DONE_STATUSES, true),
+            422,
+            __('teamlead.flow.closed_no_action')
+        );
 
         $lead = CurrentActor::teamLead();
 
@@ -770,14 +866,21 @@ class TeamLeadController extends Controller
      */
     private function picRows(): array
     {
+        // Restricted to this lead's own team. The old version listed every
+        // active subject and resolved its PIC as `supportAgent ?? itAgent`,
+        // which preferred the BPO owner — so a Team Lead supervising Support IT
+        // saw BPO names here while every other panel showed their IT agents.
+        $scoped = $this->scopedAgentQuery()->pluck('id');
+
         return ServiceCatalogSubject::where('is_active', true)
-            ->with(['service:id,name', 'subcategory:id,name', 'supportAgent:id,name', 'itAgent:id,name'])
+            ->whereIn('it_agent_id', $scoped)
+            ->with(['service:id,name', 'subcategory:id,name', 'itAgent:id,name'])
             ->get()
             ->map(function (ServiceCatalogSubject $s) {
-                $pic = $s->supportAgent ?? $s->itAgent;
+                $pic = $s->itAgent;
 
                 return [
-                    'pic' => $pic?->name ?? 'Belum diatur',
+                    'pic' => $pic?->name ?? '—',
                     'initials' => $pic ? $this->initials($pic->name) : '—',
                     'app' => $s->service?->name ?? '—',
                     'subCat' => $s->subcategory?->name ?? '—',
@@ -790,9 +893,14 @@ class TeamLeadController extends Controller
     }
 
     /**
-     * Tickets eligible for an SLA teguran (active + has a PIC), each showing
-     * which channels a teguran has already gone out on — drives the
-     * "Notifikasi & Teguran Tiket" table's per-channel send buttons.
+     * Tickets eligible for an SLA teguran (released to Support + has a PIC),
+     * each showing which channels a teguran has already gone out on — drives
+     * the "Notifikasi & Teguran Tiket" table's per-channel send buttons.
+     *
+     * ACTIVE_STATUSES still contains 'Waiting for Approval', and
+     * `assigned_agent_id` is frozen at creation, so filtering on "active +
+     * has a PIC" alone would offer a teguran for a ticket still sitting with
+     * the Approver — nagging a PIC about work they cannot even open.
      */
     private function teguranTickets(Collection $tickets): array
     {
@@ -804,6 +912,7 @@ class TeamLeadController extends Controller
 
         return $tickets
             ->whereIn('status', Ticket::ACTIVE_STATUSES)
+            ->whereNotIn('status', Ticket::NOT_YET_RELEASED_STATUSES)
             ->filter(fn (Ticket $t) => $t->assignedAgent !== null)
             ->sortBy('sla_minutes_remaining')
             ->map(fn (Ticket $t) => [
@@ -815,6 +924,40 @@ class TeamLeadController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Option lists for the SLA Monitoring filter dropdowns.
+     *
+     * Deliberately NOT derived from the rows currently on screen: those are
+     * only the active, SLA-bearing tickets, so a status like "In Progress"
+     * vanished from the dropdown whenever no ticket happened to be in it, and
+     * the list shrank as tickets closed. A filter that returns nothing is
+     * informative; a filter option that silently disappears looks broken.
+     *
+     * Statuses are capped to what this view can actually contain (active, and
+     * carrying an SLA clock). Applications/sub-categories/units come from every
+     * scoped ticket in the period, so they stay stable and inside the lead's scope.
+     */
+    private function monitorFilters(Collection $tickets): array
+    {
+        $distinct = fn (string $key) => $tickets->pluck($key)
+            ->filter(fn ($v) => filled($v) && $v !== '—')
+            ->unique()->sort()->values()->all();
+
+        return [
+            'statuses' => array_values(array_diff(Ticket::ACTIVE_STATUSES, Ticket::NO_SLA_STATUSES)),
+            'types' => ['Incident', 'Service Request', 'Access Request'],
+            'priorities' => ['Critical', 'High', 'Medium', 'Low'],
+            'apps' => $distinct('service_name'),
+            'subcats' => $distinct('subcategory_name'),
+            'units' => $distinct('requester.unit'),
+            // Only this lead's own team (TEAM_SCOPE), and every active member of
+            // it — a Team Lead supervises Support IT, so BPO agents are not
+            // theirs to filter by, and an agent with an empty queue today is
+            // still someone they need to be able to look up.
+            'pics' => $this->scopedAgentQuery()->orderBy('name')->pluck('name')->unique()->values()->all(),
+        ];
     }
 
     private function presentWarningRow(Ticket $t): array
@@ -836,7 +979,9 @@ class TeamLeadController extends Controller
             'sla' => $t->sla_label,
             'slaKind' => $t->sla_kind,
             'slaMinutes' => $t->sla_minutes_remaining,
-            'agent' => $t->assignedAgent?->name ?? 'Belum ada PIC',
+            // null rather than a "Belum ada PIC" string: the client picks the
+            // wording (and its language), and can filter for unassigned tickets.
+            'agent' => $t->assignedAgent?->name,
             'agentId' => $t->assigned_agent_id,
             'unit' => $t->requester?->unit ?? '—',
             'createdAt' => $t->created_at->toIso8601String(),
@@ -875,6 +1020,11 @@ class TeamLeadController extends Controller
                     'to' => $t->assignedAgent?->name ?? 'Support IT',
                     'escalatedAt' => $t->escalated_at->format('d M Y · H:i'),
                     'done' => in_array($t->status, Ticket::DONE_STATUSES, true),
+                    // Only finished tickets can carry a rating — the requester
+                    // gives it when closing. null means "closed without rating",
+                    // which the table renders differently from "not closed yet".
+                    'rating' => $t->satisfaction_rating,
+                    'ratingActive' => (bool) $t->rating_active,
                 ];
             })
             ->all();

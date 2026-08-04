@@ -8,6 +8,7 @@
     data-props="{{ json_encode([
         'ticket' => $ticket,
         'timeline' => $timeline,
+        'flow' => $flow,
         'comments' => $comments,
         'agentOptions' => $agentOptions,
         'remindUrlBase' => $remindUrlBase,

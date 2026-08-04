@@ -26,6 +26,7 @@
         'workload' => $workload,
         'slaWarnings' => $slaWarnings,
         'monitorRows' => $monitorRows,
+        'monitorFilters' => $monitorFilters,
         'escalations' => $escalations,
         'breachEscalations' => $breachEscalations,
         'agentOptions' => $agentOptions,

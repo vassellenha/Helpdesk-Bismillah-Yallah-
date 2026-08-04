@@ -4,6 +4,7 @@ import RemindModal from './RemindModal';
 import ReassignModal from './ReassignModal';
 import RaisePriorityModal from './RaisePriorityModal';
 import { t as trans } from '../../lib/i18n';
+import TicketFlow from '../TicketFlow';
 import SlaPanel from '../SlaPanel';
 import BrandLockup from '../BrandLockup';
 import LanguageSwitcher from '../LanguageSwitcher';
@@ -21,7 +22,7 @@ function SlaPill({ kind, label }) {
     return <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold ${style}`}>{label}</span>;
 }
 
-export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], comments = [], agentOptions = [], remindUrlBase, dashboardUrl }) {
+export default function TeamLeadTicketDetail({ flow = null, ticket: initial, timeline = [], comments = [], agentOptions = [], remindUrlBase, dashboardUrl }) {
     const [ticket, setTicket] = useState(initial);
     const [modal, setModal] = useState(null);
     const [toast, setToast] = useState(null);
@@ -114,6 +115,8 @@ export default function TeamLeadTicketDetail({ ticket: initial, timeline = [], c
 
                         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
                             <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.sla_timeline')}</h2>
+                            <TicketFlow flow={flow} />
+                            <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
                             <div className="flex flex-col">
                                 {timeline.map((s, i) => {
                                     const st = STEP_STYLE[s.state] ?? STEP_STYLE.pending;

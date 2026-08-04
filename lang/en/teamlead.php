@@ -211,6 +211,13 @@ return [
     ],
 
     'monitoring' => [
+        'all_pic' => 'All PICs',
+        'unassigned' => 'No PIC yet',
+        'all_priority' => 'All Priorities',
+        'all_status' => 'All Statuses',
+        'all_type' => 'All Ticket Types',
+        'all_subcategory' => 'All Sub-Categories',
+        'all_unit' => 'All Work Units',
         'warn_title' => 'SLA Warning — :count critical tickets approaching the deadline',
         'warn_body' => 'Critical / High tickets with under 30 minutes left. Review or reassign them now.',
         'filter_count' => 'Filter · :count',
@@ -343,6 +350,29 @@ return [
         'reminded' => 'Reminder sent.',
         'reassigned' => 'Ticket reassigned.',
         'priority_updated' => 'Priority updated.',
+    ],
+
+    'flow' => [
+        'no_approval' => 'No Approval',
+        'manager' => 'Manager',
+        'bpo_owner' => 'BPO / App Owner',
+        'it_support' => 'IT Support',
+        'handling' => 'Handling',
+        'incident' => 'Incident',
+        'l1' => 'Approval L1',
+        'l2' => 'Approval L2',
+        'note_draft' => 'Still a draft — not submitted by the requester yet.',
+        'note_waiting' => 'Awaiting the decision from :step.',
+        'note_returned' => 'Sent back to the requester for revision.',
+        'note_rejected' => 'Rejected by the approver — never forwarded to IT.',
+        'note_handling' => 'Received by IT Support and being worked on.',
+        'note_done' => 'Finished by IT Support.',
+        'by' => ':name',
+        'rating' => 'Requester Rating',
+        'no_rating' => 'The requester has not rated this yet.',
+        'rating_excluded' => 'Excluded from the average',
+        'rating_included' => 'Counted in the average',
+        'closed_no_action' => 'This ticket is closed — it can no longer be reassigned.',
     ],
 
     'remind' => [

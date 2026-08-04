@@ -3,6 +3,7 @@ import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
+import TicketFlow from '../TicketFlow';
 import RatingStars from '../RatingStars';
 
 const STATUS_STYLES = {
@@ -89,7 +90,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
             const matchesCategory = categoryFilter === ALL.category || t.issueCategory === categoryFilter;
             const matchesRequester = requesterFilter === ALL.requester || t.requesterName === requesterFilter;
             const matchesPic =
-                picFilter === ALL.pic || (picFilter === UNASSIGNED ? !t.pic : t.pic === picFilter);
+                picFilter === ALL.pic || (picFilter === UNASSIGNED ? !t.pic : (t.picNames ?? []).includes(picFilter));
 
             const matchesPeriod = period === 'Semua' || withinPeriod(new Date(t.createdAtIso), now, period);
 
@@ -141,7 +142,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
             <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.tickets.title')}</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">Seluruh transaksi tiket Incident, Service Request, dan Role Access.</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.tickets.subtitle')}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                     <button onClick={handleExport} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
@@ -187,7 +188,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                     <FilterSelect value={requesterFilter} onChange={setRequesterFilter} allLabel={trans('admin.tickets.all_requester')} allValue={ALL.requester} options={filterOptions.requesters} />
                     <FilterSelect value={picFilter} onChange={setPicFilter} allLabel={trans('admin.tickets.all_pic')} allValue={ALL.pic} options={[...filterOptions.pics, UNASSIGNED]} />
                     <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">
-                        Reset Filter
+                        {trans('admin.common.reset_filter')}
                     </button>
                 </div>
 
@@ -211,7 +212,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-transparent">
                             {filtered.map((t) => (
-                                <tr key={t.ticketNo} className="hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                                <tr key={t.ticketNo} onClick={() => setDetailTicket(t)} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                                     <td className="px-5 py-3">
                                         <button onClick={() => setDetailTicket(t)} className="font-semibold text-blue-700 dark:text-accent-text hover:underline">
                                             {t.ticketNo}
@@ -242,7 +243,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                                     </td>
                                     <td className="px-5 py-3 text-gray-500 dark:text-ink-2">{t.createdAt}</td>
                                     <td className="px-5 py-3 text-right">
-                                        <button onClick={(e) => openMenu(e, t)} className="rounded-full border border-gray-200 dark:border-edge-strong px-2.5 py-1 text-gray-500 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-panel-hover">
+                                        <button onClick={(e) => { e.stopPropagation(); openMenu(e, t); }} className="rounded-full border border-gray-200 dark:border-edge-strong px-2.5 py-1 text-gray-500 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-panel-hover">
                                             •••
                                         </button>
                                     </td>
@@ -269,7 +270,14 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                 </div>
             )}
 
-            {detailTicket && <TicketDetailModal ticket={detailTicket} onClose={() => setDetailTicket(null)} />}
+            {detailTicket && (
+                <TicketDetailModal
+                    ticket={tickets.find((x) => x.ticketNo === detailTicket.ticketNo) ?? detailTicket}
+                    busy={ratingBusy === detailTicket.ticketNo}
+                    onToggle={toggleRating}
+                    onClose={() => setDetailTicket(null)}
+                />
+            )}
         </div>
     );
 }
@@ -316,10 +324,10 @@ function RatingCell({ ticket, busy, onToggle }) {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onToggle(ticket); }}
                 disabled={busy}
-                title={ticket.ratingActive ? 'Nonaktifkan dari rata-rata rating' : 'Aktifkan kembali ke rata-rata rating'}
+                title={trans(ticket.ratingActive ? 'admin.tickets.rating_disable' : 'admin.tickets.rating_enable')}
                 className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${ticket.ratingActive ? 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2 hover:bg-gray-200 dark:hover:bg-panel-hover' : 'bg-amber-50 dark:bg-warn-soft text-amber-700 dark:text-warn-text'}`}
             >
-                {busy ? '…' : ticket.ratingActive ? 'Aktif' : 'Nonaktif'}
+                {busy ? '…' : trans(ticket.ratingActive ? 'admin.common.active' : 'admin.common.inactive')}
             </button>
         </div>
     );
@@ -335,7 +343,7 @@ function Stat({ icon, value, label, bg, color }) {
     );
 }
 
-function TicketDetailModal({ ticket: t, onClose }) {
+function TicketDetailModal({ ticket: t, onClose, busy, onToggle }) {
     useLockBodyScroll();
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
@@ -364,10 +372,19 @@ function TicketDetailModal({ ticket: t, onClose }) {
                                 label={trans('admin.tickets.requester_rating')}
                                 span
                                 value={t.rating ? (
-                                    <span className="flex items-center gap-1.5">
+                                    <span className="flex flex-wrap items-center gap-1.5">
                                         <RatingStars rating={t.rating} muted={!t.ratingActive} />
                                         <span>{t.rating}/5</span>
-                                        {!t.ratingActive && <span className="text-xs text-gray-400 dark:text-ink-3">· dikecualikan dari rata-rata</span>}
+                                        {!t.ratingActive && <span className="text-xs text-gray-400 dark:text-ink-3">{trans('admin.tickets.rating_excluded_note')}</span>}
+                                        <button
+                                            type="button"
+                                            onClick={() => onToggle?.(t)}
+                                            disabled={busy}
+                                            title={trans(t.ratingActive ? 'admin.tickets.rating_disable' : 'admin.tickets.rating_enable')}
+                                            className={`ml-1 shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${t.ratingActive ? 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2 hover:bg-gray-200 dark:hover:bg-panel-hover' : 'bg-amber-50 dark:bg-warn-soft text-amber-700 dark:text-warn-text hover:bg-amber-100'}`}
+                                        >
+                                            {busy ? '…' : trans(t.ratingActive ? 'admin.common.active' : 'admin.common.inactive')}
+                                        </button>
                                     </span>
                                 ) : trans('admin.tickets.not_rated')}
                             />
@@ -376,10 +393,12 @@ function TicketDetailModal({ ticket: t, onClose }) {
                             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('admin.tickets.ticket_status')}</p>
                             <div className="mt-2"><StatusBadge status={t.status} /></div>
                             <p className="mt-2 text-xs text-gray-500 dark:text-ink-2">
-                                Assignment PIC dilakukan oleh Team Lead domain terkait — Administrator hanya dapat memantau.
+                                {trans('admin.tickets.pic_note')}
                             </p>
 
                             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('admin.tickets.timeline')}</p>
+                            <div className="mt-2"><TicketFlow flow={t.flow} /></div>
+                            <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
                             <ol className="mt-2 flex flex-col">
                                 {t.timeline.map((step, i) => (
                                     <li key={i} className="flex gap-3">

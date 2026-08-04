@@ -83,6 +83,7 @@ return [
     ],
 
     'detail' => [
+        'status_history' => 'Riwayat Status',
         'service' => 'Layanan',
         'category' => 'Kategori',
         'subject' => 'Subjek',

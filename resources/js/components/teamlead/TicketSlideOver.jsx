@@ -5,6 +5,7 @@ import RemindModal from './RemindModal';
 import ReassignModal from './ReassignModal';
 import RaisePriorityModal from './RaisePriorityModal';
 import { t as trans } from '../../lib/i18n';
+import TicketFlow from '../TicketFlow';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import { SkeletonBar } from '../Spinner';
 
@@ -12,7 +13,80 @@ const STEP_STYLE = {
     done: { dot: 'bg-emerald-500', line: 'bg-emerald-500', text: 'text-gray-900 dark:text-ink-1' },
     current: { dot: 'bg-blue-500 ring-4 ring-blue-100', line: 'bg-gray-200', text: 'text-blue-700 dark:text-accent-text' },
     pending: { dot: 'bg-gray-300', line: 'bg-gray-200', text: 'text-gray-400 dark:text-ink-3' },
+    // A ticket can stop at an approval step instead of passing through it:
+    // rejected ends the flow, returned bounces it back to the requester.
+    rejected: { dot: 'bg-red-500 ring-4 ring-red-100', line: 'bg-gray-200', text: 'text-red-600 dark:text-bad-text' },
+    returned: { dot: 'bg-amber-500 ring-4 ring-amber-100', line: 'bg-gray-200', text: 'text-amber-700 dark:text-warn-text' },
 };
+
+const NOTE_STYLE = {
+    done: 'text-emerald-600 dark:text-ok-text',
+    current: 'text-blue-600 dark:text-accent-text',
+    rejected: 'text-red-600 dark:text-bad-text',
+    returned: 'text-amber-700 dark:text-warn-text',
+    pending: 'text-gray-400 dark:text-ink-3',
+};
+
+const NOTE_ICON = {
+    done: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M8.5 12l2.5 2.5 4.5-5',
+    current: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 2',
+    rejected: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M15 9l-6 6 M9 9l6 6',
+    returned: 'M9 14 4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+    pending: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 8v5 M12 16h.01',
+};
+
+const STAR_PATH = 'm12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z';
+
+function Stars({ rating = 0, size = 16 }) {
+    const pct = Math.max(0, Math.min(100, (rating / 5) * 100));
+    const row = (
+        <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+                <svg key={n} width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d={STAR_PATH} /></svg>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className="relative inline-flex text-gray-200 dark:text-panel-3">
+            {row}
+            <div className="absolute inset-0 overflow-hidden text-amber-500" style={{ width: `${pct}%` }}>{row}</div>
+        </div>
+    );
+}
+
+/**
+ * Only rendered once the ticket is finished — a rating cannot exist before the
+ * requester closes it, and an empty star row on an in-progress ticket reads as
+ * "rated zero" rather than "not rated yet".
+ */
+function RatingBlock({ ticket }) {
+    const { satisfactionRating: rating, feedbackNote, ratingActive } = ticket;
+
+    return (
+        <div className="mt-6">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.flow.rating')}</p>
+            <div className="rounded-2xl bg-white dark:bg-panel-2 p-4 shadow-sm">
+                {rating === null || rating === undefined ? (
+                    <p className="text-[12.5px] text-gray-400 dark:text-ink-3">{trans('teamlead.flow.no_rating')}</p>
+                ) : (
+                    <>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <Stars rating={rating} size={17} />
+                            <span className="text-[15px] font-extrabold text-gray-900 dark:text-ink-1">{Number(rating).toFixed(1)}</span>
+                            <span className={`ml-auto rounded-full px-2.5 py-1 text-[11px] font-semibold ${ratingActive ? 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text' : 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2'}`}>
+                                {trans(ratingActive ? 'teamlead.flow.rating_included' : 'teamlead.flow.rating_excluded')}
+                            </span>
+                        </div>
+                        {feedbackNote && (
+                            <p className="mt-2.5 border-t border-gray-100 dark:border-edge pt-2.5 text-[12.5px] leading-relaxed text-gray-600 dark:text-ink-2">“{feedbackNote}”</p>
+                        )}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
 const TL_STYLE = { done: 'bg-emerald-500', current: 'bg-blue-500', pending: 'bg-gray-300', rejected: 'bg-red-500' };
 
 function SlaPill({ kind, label }) {
@@ -87,13 +161,15 @@ function ApprovalFlow({ flow }) {
                             <div>
                                 <p className={`text-[11.5px] font-bold ${st.text}`}>{s.name}</p>
                                 <p className="text-[10px] text-gray-400 dark:text-ink-3">{s.sub}</p>
+                                {s.by && <p className="mt-0.5 text-[10px] font-medium text-gray-500 dark:text-ink-2">{s.by}</p>}
+                                {s.at && <p className="text-[9.5px] text-gray-400 dark:text-ink-3">{s.at}</p>}
                             </div>
                         </div>
                     );
                 })}
             </div>
-            <p className="mt-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-emerald-600 dark:text-ok-text">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M8.5 12l2.5 2.5 4.5-5"/></svg>
+            <p className={`mt-2 flex items-center gap-1.5 text-[11.5px] font-semibold ${NOTE_STYLE[flow.noteState] ?? NOTE_STYLE.done}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={NOTE_ICON[flow.noteState] ?? NOTE_ICON.done} /></svg>
                 {flow.note}
             </p>
         </div>
@@ -138,6 +214,9 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
 
     const t = data?.ticket;
     const row = t ? { id: t.id, subject: t.subject, agent: t.agent, agentId: t.agentId, priority: t.priority, sla: t.sla, subcategory: t.subcategory, service: t.service } : null;
+    // Mirrors Ticket::DONE_STATUSES — a finished ticket has a rating to show
+    // and nothing left to hand to another agent.
+    const finished = ['Resolved', 'Completed', 'Closed'].includes(t?.status);
 
     return (
         <div className="fixed inset-0 z-40 flex justify-end bg-gray-900/45" onMouseDown={onClose}>
@@ -180,8 +259,12 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
 
                             <div className="mt-6"><ApprovalFlow flow={data.approvalFlow} /></div>
 
+                            {finished && <RatingBlock ticket={t} />}
+
                             <div className="mt-6">
                                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.sla_timeline')}</p>
+                                <TicketFlow flow={data.flow} />
+                                <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
                                 <div className="flex flex-col">
                                     {data.timeline.map((s, i) => (
                                         <div key={i} className="flex gap-3">
@@ -220,7 +303,12 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
 
                         <div className="flex gap-2 border-t border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-6 py-3.5">
                             <button onClick={() => setModal('remind')} title={trans('teamlead.ticket.send_remind')} className="flex h-11 w-11 items-center justify-center rounded-xl border border-red-200 text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.4 5.6a8 8 0 0 1 1.9 8.9c-.5 1.2-.3 2.6.5 3.6l.2.3H3l.2-.3c.8-1 1-2.4.5-3.6a8 8 0 0 1 14.7-8.9Z M10 21h4"/></svg></button>
-                            <button onClick={() => setModal('reassign')} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 py-3 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 8h13 M16 5l4 3-4 3 M17 16H4 M8 13l-4 3 4 3"/></svg>{trans('teamlead.ticket.reassign')}</button>
+                            {!finished && (
+                                <button onClick={() => setModal('reassign')} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 py-3 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 8h13 M16 5l4 3-4 3 M17 16H4 M8 13l-4 3 4 3"/></svg>{trans('teamlead.ticket.reassign')}</button>
+                            )}
+                            {finished && (
+                                <p className="flex flex-1 items-center justify-center px-3 text-center text-[12px] font-medium text-gray-400 dark:text-ink-3">{trans('teamlead.flow.closed_no_action')}</p>
+                            )}
                             <button onClick={() => setModal('raise')} className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-edge-strong px-4 py-3 text-[13px] font-bold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M6 11l6-6 6 6"/></svg>{trans('teamlead.ticket.priority_btn')}</button>
                         </div>
                     </>

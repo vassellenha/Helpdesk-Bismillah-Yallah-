@@ -10,6 +10,7 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -185,6 +186,7 @@ class ApprovalController extends Controller
             'ticket' => $this->presentTicket($ticket, $lastDecision),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('approver.tickets.data', $ticket),
             'commentsUrl' => route('approver.tickets.comments.store', $ticket),
             'decideUrl' => route('approver.tickets.decide', $ticket),
@@ -209,6 +211,7 @@ class ApprovalController extends Controller
             'ticket' => $this->presentTicket($ticket, $lastDecision),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
+            'flow' => TicketFlow::stages($ticket),
         ]);
     }
 
