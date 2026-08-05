@@ -267,6 +267,7 @@ Route::prefix('eva')->name('eva.')->middleware('eva.access')->group(function () 
             ->middleware('throttle:20,1')
             ->name('ask');
         Route::post('/rate', [EvaPreviewController::class, 'rate'])->name('rate');
+        Route::post('/rate/note', [EvaPreviewController::class, 'note'])->name('note');
         Route::post('/ticket-draft', [EvaPreviewController::class, 'ticketDraft'])->name('ticket-draft');
     });
 

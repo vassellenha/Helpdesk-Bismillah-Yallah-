@@ -16,6 +16,20 @@ import { useState } from 'react';
 
 const LOW_RATING_MAX = 3;
 
+/**
+ * Pertanyaan contoh, dipakai widget portal MAUPUN EVA Preview.
+ *
+ * Satu daftar, bukan dua. Sebelumnya keduanya punya salinan sendiri dan sudah
+ * melenceng — Preview memuat satu pertanyaan yang tidak ada di portal. Admin
+ * yang menguji lewat Preview lalu menyimpulkan hal tentang perilaku EVA yang
+ * tidak pernah dialami user.
+ */
+export const QUICK_QUESTIONS = [
+    'cara reset password SAP',
+    'vpn forticlient tidak bisa connect',
+    'akun SAP saya terkunci',
+];
+
 const FEEDBACK_REASONS = [
     'Jawaban tidak sesuai pertanyaan',
     'Langkahnya kurang lengkap',
@@ -27,7 +41,13 @@ export function UserBubble({ text }) {
     return <div className="eva-w-bubble eva-w-bubble-user">{text}</div>;
 }
 
-export function EvaBubble({ message, onClarifyPick, onRate, onNote, onTicketDraft }) {
+/**
+ * @param thresholds  Hanya diisi EVA Preview. Kalau ada, angka keyakinan dan
+ *                    ambangnya ikut ditampilkan — lihat alasannya di atas
+ *                    AnswerBubble. Widget portal tidak mengirimnya, jadi
+ *                    tampilannya di sana tidak berubah sedikit pun.
+ */
+export function EvaBubble({ message, thresholds = null, onClarifyPick, onRate, onNote, onTicketDraft }) {
     if (message.type === 'ticket_draft') {
         return <TicketDraftBubble message={message} />;
     }
@@ -47,7 +67,7 @@ export function EvaBubble({ message, onClarifyPick, onRate, onNote, onTicketDraf
         );
     }
 
-    return <AnswerBubble message={message} onRate={onRate} onNote={onNote} />;
+    return <AnswerBubble message={message} thresholds={thresholds} onRate={onRate} onNote={onNote} />;
 }
 
 function TicketDraftBubble({ message }) {
@@ -99,9 +119,12 @@ function ClarifyBubble({ message, onPick }) {
  | berasal dari materi resmi yang mana, dan catatan ragu-ragu di bawah —
  | itu peringatan yang bisa ditindaklanjuti ("periksa lagi"), bukan skor.
  |
- | Tempat melihat angkanya tetap ada: EVA Preview di konsol admin.
+ | Tempat melihat angkanya tetap ada: EVA Preview di konsol admin — dan itulah
+ | satu-satunya guna prop `thresholds`. Ia SATU-SATUNYA perbedaan yang boleh ada
+ | antara kedua permukaan; sisanya wajib identik, karena Preview tidak ada
+ | gunanya kalau ia memperlihatkan sesuatu yang berbeda dari yang dialami user.
 */
-function AnswerBubble({ message, onRate, onNote }) {
+function AnswerBubble({ message, thresholds, onRate, onNote }) {
     return (
         <div className="eva-w-bubble eva-w-bubble-eva eva-pop">
             {message.is_hedged && (
@@ -114,6 +137,11 @@ function AnswerBubble({ message, onRate, onNote }) {
 
             <div className="eva-w-source">
                 <span className="eva-w-source-tag">{message.hit.title}</span>
+                {thresholds && (
+                    <span className="eva-w-muted">
+                        keyakinan {message.hit.confidence} (ambang {thresholds.min_confidence})
+                    </span>
+                )}
             </div>
 
             <RatingRow message={message} onRate={onRate} onNote={onNote} />

@@ -5,11 +5,10 @@
  * Team Lead dirender React, bukan Blade, jadi partial itu tidak bisa dipakai
  * dari sana. Kalau salah satunya diubah, ubah keduanya.
  *
- * Strukturnya terbalik dari versi sebelumnya: dulu tiketnya yang biru dengan
- * ukiran putih, sekarang KOTAKNYA yang biru dan tiketnya siluet putih di dalam.
+ * Kotaknya yang biru, tiketnya siluet putih di dalam.
  *
  * Konsekuensi yang menentukan bentuk glyph-nya: di dalam kotak, tiket hanya
- * kebagian ~60% lebar kanvas — di navbar 36px itu cuma ~21px. Karena itu dua
+ * kebagian ~68% lebar kanvas — di navbar 36px itu cuma ~24px. Karena itu dua
  * garis perforasi dan kotak judul dari versi sebelumnya dibuang; ruasnya jatuh
  * di bawah 1px dan lenyap ditelan anti-aliasing. Yang disisakan hanya takik di
  * kedua sisi dan dua baris isi yang ditebalkan.

@@ -562,6 +562,41 @@ html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
     gap: 12px;
 }
 
+/*
+ * Varian tertanam — dipakai EVA Preview di konsol admin.
+ *
+ * Preview memakai kelas `eva-widget` yang sama supaya seluruh gaya gelembung
+ * portal berlaku apa adanya; yang dicabut di sini hanya sifat mengambangnya,
+ * sebab di Preview panel itu duduk di dalam kartu, bukan melayang di atas
+ * halaman. Membuat salinan gaya khusus Preview justru mengulang kesalahan yang
+ * baru saja diperbaiki: dua tampilan yang perlahan berbeda tanpa ada yang tahu.
+ */
+.eva-app.eva-widget.eva-widget--inline {
+    position: static;
+    z-index: auto;
+    align-items: stretch;
+    gap: 0;
+    height: 100%;
+}
+
+/*
+ * Selektornya sengaja tiga kelas, bukan dua. `.eva-widget .eva-w-panel` yang
+ * memberi panel ukuran mengambang (380×560) ditulis SETELAH blok ini, jadi pada
+ * spesifisitas yang sama ia menang dan panelnya tetap sebesar widget portal —
+ * mengambang di tengah kartu yang jauh lebih lebar. Menaikkan spesifisitas
+ * lebih tahan daripada mengandalkan urutan baris di berkas sepanjang ini.
+ */
+.eva-app.eva-widget--inline .eva-w-panel {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+}
+
 /* Tombol pemicu — satu-satunya yang terlihat sebelum widget dibuka. */
 .eva-widget .eva-w-launcher {
     width: 56px;

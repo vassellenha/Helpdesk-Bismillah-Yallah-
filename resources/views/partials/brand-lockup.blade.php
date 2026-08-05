@@ -2,13 +2,12 @@
     Lockup brand Helpdesk: ikon tiket dalam kotak + wordmark, untuk kiri atas
     tiap header role.
 
-    Strukturnya terbalik dari versi sebelumnya: dulu tiketnya yang biru dengan
-    ukiran putih, sekarang KOTAKNYA yang biru dan tiketnya jadi siluet putih di
-    dalam — mengikuti squircle pada ikon acuan.
+    Kotaknya yang biru, tiketnya siluet putih di dalam — mengikuti squircle pada
+    ikon acuan.
 
     Konsekuensi yang menentukan bentuk glyph-nya: begitu tiket dimasukkan ke
-    dalam kotak, ia hanya kebagian ~60% lebar kanvas. Di navbar 36px itu berarti
-    tiketnya cuma ~21px. Karena itu dua garis perforasi putus-putus dan kotak
+    dalam kotak, ia hanya kebagian ~68% lebar kanvas. Di navbar 36px itu berarti
+    tiketnya cuma ~24px. Karena itu dua garis perforasi putus-putus dan kotak
     judul dari versi sebelumnya DIBUANG — ruasnya jatuh di bawah 1px dan lenyap
     ditelan anti-aliasing. Yang disisakan cuma yang masih terbaca di ukuran itu:
     takik di kedua sisi, dan dua baris isi yang ditebalkan.

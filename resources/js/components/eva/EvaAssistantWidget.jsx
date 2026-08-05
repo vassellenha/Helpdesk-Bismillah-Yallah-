@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import EvaMark from './EvaMark';
-import { EvaBubble, UserBubble } from './widget/EvaChatMessages';
+import { EvaBubble, UserBubble, QUICK_QUESTIONS } from './widget/EvaChatMessages';
 
 /*
  | Widget EVA — asisten mengambang di pojok kanan bawah portal.
@@ -21,12 +21,6 @@ import { EvaBubble, UserBubble } from './widget/EvaChatMessages';
  | tab yang dibuka besok menyambung percakapan kemarin, dan Log Percakapan
  | melaporkan satu percakapan panjang yang tidak pernah terjadi.
  */
-
-const QUICK_QUESTIONS = [
-    'cara reset password SAP',
-    'vpn forticlient tidak bisa connect',
-    'akun SAP saya terkunci',
-];
 
 const MAX_QUESTION_LENGTH = 500;
 

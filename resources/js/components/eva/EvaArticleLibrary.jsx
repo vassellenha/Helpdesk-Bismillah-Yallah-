@@ -273,11 +273,21 @@ export default function EvaArticleLibrary({ articles: initial, subjects, service
                 <Modal title="Hapus artikel ini?" onClose={() => setDeleting(null)}>
                     <div style={{ padding: '12px 20px 4px' }}>
                         <p style={{
-                            margin: 0, fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-900)',
+                            margin: '0 0 12px', fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-900)',
                             padding: '10px 12px', background: 'var(--surface-tint)',
                             borderRadius: '6px', borderLeft: '3px solid var(--border-soft)',
                         }}>
                             “{deleting.title}”
+                        </p>
+                        {/*
+                            Akibatnya ditulis, bukan diserahkan pada dugaan. Dua hal
+                            yang tidak terlihat dari daftar: penghapusannya permanen,
+                            dan EVA langsung berhenti memakai artikel ini — jawaban
+                            yang tadi pagi masih keluar, sore ini tidak lagi.
+                        */}
+                        <p style={{ margin: 0, fontSize: '11.5px', lineHeight: 1.6, color: 'var(--slate-500)' }}>
+                            Artikel yang dihapus <strong>tidak bisa dikembalikan</strong>, dan EVA berhenti
+                            memakainya untuk menjawab sejak saat itu juga.
                         </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px 16px' }}>

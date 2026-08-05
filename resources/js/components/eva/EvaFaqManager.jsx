@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import {
     PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge, Toggle, Button,
-    EmptyState, ErrorBanner, Pagination, usePagination,
+    EmptyState, ErrorBanner, Modal, Pagination, usePagination,
     inputStyle, labelStyle, thStyle, tdStyle,
 } from './ui';
 
@@ -40,6 +40,8 @@ export default function EvaFaqManager({
     );
     const [error, setError] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(null);
+    const [busyDelete, setBusyDelete] = useState(false);
 
     const subjectService = useMemo(
         () => Object.fromEntries(subjects.map((s) => [s.id, s.service])),
@@ -98,13 +100,25 @@ export default function EvaFaqManager({
         }
     }
 
-    async function remove(faq) {
+    /**
+     * Dipanggil dari dialog konfirmasi, bukan langsung dari tombol di baris.
+     *
+     * Sebelumnya tombol Hapus di sini langsung memanggil API tanpa bertanya —
+     * satu-satunya layar EVA yang begitu, sementara Article Library, Documents,
+     * Taxonomy, dan Log Percakapan semuanya bertanya lebih dulu. FAQ pun tidak
+     * punya tempat sampah: sekali terhapus, pertanyaan dan jawabannya hilang.
+     */
+    async function remove() {
+        setBusyDelete(true);
         setError(null);
         try {
-            await apiFetch(`/eva/api/faqs/${faq.id}`, { method: 'DELETE' });
-            setFaqs((current) => current.filter((f) => f.id !== faq.id));
+            await apiFetch(`/eva/api/faqs/${deleting.id}`, { method: 'DELETE' });
+            setFaqs((current) => current.filter((f) => f.id !== deleting.id));
+            setDeleting(null);
         } catch (e) {
             setError(`Gagal menghapus FAQ: ${e.message}`);
+        } finally {
+            setBusyDelete(false);
         }
     }
 
@@ -242,7 +256,7 @@ export default function EvaFaqManager({
                                     </td>
                                     <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                                         <Button variant="ghost" onClick={() => setDraft({ ...faq })}>Edit</Button>{' '}
-                                        <Button variant="danger" onClick={() => remove(faq)}>Hapus</Button>
+                                        <Button variant="dangerPrimary" onClick={() => setDeleting(faq)}>Hapus</Button>
                                     </td>
                                 </tr>
                             ))}
@@ -260,6 +274,37 @@ export default function EvaFaqManager({
 
                 <Pagination {...pager} onPage={pager.setPage} unit="FAQ" />
             </Card>
+
+            {/*
+                Dialognya menampilkan PERTANYAANNYA, bukan sekadar "yakin hapus?".
+                Baris FAQ dipindai lewat teks pertanyaannya, dan di daftar
+                sepanjang ini salah tekan satu baris ke bawah adalah kekeliruan
+                yang paling mudah terjadi — mengulang teksnya di sini yang
+                membuat kekeliruan itu ketahuan sebelum, bukan sesudah.
+            */}
+            {deleting && (
+                <Modal title="Hapus FAQ ini?" onClose={() => setDeleting(null)}>
+                    <div style={{ padding: '12px 20px 4px' }}>
+                        <p style={{
+                            margin: '0 0 12px', fontSize: '13px', lineHeight: 1.6, color: 'var(--ink-900)',
+                            padding: '10px 12px', background: 'var(--surface-tint)',
+                            borderRadius: '6px', borderLeft: '3px solid var(--border-soft)',
+                        }}>
+                            “{deleting.question}”
+                        </p>
+                        <p style={{ margin: 0, fontSize: '11.5px', lineHeight: 1.6, color: 'var(--slate-500)' }}>
+                            FAQ yang dihapus <strong>tidak bisa dikembalikan</strong>, dan EVA berhenti
+                            memakainya untuk menjawab sejak saat itu juga.
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px 16px' }}>
+                        <Button variant="ghost" onClick={() => setDeleting(null)} disabled={busyDelete}>Batal</Button>
+                        <Button variant="dangerPrimary" onClick={remove} disabled={busyDelete}>
+                            {busyDelete ? 'Menghapus…' : 'Hapus'}
+                        </Button>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 }

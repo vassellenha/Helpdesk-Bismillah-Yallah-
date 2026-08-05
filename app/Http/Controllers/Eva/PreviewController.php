@@ -27,6 +27,7 @@ class PreviewController extends Controller
             'endpoints' => [
                 'ask' => route('eva.preview.ask'),
                 'rate' => route('eva.preview.rate'),
+                'note' => route('eva.preview.note'),
                 'ticketDraft' => route('eva.preview.ticket-draft'),
             ],
             'thresholds' => [
@@ -71,6 +72,35 @@ class PreviewController extends Controller
         }
 
         return response()->json(['rated' => true]);
+    }
+
+    /**
+     * Catatan tertulis yang menyertai bintang.
+     *
+     * Sebelumnya endpoint ini hanya ada di widget portal, sehingga kotak ulasan
+     * tidak bisa ditampilkan di Preview — dan Preview jadi tidak lagi
+     * memperlihatkan apa yang sebenarnya dilihat user, padahal itu seluruh
+     * gunanya. Isinya sengaja sama persis dengan AssistantController::note:
+     * keduanya memanggil EvaChat::annotate yang sama.
+     */
+    public function note(Request $request): JsonResponse
+    {
+        $data = $request->validate(EvaChat::NOTE_RULES);
+
+        $attached = $this->chat->annotate(
+            $data['answer_log_id'],
+            $data['reason'] ?? null,
+            $data['comment'] ?? null,
+            CurrentActor::requester(),
+        );
+
+        if (! $attached) {
+            return response()->json([
+                'message' => 'Catatan hanya bisa dilampirkan pada jawaban yang sudah Anda nilai.',
+            ], 409);
+        }
+
+        return response()->json(['noted' => true]);
     }
 
     /**

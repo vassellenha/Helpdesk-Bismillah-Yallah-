@@ -10,9 +10,16 @@ import { useId } from 'react';
  * — kalau squircle-nya beda radius atau gradiennya beda arah, keduanya langsung
  * terbaca sebagai dua brand yang kebetulan sama-sama biru.
  *
- * Glyph-nya cincin konsentris dengan inti padat. Dipilih karena bentuk
- * konsentris tidak punya detail yang bisa hilang duluan saat diperkecil: di
- * 16px ia masih cincin dengan titik, bukan gumpalan.
+ * Glyph-nya kepala membulat dengan antena dan sepasang mata.
+ *
+ * Sempat dicoba cincin konsentris (orb asisten suara) dan gagal: bentuk itu
+ * memang tenang, tapi tanpa isyarat kehadiran ia terbaca sebagai target atau
+ * lensa kamera — bukan sebagai sesuatu yang bisa diajak bicara. Sepasang mata
+ * adalah isyarat termurah yang membalik pembacaan itu sepenuhnya.
+ *
+ * Matanya batang membulat, bukan lingkaran, dan itu yang menjaganya tetap
+ * bertahan saat diperkecil: batang setinggi 12 unit masih terbaca sebagai mata
+ * di 16px, sedangkan lingkaran kecil melebur jadi dua titik samar.
  *
  * ID gradien dan mask dibuat lewat useId, bukan ditulis tetap. Dua mark bisa
  * tampil bersamaan di satu halaman (avatar header dan tombol peluncur), dan id
@@ -39,11 +46,19 @@ export default function EvaMark({ size = 32, className = '' }) {
                 <clipPath id={`eva-box-${uid}`}>
                     <rect x="2" y="2" width="96" height="96" rx="26" />
                 </clipPath>
-                <mask id={`eva-orb-${uid}`}>
+                <mask id={`eva-head-${uid}`}>
                     <rect width="100" height="100" fill="#000" />
-                    <circle cx="50" cy="50" r="30" fill="#fff" />
-                    <circle cx="50" cy="50" r="20" fill="#000" />
-                    <circle cx="50" cy="50" r="9" fill="#fff" />
+                    {/* Kepala */}
+                    <rect x="22" y="32" width="56" height="46" rx="18" fill="#fff" />
+                    {/* Antena: batang lalu bulatan, digambar terpisah supaya
+                        sambungannya tetap tegas di ukuran kecil. */}
+                    <rect x="47" y="20" width="6" height="12" rx="3" fill="#fff" />
+                    <circle cx="50" cy="17" r="6" fill="#fff" />
+                    {/* Mata dilubangkan, bukan digambar biru di atas kepala —
+                        dengan begitu gradien dan pita kilau kotaknya yang
+                        terlihat menembus, bukan warna solid yang menirunya. */}
+                    <rect x="37" y="49" width="8" height="12" rx="4" fill="#000" />
+                    <rect x="55" y="49" width="8" height="12" rx="4" fill="#000" />
                 </mask>
             </defs>
 
@@ -52,7 +67,7 @@ export default function EvaMark({ size = 32, className = '' }) {
                 <path d="M-10 100 L36 -4 L54 -4 L8 100 Z" fill="#fff" opacity="0.13" />
             </g>
 
-            <rect width="100" height="100" fill="#fff" mask={`url(#eva-orb-${uid})`} />
+            <rect width="100" height="100" fill="#fff" mask={`url(#eva-head-${uid})`} />
         </svg>
     );
 }
