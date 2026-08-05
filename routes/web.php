@@ -48,6 +48,9 @@ Route::prefix('auth/sso')->name('sso.')->group(function () {
     Route::get('/login', [SsoController::class, 'login'])->name('login');
     Route::get('/redirect', [SsoController::class, 'redirect'])->name('redirect');
     Route::get('/callback', [SsoController::class, 'callback'])->name('callback');
+    // Portal-initiated: SINTA sends the employee straight here with a signed
+    // identity. Off (404) unless SSO_ENTRY_DRIVER is configured.
+    Route::get('/entry', [SsoController::class, 'entry'])->name('entry');
     Route::post('/logout', [SsoController::class, 'logout'])->name('logout');
 });
 

@@ -25,6 +25,17 @@ class SsoAuthenticator
     {
         $config = config('integrations.sso');
 
+        if (self::mockRefusedInProduction()) {
+            // Not an exception: throwing here would take down every page that
+            // merely renders a login button. Handing back an unconfigured OIDC
+            // provider routes into the "Konfigurasi SSO belum lengkap" path
+            // that already exists, so nobody gets in and the screen explains
+            // itself.
+            Log::critical('[SSO] SSO_DRIVER=mock ditolak di environment production. Login SSO dimatikan sampai driver diperbaiki.');
+
+            return new OidcSsoProvider([]);
+        }
+
         return match ($config['driver'] ?? 'mock') {
             'oidc' => new OidcSsoProvider($config['oidc'] ?? []),
             default => new MockSsoProvider,
@@ -33,7 +44,24 @@ class SsoAuthenticator
 
     public static function isMock(): bool
     {
+        if (self::mockRefusedInProduction()) {
+            return false;
+        }
+
         return (config('integrations.sso.driver') ?? 'mock') !== 'oidc';
+    }
+
+    /**
+     * Mock SSO fabricates identities — the login screen lets you pick any
+     * employee and become them, with no password. That is exactly what makes
+     * it useful for demos and catastrophic in production, and a wrong .env or
+     * a forgotten default is all it takes to ship it. So production refuses
+     * it outright rather than trusting the deploy to be careful.
+     */
+    private static function mockRefusedInProduction(): bool
+    {
+        return (config('integrations.sso.driver') ?? 'mock') !== 'oidc'
+            && app()->isProduction();
     }
 
     /**
@@ -67,12 +95,23 @@ class SsoAuthenticator
     public static function resolve(array $claims): array
     {
         $mapped = self::mapClaims($claims);
-        $primary = config('integrations.sso.match_by', 'nip');
-        $fallback = config('integrations.sso.fallback_match_by', 'email');
+
+        // An ordered list, tried in turn. SINTA's entry link identifies people
+        // by username, while the OIDC token may carry NIP instead — one chain
+        // serves both without either flow needing its own matching rule. A
+        // plain string still works, so older config keeps functioning.
+        $columns = collect((array) config('integrations.sso.match_by', 'username'))
+            ->push(config('integrations.sso.fallback_match_by'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $primary = $columns->first() ?? 'username';
+        $fallback = $columns->last();
 
         $user = null;
 
-        foreach ([$primary, $fallback] as $column) {
+        foreach ($columns as $column) {
             if (blank($mapped[$column] ?? null)) {
                 continue;
             }
@@ -85,7 +124,7 @@ class SsoAuthenticator
         }
 
         if (! $user) {
-            $label = $mapped[$primary] ?? $mapped[$fallback] ?? 'identitas tanpa NIP/email';
+            $label = $mapped[$primary] ?? $mapped[$fallback] ?? 'identitas tanpa username/NIP/email';
             Log::warning('[SSO] Identitas tidak punya akun helpdesk.', ['claims' => $mapped]);
 
             return [null, "Akun untuk \"{$label}\" belum ada di helpdesk. Jalankan sinkronisasi data pegawai terlebih dahulu."];

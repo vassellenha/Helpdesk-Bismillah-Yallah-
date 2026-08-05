@@ -143,16 +143,58 @@ return [
         | arrives this array is the only thing that changes.
         */
         'claim_map' => [
+            'username' => 'username',
             'nip' => 'nip',
             'email' => 'email',
             'name' => 'name',
         ],
 
-        // Which mapped claim identifies the local account. NIP is the stable
-        // payroll key; email changes when someone marries or transfers.
-        'match_by' => 'nip',
+        /*
+        | Which mapped claims identify the local account, tried in this order
+        | until one matches. Email leads because that is the only thing ADHI's
+        | entry URL sends; username and NIP follow so an OIDC token carrying
+        | either of those still resolves through the same code.
+        |
+        | All three are unique columns on `users`.
+        */
+        'match_by' => ['email', 'username', 'nip'],
 
-        // Fallback used when the primary claim is absent from the token.
+        // Kept for older config that set a single match_by; appended to the
+        // chain above and de-duplicated.
         'fallback_match_by' => 'email',
+
+        /*
+        |------------------------------------------------------------------
+        | Portal-initiated entry (SINTA -> helpdesk, one hop)
+        |------------------------------------------------------------------
+        |
+        | A single URL the SINTA portal can send a signed-in employee to
+        | (a "Helpdesk" tile), carrying their identity, so they land inside
+        | the app without meeting a second login screen. This is the reverse
+        | direction from the /auth/sso/redirect flow, where the journey
+        | starts here.
+        |
+        | The identity arrives in the URL, so it MUST be proven — otherwise
+        | appending someone else's NIP is a complete impersonation of them.
+        | 'disabled' is the default on purpose: the endpoint answers 404
+        | until a verification method is configured, so merely shipping this
+        | opens nothing.
+        |
+        |   disabled : endpoint off (default)
+        |   hmac     : SINTA signs the params with a shared secret
+        |
+        | If SINTA hands out a signed JWT instead, that becomes one more arm
+        | in SsoEntry::verify() — nothing else changes.
+        */
+        'entry' => [
+            'driver' => env('SSO_ENTRY_DRIVER', 'disabled'),
+
+            // Shared secret for the 'hmac' driver. Lives in .env only.
+            'secret' => env('SSO_ENTRY_SECRET'),
+
+            // How old a link may be, in seconds. Short on purpose: the link
+            // carries a working identity, so it is a password until it expires.
+            'ttl' => (int) env('SSO_ENTRY_TTL', 120),
+        ],
     ],
 ];

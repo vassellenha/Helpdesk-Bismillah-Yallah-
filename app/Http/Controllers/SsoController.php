@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Support\Sso\MockSsoProvider;
 use App\Support\Sso\SsoAuthenticator;
+use App\Support\Sso\SsoEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -85,6 +86,40 @@ class SsoController extends Controller
         if ($claims === null) {
             return redirect()->route('sso.login')
                 ->with('sso_error', 'Gagal mengambil identitas dari portal SINTA. Cek konfigurasi dan log aplikasi.');
+        }
+
+        [$user, $error] = SsoAuthenticator::resolve($claims);
+
+        if (! $user) {
+            return redirect()->route('sso.login')->with('sso_error', $error);
+        }
+
+        SsoAuthenticator::login($user);
+
+        return redirect()->route('portal.index')
+            ->with('sso_success', "Masuk sebagai {$user->name}.");
+    }
+
+    /**
+     * Portal-initiated entry: SINTA sends an already-signed-in employee here
+     * with their identity, and they land inside the helpdesk in one hop — no
+     * second login screen, no round trip back out to the portal.
+     *
+     * Off unless SSO_ENTRY_DRIVER is configured, and it answers 404 rather than
+     * "disabled" so an unconfigured deployment gives a prober nothing to work
+     * with. SsoEntry proves the link; everything after that is the ordinary
+     * account resolution the callback uses, so an unknown or deactivated person
+     * is refused here exactly as they are there.
+     */
+    public function entry(Request $request)
+    {
+        abort_unless(SsoEntry::enabled(), 404);
+
+        $claims = SsoEntry::verify($request);
+
+        if ($claims === null) {
+            return redirect()->route('sso.login')
+                ->with('sso_error', 'Tautan masuk dari portal tidak valid atau sudah kedaluwarsa. Silakan buka ulang dari portal SINTA.');
         }
 
         [$user, $error] = SsoAuthenticator::resolve($claims);
