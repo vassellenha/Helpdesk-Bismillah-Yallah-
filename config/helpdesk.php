@@ -101,4 +101,38 @@ return [
         ['key' => 'catalog', 'route' => 'admin.service-catalog'],
         ['key' => 'tickets', 'route' => 'admin.ticket-management'],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Singkatan layanan untuk nomor tiket
+    |--------------------------------------------------------------------------
+    |
+    | Dipakai TicketNumber::serviceCode(). Layanan yang TIDAK terdaftar di sini
+    | disingkat otomatis: seluruh spasi dan tanda baca dibuang, lalu dibesarkan
+    | — "ADELE" tetap "ADELE", "iBLAST" jadi "IBLAST".
+    |
+    | Daftar ini hanya untuk nama yang penyingkatan otomatisnya jadi terlalu
+    | panjang atau tidak dikenali orang. Singkatan otomatis tidak bisa menebak
+    | istilah yang sudah biasa dipakai di kantor; itu pengetahuan organisasi,
+    | bukan aturan teks. Karena itu daftarnya ditulis tangan.
+    |
+    | ATURAN: hanya huruf dan angka. Satu tanda hubung saja akan merusak
+    | pembacaan nomor urut, yang diambil dari segmen terakhir nomor tiket.
+    |
+    | Kalau ada singkatan di bawah yang bukan istilah yang dipakai sehari-hari,
+    | ganti saja — lalu jalankan `php artisan tickets:renumber` supaya tiket
+    | lama ikut menyesuaikan.
+    */
+    'service_codes' => [
+        'ADHI MAN-POWER' => 'MANPOWER',
+        'AKUN APLIKASI' => 'AKUN',
+        'PERUBAHAN AKSES APLIKASI' => 'AKSES',
+        'ARINA (DASHBOARD)' => 'ARINA',
+        'Asset Management System' => 'AMS',
+        'Sahabat APP' => 'SAHABAT',
+        'SILO APPS' => 'SILO',
+        'APB ERP' => 'APB',
+        'APG ERP' => 'APG',
+        'EA ADHI' => 'EA',
+    ],
 ];

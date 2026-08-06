@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -74,6 +75,26 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === 'active' && $this->helpdesk_access === 'enabled';
+    }
+
+    /**
+     * Versi query dari isActive() — untuk daftar pilihan, bukan satu baris.
+     *
+     * Ada supaya aturan dua kolomnya tidak perlu diketik ulang di tiap tempat.
+     * Sebelum scope ini ada, empat daftar menyaring `status` saja: user yang
+     * baru dinonaktifkan Admin tetap muncul dan tetap bisa dipilih sebagai
+     * tujuan approval. Bocornya tanpa gejala — tiketnya berangkat, lalu
+     * menggantung, karena SsoAuthenticator menolak sesi orang itu.
+     *
+     * Kolomnya disebut lengkap dengan nama tabel: hampir semua pemakainya
+     * menempel setelah join ke role_user atau support_agents, dan `status`
+     * telanjang di sana ambigu.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query
+            ->where('users.status', 'active')
+            ->where('users.helpdesk_access', 'enabled');
     }
 
     /**

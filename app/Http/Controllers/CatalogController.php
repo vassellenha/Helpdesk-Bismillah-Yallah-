@@ -57,7 +57,7 @@ class CatalogController extends Controller
 
         $approvers = Role::where('name', 'Approver')->firstOrFail()
             ->users()
-            ->where('status', 'active')
+            ->active()
             ->when($q !== '', fn ($query) => $query->where('users.name', 'like', "%{$q}%"))
             ->orderBy('users.name')
             ->get(['users.id', 'users.name', 'users.jabatan', 'users.unit']);

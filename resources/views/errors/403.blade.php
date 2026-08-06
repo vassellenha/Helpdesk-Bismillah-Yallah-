@@ -19,13 +19,38 @@
         {{ $exception->getMessage() ?: 'Item ini bukan tanggung jawab akun/role yang sedang aktif. Jika kamu baru saja berpindah "Bertindak sebagai" di tab lain, coba muat ulang halaman ini.' }}
     </p>
 
-    <div class="mt-8 flex items-center gap-3">
-        <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('portal.index') }}" class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-5 py-2.5 text-sm font-semibold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover">
-            ← Kembali
-        </a>
-        <a href="{{ route('portal.index') }}" class="rounded-xl bg-blue-700 dark:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 dark:hover:bg-blue-400">
-            Pilih Role
-        </a>
-    </div>
+    {{--
+        Akun nonaktif TIDAK diberi tombol navigasi sama sekali.
+
+        Keduanya bermuara ke portal pemilih role, dan role mana pun yang diklik
+        di sana ditolak lagi oleh gerbang yang sama. Tombol yang memutar kembali
+        ke halaman ini bukan cuma tak berguna — ia membuat orang mengira
+        masalahnya salah pilih role, lalu mencoba ketujuhnya satu per satu.
+
+        Yang menggantikannya adalah satu-satunya langkah yang benar-benar
+        menyelesaikan: menghubungi Administrator.
+    --}}
+    @php
+        // getPrevious(), bukan $exception itu sendiri: Laravel membungkus setiap
+        // AuthorizationException jadi HttpException sebelum merender halaman ini,
+        // dan menyimpan yang asli sebagai "previous". Memeriksa $exception
+        // langsung selalu meleset, tanpa error — cabang else yang jalan.
+        $akunNonaktif = $exception->getPrevious() instanceof \App\Exceptions\AccountInactive;
+    @endphp
+
+    @if ($akunNonaktif)
+        <p class="mt-6 text-sm text-gray-400 dark:text-ink-3">
+            Hubungi Administrator Helpdesk untuk mengaktifkan kembali akun Anda.
+        </p>
+    @else
+        <div class="mt-8 flex items-center gap-3">
+            <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('portal.index') }}" class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-5 py-2.5 text-sm font-semibold text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover">
+                ← Kembali
+            </a>
+            <a href="{{ route('portal.index') }}" class="rounded-xl bg-blue-700 dark:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 dark:hover:bg-blue-400">
+                Pilih Role
+            </a>
+        </div>
+    @endif
 </div>
 @endsection

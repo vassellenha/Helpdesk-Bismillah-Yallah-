@@ -80,7 +80,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $options = Role::where('name', 'Approver')->firstOrFail()
             ->users()
-            ->where('status', 'active')
+            ->active()
             ->orderBy('name')
             ->get(['users.id', 'users.name']);
 
@@ -98,9 +98,13 @@ class AppServiceProvider extends ServiceProvider
      */
     private function buildAgentSwitcher(string $type, \App\Models\User $currentUser, string $routeName): array
     {
+        // is_active milik SupportAgent DAN akses user-nya, dua saklar berbeda.
+        // Agent yang masih aktif tapi akun helpdesk-nya dimatikan Admin tetap
+        // muncul kalau hanya yang pertama diperiksa — dan tiket bisa diarahkan
+        // ke orang yang tidak akan pernah bisa membukanya.
         $options = SupportAgent::where('type', $type)
-            ->whereNotNull('user_id')
             ->where('is_active', true)
+            ->whereHas('user', fn ($q) => $q->active())
             ->orderBy('name')
             ->get(['id', 'name', 'user_id']);
 

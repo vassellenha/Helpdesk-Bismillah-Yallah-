@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\SupportAgent;
 use App\Models\User;
+use App\Exceptions\AccountInactive;
 use App\Support\Sso\SsoAuthenticator;
 
 /**
@@ -68,28 +69,36 @@ class CurrentActor
 
     public static function admin(): User
     {
-        return self::ssoUserWithRole('Administrator')
-            ?? User::where('nip', '19870114001')->firstOrFail();
+        return self::mustBeActive(
+            self::ssoUserWithRole('Administrator')
+                ?? User::where('nip', '19870114001')->firstOrFail(),
+        );
     }
 
     public static function requester(): User
     {
-        return self::ssoUserWithRole('Requester')
-            ?? User::where('nip', '19950418102')->firstOrFail();
+        return self::mustBeActive(
+            self::ssoUserWithRole('Requester')
+                ?? User::where('nip', '19950418102')->firstOrFail(),
+        );
     }
 
     public static function approver(): User
     {
-        return self::ssoUserWithRole('Approver')
-            ?? self::actingApproverUser()
-            ?? User::where('nip', '19900322014')->firstOrFail();
+        return self::mustBeActive(
+            self::ssoUserWithRole('Approver')
+                ?? self::actingApproverUser()
+                ?? User::where('nip', '19900322014')->firstOrFail(),
+        );
     }
 
     public static function support(): User
     {
-        return self::ssoUserWithRole('Support IT')
-            ?? self::actingAgentUser('it', 'acting_support_agent_id')
-            ?? User::where('nip', '10027761')->firstOrFail();
+        return self::mustBeActive(
+            self::ssoUserWithRole('Support IT')
+                ?? self::actingAgentUser('it', 'acting_support_agent_id')
+                ?? User::where('nip', '10027761')->firstOrFail(),
+        );
     }
 
     /**
@@ -99,21 +108,64 @@ class CurrentActor
      */
     public static function teamLead(): User
     {
-        return self::ssoUserWithRole('Team Lead')
-            ?? User::where('nip', '19891117033')->firstOrFail();
+        return self::mustBeActive(
+            self::ssoUserWithRole('Team Lead')
+                ?? User::where('nip', '19891117033')->firstOrFail(),
+        );
     }
 
     public static function supportBpo(): User
     {
-        return self::ssoUserWithRole('Support BPO')
-            ?? self::actingAgentUser('bpo', 'acting_support_bpo_agent_id')
-            ?? User::where('nip', '19960130096')->firstOrFail();
+        return self::mustBeActive(
+            self::ssoUserWithRole('Support BPO')
+                ?? self::actingAgentUser('bpo', 'acting_support_bpo_agent_id')
+                ?? User::where('nip', '19960130096')->firstOrFail(),
+        );
     }
 
     public static function knowledgeAdmin(): User
     {
-        return self::ssoUserWithRole('Knowledge Administrator')
-            ?? User::where('nip', '19920504052')->firstOrFail();
+        return self::mustBeActive(
+            self::ssoUserWithRole('Knowledge Administrator')
+                ?? User::where('nip', '19920504052')->firstOrFail(),
+        );
+    }
+
+    /**
+     * Gerbang terakhir sebelum siapa pun menjadi aktor.
+     *
+     * Ditaruh di sini, bukan di middleware, karena INI satu-satunya pintu yang
+     * dilewati setiap controller untuk tahu siapa yang sedang bertindak. Sebuah
+     * middleware harus didaftarkan per rute dan pasti ada yang terlewat; gerbang
+     * di sini berlaku otomatis untuk seluruh layar dan endpoint, termasuk yang
+     * ditulis besok.
+     *
+     * Menjaga TIGA jalur sekaligus, dan ketiganya bisa berubah setelah sesi
+     * dimulai:
+     *   - Persona tetap (mode mockup) — sebelumnya tidak diperiksa sama sekali.
+     *   - Approver/agent yang sedang "diperankan" lewat switcher — orangnya bisa
+     *     dinonaktifkan setelah terlanjur terpilih ke sesi.
+     *   - User SSO — sudah dijaga SsoAuthenticator, diperiksa ulang di sini
+     *     supaya aturannya berdiri di satu tempat, bukan bergantung pada urutan
+     *     pemanggilan.
+     *
+     * KONSEKUENSI yang disengaja: di mode persona, mematikan akses seorang
+     * persona mematikan SELURUH layar role itu — persona itulah satu-satunya
+     * identitas yang ada di sana. Itu memang yang diminta: user nonaktif tidak
+     * boleh berinteraksi dengan fitur apa pun.
+     */
+    private static function mustBeActive(User $user): User
+    {
+        if ($user->isActive()) {
+            return $user;
+        }
+
+        throw new AccountInactive(
+            "Akun {$user->name} tidak dapat mengakses Helpdesk: "
+            // lcfirst, BUKAN strtolower: alasannya memuat kata "Admin" yang harus
+            // tetap berhuruf besar.
+            .lcfirst((string) $user->inactiveReason()).'.'
+        );
     }
 
     private static function actingAgentUser(string $type, string $sessionKey): ?User

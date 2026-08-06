@@ -68,7 +68,7 @@ class MockSsoProvider implements SsoProvider
         return User::with('roles')
             ->whereNotNull('nip')
             ->where('nip', '!=', '')
-            ->where('status', 'active')
+            ->active()
             ->orderBy('name')
             ->get();
     }
