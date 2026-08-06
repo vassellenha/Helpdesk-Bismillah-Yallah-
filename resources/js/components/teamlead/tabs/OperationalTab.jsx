@@ -318,7 +318,7 @@ function CategoryTree({ tree = [] }) {
 export default function OperationalTab({ opStats = [], appTrend = {}, escalationRecs = [], ticketTrend = [], categoryTree = [], escalateUrl, actions = {} }) {
     return (
         <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-5">
                 {opStats.map((s) => <StatCard key={s.label} s={s} />)}
             </div>
 

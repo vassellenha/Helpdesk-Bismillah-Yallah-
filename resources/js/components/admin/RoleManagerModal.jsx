@@ -70,7 +70,7 @@ export default function RoleManagerModal({ roles, onClose, onAddRole, onRoleSave
                     </button>
                 </div>
 
-                <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
+                <div className="w-full overflow-x-auto"><table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                     <thead>
                         <tr className="bg-gray-50 dark:bg-panel-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                             <th className="px-3 py-2">{trans('admin.roles.col_name')}</th>
@@ -101,7 +101,7 @@ export default function RoleManagerModal({ roles, onClose, onAddRole, onRoleSave
                             </tr>
                         ))}
                     </tbody>
-                </table>
+                </table></div>
             </div>
 
             {menu && (

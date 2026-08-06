@@ -41,7 +41,7 @@ export default function RequesterDashboard({ user = {}, stats, chart = [], slaDo
                 <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} evaDraft={evaDraft} />
             </div>
 
-            <div className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
                 <StatCard
                     label={trans('requester.dashboard.active_tickets')}
                     value={stats.active.count}

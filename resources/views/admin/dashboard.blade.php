@@ -33,7 +33,7 @@
             <h2 class="text-base font-bold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.recent_audit')</h2>
             <p class="text-sm text-gray-400 dark:text-ink-3">@lang('admin.dashboard.recent_audit_hint')</p>
         </div>
-        <table class="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
+        <div class="w-full overflow-x-auto"><table class="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
             <thead>
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                     <th class="px-5 py-3">@lang('admin.common.time')</th>
@@ -54,7 +54,7 @@
                     </tr>
                 @endforeach
             </tbody>
-        </table>
+        </table></div>
         <div class="border-t border-gray-100 dark:border-edge p-4 text-center">
             <a href="{{ route('admin.audit-trail') }}" class="text-sm font-semibold text-blue-700 dark:text-accent-text hover:text-blue-800">@lang('admin.dashboard.view_all_audit')</a>
         </div>

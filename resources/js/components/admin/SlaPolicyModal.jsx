@@ -74,7 +74,7 @@ export default function SlaPolicyModal({ policy, onClose, onSaved }) {
                     />
                 </Field>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Field label={trans('admin.sla.response_hours')}>
                         <input type="number" min="0.5" step="0.5" value={form.response_time_hours} onChange={(e) => set('response_time_hours', e.target.value)} placeholder="mis. 2" className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none" />
                     </Field>

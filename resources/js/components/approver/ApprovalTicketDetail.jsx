@@ -165,7 +165,7 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
 
                     <Card title={trans('approver.detail.ticket_info')}>
                         <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'Tidak ada deskripsi.'}</p>
-                        <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-2">
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-2">
                             <Field label={trans('approver.detail.requester')} value={ticket.requester?.name} />
                             <Field label={trans('approver.detail.unit')} value={ticket.requester?.unit} />
                             <Field label={trans('approver.detail.catalog_service')} value={ticket.layananKatalog} />

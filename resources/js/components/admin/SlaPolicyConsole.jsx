@@ -59,7 +59,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
 
     return (
         <div>
-            <div className="mb-6 flex items-start justify-between gap-3">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.sla.title')}</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.sla.subtitle')}</p>
@@ -71,7 +71,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
 
             {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
-            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
                 <Stat label={trans('admin.sla.stat_policy_active')} value={activeCount} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
                 <Stat label={trans('admin.sla.stat_within')} value={`${ticketSlaBreakdown[0]?.percent ?? 0}%`} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
                 <Stat label={trans('admin.sla.stat_warning')} value={`${ticketSlaBreakdown[1]?.percent ?? 0}%`} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
@@ -220,7 +220,7 @@ function PolicyDetailModal({ policy, onClose }) {
                     </div>
                     <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600">✕</button>
                 </div>
-                <div className="grid grid-cols-2 gap-4 px-6 py-5 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-5 text-sm">
                     <Detail label={trans('admin.sla.col_priority')} value={policy.priority} />
                     <Detail label={trans('admin.sla.col_response')} value={formatMinutes(policy.response_time_minutes)} />
                     <Detail label={trans('admin.sla.col_resolution')} value={formatMinutes(policy.resolution_time_minutes)} />

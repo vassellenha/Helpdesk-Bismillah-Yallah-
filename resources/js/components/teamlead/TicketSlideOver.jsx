@@ -112,7 +112,7 @@ function SlideOverSkeleton() {
             </div>
 
             <div className="flex-1 overflow-hidden px-6 py-5">
-                <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
                     {Array.from({ length: 6 }).map((_, i) => (
                         <div key={i} className="flex flex-col gap-1.5">
                             <SkeletonBar className="h-2.5 w-16" />
@@ -243,7 +243,7 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-6 py-5">
-                            <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
                                 {[[trans('teamlead.ticket.reporter'), t.requester?.name ?? '—'], [trans('teamlead.ticket.unit'), t.requester?.unit ?? '—'], [trans('teamlead.ticket.app'), t.service], [trans('teamlead.ticket.assigned_agent'), t.agent], [trans('teamlead.ticket.category'), t.type], [trans('teamlead.ticket.subcategory'), t.subcategory]].map(([k, v]) => (
                                     <div key={k}>
                                         <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{k}</p>

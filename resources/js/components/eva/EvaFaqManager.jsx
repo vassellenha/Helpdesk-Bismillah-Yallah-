@@ -221,7 +221,7 @@ export default function EvaFaqManager({
 
             <Card>
                 <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div className="w-full overflow-x-auto"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
                                 <th style={thStyle}>PERTANYAAN & JAWABAN</th>
@@ -261,7 +261,7 @@ export default function EvaFaqManager({
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
 
                 {visible.length === 0 && (

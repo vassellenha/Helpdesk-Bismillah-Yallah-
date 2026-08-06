@@ -16,7 +16,7 @@ export default function ServiceCatalogDetailModal({ subject, onClose }) {
         <Modal onClose={onClose} maxWidth="max-w-lg">
             <ModalHeader title={trans('admin.catalog.detail_title')} subtitle={`${subject.layanan} — ${subject.subject}`} onClose={onClose} />
 
-            <div className="grid grid-cols-2 gap-4 px-6 py-5 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-5 text-sm">
                 <Detail label={trans('admin.catalog.col_issue')} value={subject.issue_category} />
                 <Detail label={trans('admin.catalog.col_service')} value={subject.layanan} />
                 <Detail label={trans('admin.catalog.col_subcategory')} value={subject.subcategory} />

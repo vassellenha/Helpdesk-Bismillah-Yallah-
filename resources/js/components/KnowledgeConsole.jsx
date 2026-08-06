@@ -26,7 +26,7 @@ export default function KnowledgeConsole({ articles = [], unanswered = [] }) {
                         />
                     </div>
                 </div>
-                <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
+                <div className="w-full overflow-x-auto"><table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
                     <thead>
                         <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">
                             <th className="px-4 py-3">Judul Artikel</th>
@@ -53,7 +53,7 @@ export default function KnowledgeConsole({ articles = [], unanswered = [] }) {
                             </tr>
                         ))}
                     </tbody>
-                </table>
+                </table></div>
             </div>
 
             <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">

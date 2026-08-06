@@ -667,7 +667,7 @@ export default function NewTicketModal({
                                 </Field>
 
                                 <Field label="Prioritas">
-                                    <div className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 p-2.5 sm:grid-cols-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-2xl border border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 p-2.5 sm:grid-cols-4">
                                         {PRIORITIES.map((p, i) => {
                                             const active = form.priority === p.label;
                                             const isActivePriority = !policies || activePriorities.has(p.label);

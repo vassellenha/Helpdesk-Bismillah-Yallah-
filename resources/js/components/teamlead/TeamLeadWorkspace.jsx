@@ -117,7 +117,7 @@ export default function TeamLeadWorkspace(props) {
     return (
         <div className="flex min-h-screen flex-col">
             <TopProgressBar active={refreshing} />
-            <header className="sticky top-3 z-20 mx-3 flex h-[62px] items-center gap-4 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
+            <header className="sticky top-2 z-20 mx-2 flex min-h-[62px] items-center gap-2.5 rounded-2xl sm:top-3 sm:mx-3 sm:gap-4 border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-3 sm:px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
                 <BrandLockup />
 
                 <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

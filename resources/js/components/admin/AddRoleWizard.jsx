@@ -121,7 +121,7 @@ export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], mo
 
                         <div className="mt-4 rounded-lg bg-blue-50 dark:bg-accent-soft p-4 text-sm">
                             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-900 dark:text-accent-text">{trans('admin.roles.summary')}</p>
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div>
                                     <p className="text-xs text-gray-500 dark:text-ink-2">{trans('admin.roles.name')}</p>
                                     <p className="font-semibold text-gray-900 dark:text-ink-1">{form.name || '—'}</p>

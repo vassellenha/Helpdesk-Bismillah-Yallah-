@@ -63,7 +63,7 @@ export default function EvaAppsSystems({ services, stats, catalogUrl }) {
 
             <Card>
                 <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div className="w-full overflow-x-auto"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
                                 <th style={thStyle}>LAYANAN</th>
@@ -98,7 +98,7 @@ export default function EvaAppsSystems({ services, stats, catalogUrl }) {
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
 
                 {visible.length === 0 && (

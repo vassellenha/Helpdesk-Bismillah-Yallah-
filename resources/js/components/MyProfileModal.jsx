@@ -47,7 +47,7 @@ export default function MyProfileModal({ profileUrl, onClose }) {
                                     <SkeletonBar className="h-4 w-32" />
                                     <SkeletonBar className="ml-auto h-6 w-20 rounded-full" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {Array.from({ length: 12 }).map((_, i) => (
                                         <div key={i} className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3">
                                             <SkeletonBar className="h-2.5 w-20" />
@@ -78,7 +78,7 @@ export default function MyProfileModal({ profileUrl, onClose }) {
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Detail label="Nama Lengkap" value={profile.name} />
                                     <Detail label="Email Korporat" value={profile.email} />
                                     <Detail label="Username" value={profile.username} />

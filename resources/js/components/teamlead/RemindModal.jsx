@@ -68,7 +68,7 @@ export default function RemindModal({ ticket, remindUrlBase, onClose, onSent }) 
                 <div className="space-y-4 px-5 py-4">
                     <div>
                         <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.remind.channel')}</label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {CHANNELS.map((ch) => (
                                 <button
                                     key={ch.key}

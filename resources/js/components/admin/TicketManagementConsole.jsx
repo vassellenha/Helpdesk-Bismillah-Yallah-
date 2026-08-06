@@ -139,7 +139,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
 
     return (
         <div>
-            <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.tickets.title')}</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.tickets.subtitle')}</p>
@@ -151,7 +151,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                 </div>
             </div>
 
-            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-6">
                 <Stat icon={<TicketIcon />} value={stats.total} label={trans('admin.tickets.stat_total')} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
                 <Stat icon={<ArchiveIcon />} value={stats.open} label={trans('admin.tickets.stat_open')} bg="bg-gray-100 dark:bg-panel-3" color="text-gray-600 dark:text-ink-2" />
                 <Stat icon={<DotIcon />} value={stats.waitingApproval} label={trans('admin.tickets.stat_waiting_approval')} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />
@@ -359,7 +359,7 @@ function TicketDetailModal({ ticket: t, onClose, busy, onToggle }) {
                 <div className="overflow-y-auto px-6 py-5">
                     <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.ticket_info')}</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <Detail label={trans('admin.tickets.col_id')} value={t.ticketNo} />
                             <Detail label={trans('admin.tickets.col_category')} value={t.issueCategory} />
                             <Detail label={trans('admin.tickets.col_service')} value={[t.service, t.subcategory, t.subject].filter(Boolean).join(' • ')} span />
@@ -418,7 +418,7 @@ function TicketDetailModal({ ticket: t, onClose, busy, onToggle }) {
                     </div>
 
                     <h3 className="mb-3 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.requester_info')}</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Detail label={trans('admin.tickets.name')} value={t.requester?.name ?? '—'} />
                         <Detail label={trans('admin.tickets.nik')} value={t.requester?.nik ?? '—'} />
                         <Detail label={trans('admin.tickets.email')} value={t.requester?.email ?? '—'} />
@@ -456,7 +456,7 @@ function TicketDetailModal({ ticket: t, onClose, busy, onToggle }) {
                     <p className="rounded-lg bg-gray-50 dark:bg-panel-3 p-3 text-sm text-gray-700 dark:text-ink-2">{t.approvalInfo}</p>
 
                     <h3 className="mb-3 mt-6 text-sm font-bold text-gray-900 dark:text-ink-1">{trans('admin.tickets.handling')}</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Detail label={trans('admin.tickets.main_pic')} value={t.pic ?? trans('admin.tickets.unassigned')} />
                         <Detail label={trans('admin.common.status')} value={<StatusBadge status={t.status} />} />
                     </div>

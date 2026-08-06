@@ -44,7 +44,7 @@ export default function RaisePriorityModal({ ticket, remindUrlBase, onClose, onS
                     </button>
                 </div>
                 <div className="px-5 py-4">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {PRIORITIES.map((p) => (
                             <button
                                 key={p}

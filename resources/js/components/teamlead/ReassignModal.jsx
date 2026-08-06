@@ -41,7 +41,7 @@ function AgentCard({ a, onPick, saving, recommended }) {
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3"><div className={`h-full rounded-full ${ls.bar}`} style={{ width: `${Math.min(100, Math.round((a.load / 20) * 100))}%` }} /></div>
                 <span className={`text-[11px] font-bold ${ls.text}`}>{trans(ls.labelKey)}</span>
             </div>
-            <div className="mt-3 grid grid-cols-4 gap-2">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-2">
                 {[[trans('teamlead.reassign.resolved'), a.resolved], [trans('teamlead.reassign.sla'), a.slaPct === null ? '—' : `${a.slaPct}%`], [trans('teamlead.reassign.avg_resolution'), a.avgResolution]].map(([k, v]) => (
                     <div key={k} className="rounded-xl bg-gray-50 dark:bg-panel-3 px-2.5 py-2">
                         <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{k}</p>

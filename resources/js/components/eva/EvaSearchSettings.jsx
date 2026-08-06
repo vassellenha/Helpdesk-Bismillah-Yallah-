@@ -128,7 +128,7 @@ export default function EvaSearchSettings({ synonyms: initial, threshold, endpoi
                             Kelompok sinonim
                         </CardTitle>
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="w-full overflow-x-auto"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr>
                                         <th style={thStyle}>KATA SETARA</th>
@@ -161,7 +161,7 @@ export default function EvaSearchSettings({ synonyms: initial, threshold, endpoi
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </table></div>
                         </div>
 
                         {synonyms.length === 0 && (

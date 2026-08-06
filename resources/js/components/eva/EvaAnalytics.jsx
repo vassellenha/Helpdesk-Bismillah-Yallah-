@@ -78,7 +78,7 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                         <EmptyState>Belum ada pertanyaan yang tercatat.</EmptyState>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="w-full overflow-x-auto"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr>
                                         <th style={thStyle}>PERTANYAAN</th>
@@ -108,7 +108,7 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </table></div>
                         </div>
                     )}
                 </Card>
@@ -121,7 +121,7 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                         <EmptyState>Belum ada materi yang digunakan EVA.</EmptyState>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="w-full overflow-x-auto"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr>
                                         <th style={thStyle}>MATERI</th>
@@ -147,7 +147,7 @@ export default function EvaAnalytics({ summary, trend, topQuestions, topMaterial
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </table></div>
                         </div>
                     )}
                 </Card>

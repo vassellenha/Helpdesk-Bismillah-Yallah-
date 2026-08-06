@@ -112,7 +112,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                     {step === 'choice' && (
                         <>
                             <p className="mb-4 text-[14px] font-semibold text-gray-800 dark:text-ink-1">{trans('requester.detail.confirm_question')}</p>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <button
                                     onClick={() => setStep('reopen')}
                                     className="flex flex-col items-center gap-2 rounded-2xl border-2 border-red-100 bg-red-50/50 px-4 py-5 text-center hover:border-red-300"
@@ -425,7 +425,7 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
 
                     <Card title="Informasi Tiket">
                         <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'No description was provided.'}</p>
-                        <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-3">
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-3">
                             <Field label={trans('requester.detail.category')} value={ticket.category} />
                             <Field label={trans('requester.detail.service')} value={ticket.service} />
                             <Field label={trans('requester.detail.subject')} value={ticket.subject} />

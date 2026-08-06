@@ -10,6 +10,7 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\SupportGreeting;
 use App\Support\TicketPeople;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
@@ -17,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SupportController extends Controller
@@ -197,23 +199,40 @@ class SupportController extends Controller
         abort_unless($ticket->assigned_agent_id === $agent->id, 403);
         abort_unless($ticket->status === 'Open', 422, 'Tiket ini tidak bisa dimulai dari status saat ini.');
 
-        // Starting work is the agent picking the ticket up — same reasoning
-        // resolve()/returnTicket() use: it answers the SLA response clock
-        // even though nothing was posted in the discussion thread.
-        $ticket->markFirstResponse();
+        /*
+         | Satu transaksi untuk tiga tulisan: status, sapaan otomatis, dan jejak
+         | audit. Sebelumnya statusnya ditulis di luar transaksi, jadi kalau
+         | penulisan audit gagal tiketnya sudah terlanjur "In Progress" tanpa
+         | catatan apa pun — itu yang membuat SR-2026-0035 dan INC-2026-0016
+         | berpindah status padahal layarnya menampilkan error. Dengan komentar
+         | otomatis ikut ditulis di sini, celah itu jadi lebih mahal untuk
+         | dibiarkan: separuh gagal berarti requester melihat sapaan untuk
+         | pekerjaan yang tidak pernah dimulai.
+         */
+        DB::transaction(function () use ($ticket, $supportUser) {
+            // Starting work is the agent picking the ticket up — same reasoning
+            // resolve()/returnTicket() use: it answers the SLA response clock
+            // even though nothing was posted in the discussion thread.
+            $ticket->markFirstResponse();
 
-        $ticket->update(['status' => 'In Progress']);
+            $ticket->update(['status' => 'In Progress']);
 
-        AuditTrail::record($supportUser, [
-            'module' => 'ticket_support',
-            'action' => 'start',
-            'target_type' => 'ticket',
-            'target_id' => $ticket->id,
-            'target_name' => $ticket->ticket_no,
-            'old_value' => ['status' => 'Open'],
-            'new_value' => ['status' => 'In Progress'],
-            'description' => "{$supportUser->name} mulai mengerjakan tiket \"{$ticket->ticket_no}\".",
-        ]);
+            // Sapaan otomatis di forum diskusi + lonceng untuk requester, supaya
+            // ia tahu tiketnya sudah dipegang orang tanpa harus membuka halaman
+            // dan membaca perubahan status.
+            SupportGreeting::post($ticket, $supportUser);
+
+            AuditTrail::record($supportUser, [
+                'module' => 'ticket_support',
+                'action' => 'start',
+                'target_type' => 'ticket',
+                'target_id' => $ticket->id,
+                'target_name' => $ticket->ticket_no,
+                'old_value' => ['status' => 'Open'],
+                'new_value' => ['status' => 'In Progress'],
+                'description' => "{$supportUser->name} mulai mengerjakan tiket \"{$ticket->ticket_no}\".",
+            ]);
+        });
 
         return response()->json(['status' => $ticket->fresh()->status]);
     }

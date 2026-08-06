@@ -108,7 +108,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
 
     return (
         <div>
-            <div className="mb-6 flex items-start justify-between gap-3">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.catalog.title')}</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.catalog.subtitle')}</p>
@@ -120,7 +120,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
 
             {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
-            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
                 <Stat label={trans('admin.catalog.stat_total_subject')} value={subjects.length} bg="bg-blue-50 dark:bg-accent-soft" color="text-blue-600 dark:text-accent-text" />
                 <Stat label={trans('admin.catalog.stat_active')} value={activeCount} bg="bg-emerald-50 dark:bg-ok-soft" color="text-emerald-600 dark:text-ok-text" />
                 <Stat label={trans('admin.catalog.stat_needs_approval')} value={approvalCount} bg="bg-amber-50 dark:bg-warn-soft" color="text-amber-600 dark:text-warn-text" />

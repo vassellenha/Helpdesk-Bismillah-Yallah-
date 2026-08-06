@@ -101,7 +101,7 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
                 <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">{trans('support.history.subtitle', { count: rows.length })}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
                 {CARDS.map((c) => (
                     <button
                         key={c.key}

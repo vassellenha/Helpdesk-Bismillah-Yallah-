@@ -106,7 +106,18 @@ function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onC
     );
 }
 
-function StartWorkModal({ ticketId, starting, error, onDismiss, onStart }) {
+/**
+ * Gerbang saat agen membuka tiket yang masih Open.
+ *
+ * "Nanti" memulangkan agen ke daftar tiket — menundanya berarti tiket ini belum
+ * jadi urusannya sekarang, jadi meninggalkannya di halaman detail hanya membuat
+ * ia menatap tiket yang baru saja ia lewati.
+ *
+ * Klik di luar kotak TIDAK ikut memulangkan, hanya menutup popup. Keluar dari
+ * halaman itu akibat yang terlalu besar untuk salah pencet di area kosong, dan
+ * agen tetap perlu jalan untuk sekadar membaca isi tiket sebelum memutuskan.
+ */
+function StartWorkModal({ ticketId, starting, error, onDismiss, onLater, onStart }) {
     useLockBodyScroll();
 
     return (
@@ -121,7 +132,7 @@ function StartWorkModal({ ticketId, starting, error, onDismiss, onStart }) {
                 {error && <p className="mt-3 rounded-lg bg-red-50 dark:bg-bad-soft p-2.5 text-xs text-red-700 dark:text-bad-text">{error}</p>}
 
                 <div className="mt-5 flex gap-3">
-                    <button onClick={onDismiss} disabled={starting} className="flex-1 rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-50">
+                    <button onClick={onLater} disabled={starting} className="flex-1 rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-50">
                         {trans('support.start_modal.later')}
                     </button>
                     <button onClick={onStart} disabled={starting} className="flex-1 rounded-full bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">
@@ -246,7 +257,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
 
                     <Card title={trans('support.detail.ticket_info')}>
                         <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || trans('support.detail.no_description')}</p>
-                        <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-2">
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-2">
                             <Field label={trans('support.detail.requester')} value={ticket.requester?.name} />
                             <Field label={trans('support.detail.unit')} value={ticket.requester?.unit} />
                             <Field label={trans('support.detail.service')} value={ticket.service} />
@@ -417,6 +428,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                     starting={starting}
                     error={startError}
                     onDismiss={() => !starting && setStartOpen(false)}
+                    onLater={() => !starting && (window.location.href = ticketsUrl)}
                     onStart={startWork}
                 />
             )}

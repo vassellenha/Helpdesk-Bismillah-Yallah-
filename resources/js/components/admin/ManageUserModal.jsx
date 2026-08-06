@@ -115,7 +115,7 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
 
                 {tab === 'detail' && (
                     <div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Detail label={trans('admin.user_form.full_name')} value={user.name} />
                             <Detail label={trans('admin.user_form.email')} value={user.email} />
                             <Detail label={trans('admin.user_form.username')} value={user.username} />
@@ -171,7 +171,7 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                 {tab === 'roles' && (
                     <div>
                         <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-ink-2">{trans('admin.user_form.user_roles')}</p>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {roles.map((r) => (
                                 <label
                                     key={r.id}

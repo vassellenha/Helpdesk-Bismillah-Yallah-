@@ -17,6 +17,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use App\Support\SupportGreeting;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -193,23 +195,31 @@ class SupportBpoController extends Controller
         abort_unless($ticket->assigned_agent_id === $agent->id, 403);
         abort_unless($ticket->status === 'Open', 422, 'Tiket ini tidak bisa dimulai dari status saat ini.');
 
-        // Starting work is the agent picking the ticket up — same reasoning
-        // resolve()/escalate()/returnTicket() use: it answers the SLA
-        // response clock even though nothing was posted in the discussion.
-        $ticket->markFirstResponse();
+        // Sama persis dengan SupportController::start() — satu transaksi untuk
+        // status, sapaan otomatis, dan jejak audit. Requester tidak boleh
+        // menerima sambutan yang berbeda hanya karena tiketnya kebetulan
+        // dipegang BPO, bukan IT.
+        DB::transaction(function () use ($ticket, $bpoUser) {
+            // Starting work is the agent picking the ticket up — same reasoning
+            // resolve()/escalate()/returnTicket() use: it answers the SLA
+            // response clock even though nothing was posted in the discussion.
+            $ticket->markFirstResponse();
 
-        $ticket->update(['status' => 'In Progress']);
+            $ticket->update(['status' => 'In Progress']);
 
-        AuditTrail::record($bpoUser, [
-            'module' => 'ticket_support',
-            'action' => 'start',
-            'target_type' => 'ticket',
-            'target_id' => $ticket->id,
-            'target_name' => $ticket->ticket_no,
-            'old_value' => ['status' => 'Open'],
-            'new_value' => ['status' => 'In Progress'],
-            'description' => "{$bpoUser->name} mulai mengerjakan tiket \"{$ticket->ticket_no}\".",
-        ]);
+            SupportGreeting::post($ticket, $bpoUser);
+
+            AuditTrail::record($bpoUser, [
+                'module' => 'ticket_support',
+                'action' => 'start',
+                'target_type' => 'ticket',
+                'target_id' => $ticket->id,
+                'target_name' => $ticket->ticket_no,
+                'old_value' => ['status' => 'Open'],
+                'new_value' => ['status' => 'In Progress'],
+                'description' => "{$bpoUser->name} mulai mengerjakan tiket \"{$ticket->ticket_no}\".",
+            ]);
+        });
 
         return response()->json(['status' => $ticket->fresh()->status]);
     }

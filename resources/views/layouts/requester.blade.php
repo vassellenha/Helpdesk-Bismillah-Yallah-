@@ -12,23 +12,23 @@
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     <div class="flex min-h-screen flex-col">
-        <header class="sticky top-3 z-20 mx-3 flex h-[62px] items-center gap-6 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
+        <header class="sticky top-2 z-20 mx-2 flex min-h-[62px] items-center gap-3 rounded-2xl sm:top-3 sm:mx-3 sm:gap-6 border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] px-3 sm:px-7 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">
             @include('partials.brand-lockup')
 
-            <nav class="flex items-center gap-1">
+            <nav class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <a
                     href="{{ route('dashboard.requester') }}"
-                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold transition-all duration-200 ease-out {{ request()->routeIs('dashboard.requester') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
+                    class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] px-2.5 py-2 text-[13px] font-semibold sm:px-3.5 transition-all duration-200 ease-out {{ request()->routeIs('dashboard.requester') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
-                    Dashboards
+                    <span class="hidden sm:inline">Dashboards</span>
                 </a>
                 <a
                     href="{{ route('requester.tickets') }}"
-                    class="flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold transition-all duration-200 ease-out {{ request()->routeIs('requester.tickets') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
+                    class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] px-2.5 py-2 text-[13px] font-semibold sm:px-3.5 transition-all duration-200 ease-out {{ request()->routeIs('requester.tickets') ? 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text' : 'text-gray-600 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-ink-1' }}"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z"/><path d="M14 5v14"/></svg>
-                    My Tickets
+                    <span class="hidden sm:inline">My Tickets</span>
                 </a>
             </nav>
 
@@ -42,7 +42,7 @@
             ></div>
         </header>
 
-        <main class="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-8 px-7 py-7">
+        <main class="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-7 sm:py-7">
             @yield('content')
         </main>
     </div>

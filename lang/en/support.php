@@ -127,7 +127,7 @@ return [
 
     'start_modal' => [
         'title' => 'Start working on this ticket?',
-        'body' => 'Ticket :id will be marked "In Progress". You can start now or put it off — the ticket stays Open until you start it.',
+        'body' => 'Ticket :id will be marked "In Progress" and the requester gets an automatic note in the discussion. Choose Later to go back to your ticket list — the ticket stays Open until you start it.',
         'later' => 'Later',
         'now' => 'Work On It Now',
         'starting' => 'Starting…',

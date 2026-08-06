@@ -130,7 +130,7 @@ return [
 
     'start_modal' => [
         'title' => 'Mulai kerjakan tiket ini?',
-        'body' => 'Tiket :id akan ditandai "In Progress". Anda bisa memulainya sekarang atau menundanya — tiket akan tetap Open sampai Anda memulainya.',
+        'body' => 'Tiket :id akan ditandai "In Progress" dan requester menerima pesan otomatis di forum diskusi. Pilih Nanti untuk kembali ke daftar tiket — tiket tetap Open sampai Anda memulainya.',
         'later' => 'Nanti',
         'now' => 'Kerjakan Sekarang',
         'starting' => 'Memulai…',

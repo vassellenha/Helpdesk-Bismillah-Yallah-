@@ -150,7 +150,7 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {[[trans('teamlead.support.active_load'), agent.load, agent.load >= 6 ? 'text-red-600 dark:text-bad-text' : agent.load >= 3 ? 'text-amber-600 dark:text-warn-text' : 'text-emerald-600 dark:text-ok-text'], [trans('teamlead.support.resolved'), agent.resolved, 'text-gray-900 dark:text-ink-1'], [trans('teamlead.support.productivity'), agent.productivity === null ? '—' : `${agent.productivity}%`, 'text-gray-900 dark:text-ink-1'], [trans('teamlead.support.avg_resolution'), agent.avgResolution, 'text-gray-900 dark:text-ink-1']].map(([label, val, color]) => (
                             <div key={label} className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{label}</p>

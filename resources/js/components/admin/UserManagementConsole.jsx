@@ -115,12 +115,12 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
 
     return (
         <div>
-            <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.users.title')}</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.users.subtitle')}</p>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex flex-wrap gap-2">
                     <button
                         onClick={syncEmployees}
                         disabled={syncing}
@@ -235,7 +235,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                 </div>
             )}
 
-            <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:grid-cols-4">
                 <Stat label={trans('admin.users.stat_total_user')} value={users.length} color="text-blue-600 dark:text-accent-text" bg="bg-blue-50 dark:bg-accent-soft" />
                 <Stat label={trans('admin.users.stat_active')} value={users.filter((u) => u.status === 'Aktif').length} color="text-emerald-600 dark:text-ok-text" bg="bg-emerald-50 dark:bg-ok-soft" />
                 <Stat label={trans('admin.users.stat_inactive')} value={users.filter((u) => u.status === 'Nonaktif').length} color="text-gray-500 dark:text-ink-2" bg="bg-gray-100 dark:bg-panel-3" />
@@ -304,6 +304,17 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                                         </span>
                                         {u.status_reason && (
                                             <p className="mt-1 text-xs text-gray-400 dark:text-ink-3">{u.status_reason}</p>
+                                        )}
+                                        {/* Akun bisa nonaktif SEMENTARA saklar milik Admin
+                                            masih menyala — isActive() menuntut kedua kolom
+                                            aktif. Tanpa baris ini, barisnya cuma bilang
+                                            "Nonaktif" lalu menunya menawarkan "Nonaktifkan",
+                                            dan itu terbaca seperti bug padahal keduanya
+                                            menunjuk saklar yang berbeda. */}
+                                        {u.status === 'Nonaktif' && u.helpdesk_access === 'enabled' && (
+                                            <p className="mt-0.5 text-xs font-medium text-amber-600 dark:text-warn-text">
+                                                {trans('admin.users.access_still_on')}
+                                            </p>
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-gray-500 dark:text-ink-2">{u.last_login}</td>
