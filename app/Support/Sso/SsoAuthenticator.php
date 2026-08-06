@@ -2,6 +2,7 @@
 
 namespace App\Support\Sso;
 
+use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -137,11 +138,26 @@ class SsoAuthenticator
         return [$user, null];
     }
 
+    /**
+     * The single moment any role — requester, approver, support IT, support
+     * BPO, team lead, admin — actually opens the helpdesk, so it's the one
+     * place a "login" audit entry belongs regardless of who logged in.
+     */
     public static function login(User $user): void
     {
         session([
             self::SESSION_KEY => $user->id,
             self::SESSION_NAME => $user->name,
+        ]);
+
+        AuditTrail::record($user, [
+            'module' => 'auth',
+            'action' => 'login',
+            'target_type' => 'user',
+            'target_id' => $user->id,
+            'target_name' => $user->name,
+            'new_value' => ['roles' => $user->roles->pluck('name')->values()->all()],
+            'description' => "{$user->name} login ke helpdesk.",
         ]);
     }
 

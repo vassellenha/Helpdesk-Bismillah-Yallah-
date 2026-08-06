@@ -20,6 +20,8 @@ class AuditTrailController extends Controller
                 'waktu' => $log->created_at->format('d M Y, H:i'),
                 'timestamp' => $log->created_at->timestamp,
                 'administrator' => $log->actor->name,
+                'ip_address' => $log->ip_address,
+                'url' => $log->url,
                 'module' => $log->module,
                 'module_label' => $this->moduleLabel($log->module),
                 'action' => $log->action,
@@ -50,6 +52,7 @@ class AuditTrailController extends Controller
             'team_lead' => 'teamlead',
             'ticket_management' => 'tickets',
             'integration' => 'integration',
+            'auth' => 'auth',
             default => null,
         };
 
@@ -77,6 +80,8 @@ class AuditTrailController extends Controller
             'remind_rating' => 'rating_remind',
             'return' => 'returned',
             'sync' => 'sync',
+            'login' => 'login',
+            'start' => 'start',
             default => null,
         };
 
