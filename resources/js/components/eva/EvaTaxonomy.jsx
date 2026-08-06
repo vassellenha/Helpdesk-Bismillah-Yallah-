@@ -96,6 +96,10 @@ function TaxonomyTree({ tree, catalogUrl }) {
     const isOpen = (key) => (needle ? true : open[key] ?? false);
     const toggle = (key) => setOpen((current) => ({ ...current, [key]: ! (current[key] ?? false) }));
 
+    // Pencarian dicek pada NAMA SUBJECT juga, bukan cuma tiga level di atasnya.
+    // Sebuah sub category tetap dianggap cocok kalau salah satu subject di
+    // dalamnya cocok — tanpa itu, mencari "reset password" tidak akan
+    // menemukan apa pun kalau sub category-nya bernama "AKUN APLIKASI".
     const filtered = useMemo(() => {
         if (! needle) return tree;
 
@@ -108,7 +112,9 @@ function TaxonomyTree({ tree, catalogUrl }) {
                     .map((service) => ({
                         ...service,
                         subcategories: service.subcategories.filter(
-                            (sub) => matches(sub.name) || matches(service.name) || matches(issue.name),
+                            (sub) =>
+                                matches(sub.name) || matches(service.name) || matches(issue.name)
+                                || sub.subjectList.some((subject) => matches(subject.name)),
                         ),
                     }))
                     .filter((service) => service.subcategories.length > 0),
@@ -158,14 +164,30 @@ function TaxonomyTree({ tree, catalogUrl }) {
                                             onToggle={() => toggle(key)}
                                         />
 
-                                        {isOpen(key) && service.subcategories.map((sub) => (
-                                            <Node
-                                                key={`${key}/${sub.name}`}
-                                                level={2}
-                                                name={sub.name}
-                                                node={sub}
-                                            />
-                                        ))}
+                                        {isOpen(key) && service.subcategories.map((sub) => {
+                                            const subKey = `${key}/${sub.name}`;
+
+                                            return (
+                                                <div key={subKey}>
+                                                    <Node
+                                                        level={2}
+                                                        name={sub.name}
+                                                        node={sub}
+                                                        isOpen={isOpen(subKey)}
+                                                        onToggle={() => toggle(subKey)}
+                                                    />
+
+                                                    {isOpen(subKey) && sub.subjectList.map((subject) => (
+                                                        <Node
+                                                            key={`${subKey}/${subject.name}`}
+                                                            level={3}
+                                                            name={subject.name}
+                                                            node={subject}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             })}
@@ -183,6 +205,12 @@ function TaxonomyTree({ tree, catalogUrl }) {
 
 function Node({ level, name, node, isOpen, onToggle }) {
     const clickable = Boolean(onToggle);
+    // Subject adalah SATU baris, bukan kelompok — "1/1" dan bar 100%/0% cuma
+    // menyatakan ulang satu bit informasi lewat tiga tampilan berbeda. Level 0-2
+    // tetap memakai pecahan+bar+persen karena masing-masing menaungi beberapa
+    // subject dan ketiganya menjawab pertanyaan berbeda (berapa banyak, seberapa
+    // penuh, seberapa dekat ke 100%).
+    const isLeafSubject = level === 3;
 
     return (
         <div
@@ -196,7 +224,7 @@ function Node({ level, name, node, isOpen, onToggle }) {
                 borderRadius: 'var(--r-md)',
                 cursor: clickable ? 'pointer' : 'default',
                 background: level === 0 ? 'var(--blue-050)' : level === 1 ? 'var(--surface-tint)' : 'transparent',
-                border: level === 2 ? '1px solid var(--border-soft)' : 'none',
+                border: level >= 2 ? '1px solid var(--border-soft)' : 'none',
             }}
         >
             {clickable ? (
@@ -213,17 +241,23 @@ function Node({ level, name, node, isOpen, onToggle }) {
                 {node.articles} artikel · {node.faqs} FAQ
             </span>
 
-            <span style={{ fontSize: '11.5px', color: 'var(--slate-500)', whiteSpace: 'nowrap', width: '64px', textAlign: 'right' }}>
-                {node.covered}/{node.subjects}
-            </span>
+            {isLeafSubject ? (
+                <Badge tone={node.covered ? 'green' : 'red'}>{node.covered ? 'Ada materi' : 'Belum ada materi'}</Badge>
+            ) : (
+                <>
+                    <span style={{ fontSize: '11.5px', color: 'var(--slate-500)', whiteSpace: 'nowrap', width: '64px', textAlign: 'right' }}>
+                        {node.covered}/{node.subjects}
+                    </span>
 
-            <span style={{ width: '70px', height: '7px', borderRadius: '999px', background: 'var(--border)', overflow: 'hidden', flex: 'none' }}>
-                <span style={{ display: 'block', width: `${node.percent}%`, height: '100%', background: coverageTone(node.percent) }} />
-            </span>
+                    <span style={{ width: '70px', height: '7px', borderRadius: '999px', background: 'var(--border)', overflow: 'hidden', flex: 'none' }}>
+                        <span style={{ display: 'block', width: `${node.percent}%`, height: '100%', background: coverageTone(node.percent) }} />
+                    </span>
 
-            <span style={{ width: '38px', textAlign: 'right', fontSize: '12px', fontWeight: 700, color: coverageTone(node.percent) }}>
-                {node.percent}%
-            </span>
+                    <span style={{ width: '38px', textAlign: 'right', fontSize: '12px', fontWeight: 700, color: coverageTone(node.percent) }}>
+                        {node.percent}%
+                    </span>
+                </>
+            )}
         </div>
     );
 }

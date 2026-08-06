@@ -194,7 +194,20 @@ final class CoverageCalculator
                             ->groupBy('subcategory_name')
                             ->map(fn (Collection $subRows, string $subcategory) => [
                                 'name' => $subcategory,
+                                // ...tally() taruh 'subjects' => JUMLAH (int) di sini —
+                                // dipakai level ini sendiri untuk pecahan "covered/subjects"
+                                // dan untuk sortByDesc('subjects') di bawah. Daftar Subject
+                                // sengaja disimpan di key TERPISAH (subjectList) supaya tidak
+                                // menimpa angka itu dengan array.
                                 ...$this->tally($subRows, $articleCounts, $faqCounts),
+                                'subjectList' => $subRows
+                                    ->map(fn ($row) => [
+                                        'name' => $row->subject_name,
+                                        ...$this->tally(collect([$row]), $articleCounts, $faqCounts),
+                                    ])
+                                    ->sortBy('name')
+                                    ->values()
+                                    ->all(),
                             ])
                             ->sortByDesc('subjects')
                             ->values()
@@ -257,6 +270,7 @@ final class CoverageCalculator
             ->orderBy('service_catalog_subjects.id')
             ->get([
                 'service_catalog_subjects.id',
+                'service_catalog_subjects.name as subject_name',
                 'svc.name as service_name',
                 'sub.name as subcategory_name',
                 'ic.name as issue_category_name',
