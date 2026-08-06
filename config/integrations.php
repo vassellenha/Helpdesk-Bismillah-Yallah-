@@ -35,6 +35,27 @@ return [
         ],
 
         /*
+        | Sinkronisasi otomatis, sekali sehari.
+        |
+        | MATI secara bawaan, dan itu disengaja. Sinkronisasi MENIMPA data user
+        | — termasuk kolom `status` yang mengunci akses. Menyalakannya di
+        | lingkungan yang sumbernya masih driver "mock" berarti setiap malam
+        | data orang sungguhan ditimpa fixture contoh, dan siapa pun yang tidak
+        | ada di fixture itu ikut dinonaktifkan. Tidak ada layar merah yang
+        | memberi tahu; yang ada cuma orang yang tiba-tiba tidak bisa masuk.
+        |
+        | Nyalakan setelah driver-nya "http" dan uji koneksinya hijau di layar
+        | Admin → Integrations.
+        |
+        | Jam bawaannya 03:00 — di luar jam kerja, dan setelah penyapu log EVA
+        | (02:00) selesai supaya keduanya tidak berebut database.
+        */
+        'auto_sync' => [
+            'enabled' => (bool) env('EMPLOYEE_SYNC_AUTO', false),
+            'at' => env('EMPLOYEE_SYNC_AT', '03:00'),
+        ],
+
+        /*
         | PLACEHOLDER MAPPING — these left-hand keys are an educated guess at
         | the API's field names, made before the spec was available. When the
         | real payload arrives this array is the only thing that changes; no

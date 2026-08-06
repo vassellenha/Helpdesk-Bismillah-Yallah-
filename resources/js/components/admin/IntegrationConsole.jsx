@@ -190,6 +190,18 @@ export default function IntegrationConsole({ integration, history: initialHistor
                             <Row label="Fixture" value={<code className="text-[12px]">{integration.fixture}</code>} />
                         )}
                         <Row label={trans('admin.integration.matched_by')} value={integration.matchBy} />
+                        {/*
+                            Sinkronisasi terjadwal vs manual terlihat sama persis
+                            dari layar ini — tanpa baris ini tidak ada cara tahu
+                            apakah data user diperbarui sendiri tiap malam.
+                        */}
+                        <Row
+                            label={trans('admin.integration.auto_sync')}
+                            value={integration.autoSync
+                                ? trans('admin.integration.auto_sync_on', { time: integration.autoSyncAt })
+                                : trans('admin.integration.auto_sync_off')}
+                            hint={integration.autoSync ? null : trans('admin.integration.auto_sync_hint')}
+                        />
                         <Row label={trans('admin.integration.default_role')} value={integration.defaultRole} />
                         <Row
                             label={trans('admin.integration.deactivate_missing')}

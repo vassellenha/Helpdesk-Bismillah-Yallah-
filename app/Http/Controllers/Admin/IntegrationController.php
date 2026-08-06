@@ -85,6 +85,14 @@ class IntegrationController extends Controller
             'tokenSet' => ! blank($config['http']['token'] ?? null),
             'fixture' => $driver === 'mock' ? ($config['mock']['fixture'] ?? null) : null,
             'matchBy' => $config['match_by'] ?? 'nip',
+            /*
+             | Sinkronisasi terjadwal. Ditampilkan karena tanpa ini tidak ada
+             | satu pun tempat di layar yang memberi tahu apakah data user
+             | diperbarui sendiri atau hanya saat tombol ditekan — dan keduanya
+             | terlihat sama persis dari sisi Admin.
+             */
+            'autoSync' => (bool) ($config['auto_sync']['enabled'] ?? false),
+            'autoSyncAt' => $config['auto_sync']['at'] ?? null,
             'deactivateMissing' => (bool) ($config['deactivate_missing'] ?? false),
             'overwriteWithEmpty' => (bool) ($config['overwrite_with_empty'] ?? false),
             'fieldMap' => $config['field_map'] ?? [],

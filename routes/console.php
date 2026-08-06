@@ -55,3 +55,26 @@ Schedule::command('eva:sweep-stuck-documents')
 Schedule::command('eva:purge-expired-logs')
     ->dailyAt('02:00')
     ->withoutOverlapping();
+
+/*
+ | Sinkronisasi data pegawai dari API perusahaan.
+ |
+ | Terdaftar hanya kalau saklarnya menyala (config
+ | `integrations.employee_directory.auto_sync.enabled`, bawaannya MATI). Bukan
+ | dijadwalkan lalu dijaga di dalam perintahnya: perintah yang terdaftar tapi
+ | selalu keluar diam-diam tetap muncul di `schedule:list`, dan siapa pun yang
+ | membacanya akan mengira sinkronisasinya berjalan.
+ |
+ | Alasan saklarnya mati secara bawaan ada di config/integrations.php —
+ | ringkasnya, sinkronisasi menimpa kolom `status` yang mengunci akses.
+ |
+ | `withoutOverlapping` karena sinkronisasi penuh menyentuh seluruh baris users;
+ | dua yang berjalan bersamaan bisa saling menimpa di tengah jalan.
+ */
+$autoSync = config('integrations.employee_directory.auto_sync');
+
+if ($autoSync['enabled'] ?? false) {
+    Schedule::command('employees:sync')
+        ->dailyAt($autoSync['at'] ?? '03:00')
+        ->withoutOverlapping();
+}
