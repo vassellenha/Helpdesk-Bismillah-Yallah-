@@ -1,23 +1,23 @@
-import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import DonutChart from './DonutChart';
 
 export default function TicketCategoryDonut({ data = [], total = 0 }) {
     return (
         <div className="flex flex-col items-center gap-6 sm:flex-row">
-            <div className="relative h-44 w-44 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie data={data} dataKey="value" nameKey="label" innerRadius={55} outerRadius={80} paddingAngle={2}>
-                            {data.map((d) => (
-                                <Cell key={d.label} fill={d.color} stroke="none" />
-                            ))}
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-gray-900 dark:text-ink-1">{total.toLocaleString('id-ID')}</span>
-                    <span className="text-xs text-gray-400 dark:text-ink-3">TOTAL TIKET</span>
-                </div>
-            </div>
+            <DonutChart
+                data={data.map((d) => ({ ...d, key: d.label }))}
+                size={188}
+                thickness={25}
+                emptyLabel="Belum ada tiket"
+                // Nilai dari server sudah berupa persentase (SupportController::categoryDonut),
+                // jadi jangan dihitung ulang terhadap jumlah slice.
+                formatValue={(slice) => `${slice.value}% dari total tiket`}
+                center={
+                    <>
+                        <span className="text-2xl font-bold text-gray-900 dark:text-ink-1">{total.toLocaleString('id-ID')}</span>
+                        <span className="text-xs text-gray-400 dark:text-ink-3">TOTAL TIKET</span>
+                    </>
+                }
+            />
             <ul className="w-full space-y-2">
                 {data.map((d) => (
                     <li key={d.label} className="flex items-center justify-between text-sm">

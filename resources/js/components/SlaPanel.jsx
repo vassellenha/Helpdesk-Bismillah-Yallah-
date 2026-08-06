@@ -53,16 +53,24 @@ export default function SlaPanel({ sla, rating, feedbackNote, ratingActive = tru
             <div className="mt-4 space-y-2 border-t border-gray-100 dark:border-edge pt-3.5 text-[13px]">
                 <Row label="Mulai" value={sla.startedAt} />
                 <Row label="Selesai" value={sla.endedAt ?? `Target ${sla.dueAt ?? '—'}`} />
-                <Row label="Target Respons" value={sla.responseTarget} />
                 <Row label="Target Penyelesaian" value={sla.resolutionTarget} />
                 {sla.priority && <Row label="Prioritas" value={sla.priority} />}
             </div>
 
-            <div className="mt-3.5 border-t border-gray-100 dark:border-edge pt-3.5 text-[13px]">
-                <Row label="Kecepatan Respons" value={response.label} tone={RESPONSE_TONE[response.kind] ?? RESPONSE_TONE.none} />
-                {response.at && <Row label="Direspons pada" value={response.at} />}
-                {!response.at && response.dueAt && <Row label="Batas respons" value={response.dueAt} />}
-                <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
+            {/* Same shape as the Penyelesaian block above — heading with the
+                outcome, its own bar, then the times. The response clock is a
+                separate SLA with its own target and its own verdict, so burying
+                it as one line under the resolution block understated it: you
+                could not see when the clock started, or what the target was
+                once it had been answered. */}
+            <div className="mt-4 border-t border-gray-100 dark:border-edge pt-3.5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="text-[13px] text-gray-500 dark:text-ink-2">Respons</span>
+                    <span className={`text-right text-[13px] font-bold ${RESPONSE_TONE[response.kind] ?? RESPONSE_TONE.none}`}>
+                        {response.label ?? '—'}
+                    </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
                     <div
                         className="h-full rounded-full"
                         style={{
@@ -70,6 +78,15 @@ export default function SlaPanel({ sla, rating, feedbackNote, ratingActive = tru
                             backgroundColor: response.kind === 'breach' ? SLA_COLOR.breach : response.kind === 'warning' ? SLA_COLOR.warning : SLA_COLOR.ontrack,
                         }}
                     />
+                </div>
+
+                <div className="mt-4 space-y-2 text-[13px]">
+                    <Row label="Mulai" value={sla.startedAt} />
+                    <Row
+                        label={response.at ? 'Direspons' : 'Belum direspons'}
+                        value={response.at ?? `Target ${response.dueAt ?? '—'}`}
+                    />
+                    <Row label="Target Respons" value={sla.responseTarget} />
                 </div>
             </div>
 

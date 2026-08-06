@@ -118,6 +118,44 @@
 }
 
 /*
+ * Sorotan segmen donat (DonutChart.jsx).
+ *
+ * Ditulis sebagai CSS biasa, bukan lewat API activeShape/inactiveShape Recharts:
+ * keduanya sudah deprecated di Recharts 3 dan tidak dipakai di mana pun di repo
+ * ini, sementara kelas .recharts-pie-sector sudah stabil sejak lama. Hasilnya
+ * sama dan tidak ada state React yang perlu diurus.
+ *
+ * transform-box: view-box membuat titik acuan skala berada di pusat SVG, bukan
+ * pusat masing-masing potongan — jadi segmen tumbuh keluar mengikuti jari-jari,
+ * bukan mengembang di tempat lalu tumpang tindih dengan tetangganya.
+ */
+.donut-chart .recharts-surface {
+    filter: drop-shadow(0 4px 6px rgb(15 23 42 / 0.14));
+}
+.donut-chart .recharts-pie-sector {
+    transform-box: view-box;
+    transform-origin: center;
+    transition:
+        transform 160ms ease,
+        opacity 160ms ease;
+}
+.donut-chart:hover .recharts-pie-sector {
+    opacity: 0.42;
+}
+.donut-chart .recharts-pie-sector:hover {
+    opacity: 1;
+    transform: scale(1.06);
+}
+@media (prefers-reduced-motion: reduce) {
+    .donut-chart .recharts-pie-sector {
+        transition: none;
+    }
+    .donut-chart .recharts-pie-sector:hover {
+        transform: none;
+    }
+}
+
+/*
  * Brand lockup — ikon tiket + wordmark "Helpdesk" di kiri atas tiap header role.
  *
  * Ini versi STILISTIK, menggantikan versi kaca fotorealistis sebelumnya. Isi

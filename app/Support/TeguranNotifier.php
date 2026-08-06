@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Support\WhatsApp\FonnteWhatsAppGateway;
 use App\Support\WhatsApp\LogWhatsAppGateway;
 use App\Support\WhatsApp\WhatsAppGateway;
+use Illuminate\Mail\Mailable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -28,7 +30,7 @@ class TeguranNotifier
 {
     /**
      * @param  array<int,string>  $channels  subset of inapp|email|whatsapp
-     * @return array<int,string>  channels that were delivered successfully
+     * @return array<int,string> channels that were delivered successfully
      */
     public static function send(User $teamLead, SupportAgent $agent, Ticket $ticket, string $message, array $channels): array
     {
@@ -49,11 +51,8 @@ class TeguranNotifier
         }
 
         if (in_array('email', $channels, true) && $email) {
-            try {
-                Mail::to($email)->send(new TeguranSlaMail($ticket, $agent->name, $teamLead->name, $message));
+            if (self::deliver($email, new TeguranSlaMail($ticket, $agent->name, $teamLead->name, $message), '[Teguran]')) {
                 $delivered[] = 'email';
-            } catch (\Throwable $e) {
-                Log::error('[Teguran] Email gagal terkirim.', ['to' => $email, 'error' => $e->getMessage()]);
             }
         }
 
@@ -72,7 +71,7 @@ class TeguranNotifier
      * not tied to any single ticket, so it carries no Ticket at all.
      *
      * @param  array<int,string>  $channels  subset of inapp|email|whatsapp
-     * @return array<int,string>  channels that were delivered successfully
+     * @return array<int,string> channels that were delivered successfully
      */
     public static function sendRating(User $teamLead, SupportAgent $agent, float $rating, int $ratingCount, string $message, array $channels): array
     {
@@ -93,11 +92,8 @@ class TeguranNotifier
         }
 
         if (in_array('email', $channels, true) && $email) {
-            try {
-                Mail::to($email)->send(new TeguranRatingMail($agent->name, $teamLead->name, $rating, $ratingCount, $message));
+            if (self::deliver($email, new TeguranRatingMail($agent->name, $teamLead->name, $rating, $ratingCount, $message), '[Teguran Rating]')) {
                 $delivered[] = 'email';
-            } catch (\Throwable $e) {
-                Log::error('[Teguran Rating] Email gagal terkirim.', ['to' => $email, 'error' => $e->getMessage()]);
             }
         }
 
@@ -111,9 +107,36 @@ class TeguranNotifier
     }
 
     /**
-     * Resolves the active WhatsApp gateway from config — swap the driver in
-     * config/notifications.php (or .env WA_DRIVER) to change providers.
+     * Hands one teguran email off for delivery, reporting whether it was
+     * accepted. Shared by both fan-outs so the SLA and rating teguran cannot
+     * end up with different delivery behaviour.
      */
+    private static function deliver(string $email, Mailable $mail, string $tag): bool
+    {
+        try {
+            // Queued, not sent inline. A real SMTP handshake to Gmail measured
+            // 6.5 seconds on this app — the Team Lead's browser sat waiting that
+            // whole time, and if the mail host were slow or unreachable the
+            // request would hang until timeout, tempting a second click and a
+            // duplicate teguran. Handing it to the queue returns immediately.
+            //
+            // Falls back to sending inline when the queue is synchronous, so a
+            // machine with no worker running still delivers rather than silently
+            // parking the message in the jobs table.
+            if (config('queue.default') === 'sync') {
+                Mail::to($email)->send($mail);
+            } else {
+                Mail::to($email)->queue($mail);
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error($tag.' Email gagal terkirim.', ['to' => $email, 'error' => $e->getMessage()]);
+
+            return false;
+        }
+    }
+
     private static function gateway(): WhatsAppGateway
     {
         $driver = config('notifications.whatsapp.driver', 'log');
@@ -123,7 +146,7 @@ class TeguranNotifier
                 config('notifications.whatsapp.fonnte.token'),
                 config('notifications.whatsapp.fonnte.endpoint'),
             ),
-            default => new LogWhatsAppGateway(),
+            default => new LogWhatsAppGateway,
         };
     }
 
@@ -131,7 +154,7 @@ class TeguranNotifier
      * Recent teguran history for the Team Lead dashboard, read back from the
      * in-app notifications table (type = sla_teguran).
      *
-     * @return \Illuminate\Support\Collection<int,TicketNotification>
+     * @return Collection<int,TicketNotification>
      */
     public static function recent(int $limit = 15)
     {

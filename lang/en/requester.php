@@ -113,4 +113,23 @@ return [
         'yes' => 'Yes, Delete',
         'failed' => ':count ticket(s) could not be deleted. Please try again.',
     ],
+    'priority_help' => [
+        'Low' => 'A routine request. Your work can carry on while you wait.',
+        'Medium' => 'It disrupts your work, but there is a workaround for now.',
+        'High' => 'Your work or your team is stopped and there is no workaround.',
+        'Critical' => 'The service is fully down, many people are affected, or it reaches customers/production.',
+        'sla' => 'Target: respond within :response · resolve within :resolution',
+        'hour' => ':count hour',
+        'hours' => ':count hours',
+        'day' => ':count day',
+        'days' => ':count days',
+        'inactive' => 'The SLA for this priority is currently disabled by an Admin.',
+    ],
+
+    'sla_help' => [
+        'ontrack' => 'Still safe. The resolution deadline has not passed and the warning threshold has not been reached.',
+        'warning' => 'Running out of time. Past the warning threshold, but the deadline has not passed yet.',
+        'breach' => 'The resolution deadline has passed. The ticket is still being worked on, but it is now recorded as late.',
+    ],
+
 ];

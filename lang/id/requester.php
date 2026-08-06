@@ -116,4 +116,23 @@ return [
         'yes' => 'Ya, Hapus',
         'failed' => ':count tiket gagal dihapus. Coba lagi.',
     ],
+    'priority_help' => [
+        'Low' => 'Permintaan rutin. Pekerjaan Anda tetap bisa berjalan sambil menunggu.',
+        'Medium' => 'Mengganggu pekerjaan Anda, tapi masih ada cara lain untuk sementara.',
+        'High' => 'Pekerjaan Anda atau tim berhenti dan tidak ada cara lain.',
+        'Critical' => 'Layanan mati total, banyak orang terdampak, atau menyentuh pelanggan/produksi.',
+        'sla' => 'Target: respons :response · selesai :resolution',
+        'hour' => ':count jam',
+        'hours' => ':count jam',
+        'day' => ':count hari',
+        'days' => ':count hari',
+        'inactive' => 'SLA untuk prioritas ini sedang dinonaktifkan Admin.',
+    ],
+
+    'sla_help' => [
+        'ontrack' => 'Masih aman. Batas waktu penyelesaian belum lewat dan belum masuk ambang peringatan.',
+        'warning' => 'Waktunya hampir habis. Sudah melewati ambang peringatan, tapi batas waktunya belum terlampaui.',
+        'breach' => 'Batas waktu penyelesaian sudah terlampaui. Tiketnya tetap dikerjakan, tapi sudah tercatat lewat target.',
+    ],
+
 ];

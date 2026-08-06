@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './admin/Modal';
 import SelectMenu from './SelectMenu';
 import { apiFetch, uploadFile } from '../lib/api';
+import { t as trans } from '../lib/i18n';
 
 const OTHER = '__other__';
 const PRIORITIES = [
@@ -121,6 +122,68 @@ const emptyForm = {
     approverId: '',
     approverName: '',
 };
+
+/**
+ * Perataan tooltip per kolom, bukan selalu di tengah tombol.
+ *
+ * Tooltipnya (14rem) jauh lebih lebar dari tombolnya, dan badan modal memakai
+ * overflow-hidden — kalau semuanya dipusatkan, tooltip kolom terluar terpotong
+ * tepi modal. Grid-nya 2 kolom di ponsel dan 4 kolom dari sm ke atas, jadi
+ * kolom mana yang "terluar" ikut berubah dan varian sm-nya harus menyesuaikan.
+ * Kelasnya ditulis utuh karena Tailwind memindai string, bukan hasil rangkaian.
+ */
+const TIP_ALIGN = [
+    'left-0',
+    'right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2',
+    'left-0 sm:left-1/2 sm:-translate-x-1/2',
+    'right-0',
+];
+
+/**
+ * Menit -> "4 jam" / "2 hari", mengikuti bahasa aktif.
+ *
+ * Kunci tunggal dan jamak dipisah karena target respons Critical persis 60
+ * menit, sehingga "1 hours" bukan kasus teoretis — itu yang tampil di layar.
+ */
+function humanMinutes(minutes) {
+    if (!minutes || minutes <= 0) return '—';
+
+    const [count, unit] = minutes % 1440 === 0 ? [minutes / 1440, 'day'] : [Math.round(minutes / 60), 'hour'];
+
+    return trans(`requester.priority_help.${unit}${count === 1 ? '' : 's'}`, { count });
+}
+
+/**
+ * Panduan singkat saat requester ragu memilih prioritas.
+ *
+ * Angka SLA-nya dibaca dari policy yang sedang aktif, bukan ditulis ulang di
+ * sini — kalau Admin mengubah target di Konfigurasi SLA, tooltip ini ikut
+ * berubah. Menyalin angkanya akan membuat form menjanjikan sesuatu yang tidak
+ * lagi berlaku.
+ *
+ * Muncul saat hover DAN saat fokus keyboard: tombol prioritas bisa dijangkau
+ * dengan Tab, jadi panduannya tidak boleh hanya untuk pengguna tetikus.
+ */
+function PriorityTip({ priority, policy, disabled, index }) {
+    return (
+        <div
+            role="tooltip"
+            className={`pointer-events-none absolute bottom-full z-20 mb-2 w-56 rounded-xl bg-gray-900 px-3 py-2.5 text-left text-[11.5px] leading-relaxed text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${TIP_ALIGN[index]}`}
+        >
+            <p className="font-semibold">{trans(`requester.priority_help.${priority}`)}</p>
+            {disabled ? (
+                <p className="mt-1.5 text-[11px] text-amber-300">{trans('requester.priority_help.inactive')}</p>
+            ) : policy ? (
+                <p className="mt-1.5 text-[11px] text-gray-300">
+                    {trans('requester.priority_help.sla', {
+                        response: humanMinutes(policy.response_time_minutes),
+                        resolution: humanMinutes(policy.resolution_time_minutes),
+                    })}
+                </p>
+            ) : null}
+        </div>
+    );
+}
 
 export default function NewTicketModal({
     catalogUrl = '/api/catalog',
@@ -605,27 +668,29 @@ export default function NewTicketModal({
 
                                 <Field label="Prioritas">
                                     <div className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 p-2.5 sm:grid-cols-4">
-                                        {PRIORITIES.map((p) => {
+                                        {PRIORITIES.map((p, i) => {
                                             const active = form.priority === p.label;
                                             const isActivePriority = !policies || activePriorities.has(p.label);
+                                            const policy = (policies ?? []).find((x) => x.priority === p.label);
                                             return (
-                                                <button
-                                                    key={p.label}
-                                                    type="button"
-                                                    disabled={!isActivePriority}
-                                                    title={isActivePriority ? undefined : 'SLA policy untuk priority ini sedang nonaktif'}
-                                                    onClick={() => set({ priority: p.label })}
-                                                    className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-xs font-bold ${
-                                                        !isActivePriority
-                                                            ? 'cursor-not-allowed border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-gray-300'
-                                                            : active
-                                                              ? 'border-blue-600 bg-blue-600 dark:bg-blue-500 text-white shadow-sm'
-                                                              : 'border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-gray-600 dark:text-ink-2 hover:border-gray-300'
-                                                    }`}
-                                                >
-                                                    <span className="text-base font-extrabold leading-none">{p.glyph}</span>
-                                                    {p.label}
-                                                </button>
+                                                <div key={p.label} className="group relative">
+                                                    <button
+                                                        type="button"
+                                                        disabled={!isActivePriority}
+                                                        onClick={() => set({ priority: p.label })}
+                                                        className={`flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-xs font-bold ${
+                                                            !isActivePriority
+                                                                ? 'cursor-not-allowed border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-gray-300'
+                                                                : active
+                                                                  ? 'border-blue-600 bg-blue-600 dark:bg-blue-500 text-white shadow-sm'
+                                                                  : 'border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-gray-600 dark:text-ink-2 hover:border-gray-300'
+                                                        }`}
+                                                    >
+                                                        <span className="text-base font-extrabold leading-none">{p.glyph}</span>
+                                                        {p.label}
+                                                    </button>
+                                                    <PriorityTip priority={p.label} policy={policy} disabled={!isActivePriority} index={i} />
+                                                </div>
                                             );
                                         })}
                                     </div>

@@ -37,11 +37,27 @@ export async function apiFetch(url, options = {}) {
     const body = await res.json().catch(() => null);
 
     if (!res.ok) {
-        const message = body?.message || body?.errors ? JSON.stringify(body.errors ?? body.message) : `Request failed (${res.status})`;
-        throw new Error(message);
+        throw new Error(errorMessage(body, res.status));
     }
 
     return body;
+}
+
+/**
+ * Pesan yang layak dibaca orang.
+ *
+ * Versi sebelumnya menulis `a || b ? JSON.stringify(...) : fallback`, yang
+ * dibaca JavaScript sebagai `(a || b) ? ... : ...` — jadi pesan biasa pun ikut
+ * dibungkus tanda kutip JSON. Error validasi diratakan jadi kalimat, bukan
+ * objek mentah.
+ */
+function errorMessage(body, status) {
+    if (body?.errors && typeof body.errors === 'object') {
+        const flat = Object.values(body.errors).flat().filter(Boolean);
+        if (flat.length > 0) return flat.join(' ');
+    }
+
+    return body?.message || `Request failed (${status})`;
 }
 
 /**
@@ -73,8 +89,9 @@ export async function uploadFile(url, file, fields = {}) {
     const body = await res.json().catch(() => null);
 
     if (!res.ok) {
-        const message = body?.message || body?.errors ? JSON.stringify(body.errors ?? body.message) : `Upload failed (${res.status})`;
-        throw new Error(message);
+        throw new Error(errorMessage(body, res.status) === `Request failed (${res.status})`
+            ? `Upload failed (${res.status})`
+            : errorMessage(body, res.status));
     }
 
     return body;

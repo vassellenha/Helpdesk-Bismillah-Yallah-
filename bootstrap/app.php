@@ -29,7 +29,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // Termasuk eva/api/* — konsol EVA memakai apiFetch yang mengharap JSON;
         // tanpa ini, error validasi dirender sebagai HTML dan frontend gagal
         // memparsenya. (Ditemukan oleh TrainingControllerTest.)
+        /*
+        | Passing a closure here REPLACES Laravel's default rule, it does not
+        | add to it — so listing only api/* silently took JSON away from every
+        | other endpoint the React islands call. Those live under /support,
+        | /admin, /team-lead …, so an abort(422, 'reason') came back as an HTML
+        | error page, res.json() threw, and the UI could only show a bare
+        | "Request failed (422)" while the actual reason sat in the discarded
+        | HTML. expectsJson() restores the default; api/* stays forced.
+        */
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*', '*/api/*'),
+            fn (Request $request) => $request->is('api/*', '*/api/*') || $request->expectsJson(),
         );
     })->create();
