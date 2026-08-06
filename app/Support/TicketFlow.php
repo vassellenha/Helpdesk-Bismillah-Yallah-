@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\AuditTrail;
+use App\Models\SupportAgent;
 use App\Models\Ticket;
 
 /**
@@ -67,7 +68,7 @@ class TicketFlow
                     $bySupport => 'returned',
                     default => 'pending',
                 },
-                'by' => ($withSupport || $finished || $bySupport) ? self::picLabel($ticket) : null,
+                'by' => ($withSupport || $finished || $bySupport) ? self::picChainLabel($ticket) : null,
                 'at' => null,
             ],
             [
@@ -180,6 +181,75 @@ class TicketFlow
         $agent = $ticket->assignedAgent;
 
         return $agent ? $agent->name.' ('.strtoupper($agent->type).')' : null;
+    }
+
+    /**
+     * Every PIC who has held the ticket, oldest first, joined as
+     * "Budi (BPO) → Siti (IT)" — not just whoever holds it now.
+     *
+     * Escalation (BPO → IT) and Team Lead reassignment both swap
+     * assigned_agent_id in place, so reading only picLabel() here would make
+     * the earlier PIC's involvement vanish from the stepper the moment the
+     * ticket moves on — exactly the "Support BPO disappears after escalating
+     * to Support IT" gap this fixes.
+     */
+    private static function picChainLabel(Ticket $ticket): ?string
+    {
+        $chain = self::picChain($ticket);
+
+        return $chain === [] ? null : implode(' → ', $chain);
+    }
+
+    /** @return list<string> */
+    private static function picChain(Ticket $ticket): array
+    {
+        $handovers = AuditTrail::where('target_type', 'ticket')
+            ->where('target_id', $ticket->id)
+            ->whereIn('action', ['escalate', 'reassign'])
+            ->orderBy('created_at')
+            ->get(['old_value', 'new_value']);
+
+        $names = [];
+        foreach ($handovers as $row) {
+            $old = $row->old_value['assigned_agent'] ?? $row->old_value['agent'] ?? null;
+            $new = $row->new_value['assigned_agent'] ?? $row->new_value['agent'] ?? null;
+
+            if ($old && $names === []) {
+                $names[] = $old;
+            }
+            if ($new) {
+                $names[] = $new;
+            }
+        }
+
+        if ($names === []) {
+            $current = self::picLabel($ticket);
+
+            return $current ? [$current] : [];
+        }
+
+        // The chain's last name is whoever holds it now — swap in picLabel()
+        // so it carries the (BPO)/(IT) suffix like the rest of the chain.
+        $names[array_key_last($names)] = self::picLabel($ticket) ?? $names[array_key_last($names)];
+
+        return self::withTypeSuffix($names);
+    }
+
+    /**
+     * @param  list<string>  $names
+     * @return list<string>
+     */
+    private static function withTypeSuffix(array $names): array
+    {
+        return collect($names)->map(function (string $name) {
+            if (str_ends_with($name, ')')) {
+                return $name; // Already suffixed (the current PIC, via picLabel()).
+            }
+
+            $type = SupportAgent::where('name', $name)->value('type');
+
+            return $type ? $name.' ('.strtoupper($type).')' : $name;
+        })->all();
     }
 
     /** Number of PIC handovers (BPO→IT escalation, Team Lead reassignment). */

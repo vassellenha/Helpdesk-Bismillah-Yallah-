@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.favicon')
     {{--
      | Dibutuhkan widget EVA: apiFetch membaca token dari sini untuk setiap
      | POST. Layout ini sebelumnya tidak punya baris ini karena halamannya

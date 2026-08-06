@@ -159,6 +159,10 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.7fr_1fr]">
                 <div className="flex flex-col gap-6">
+                    <Card title={trans('approver.detail.status_history')}>
+                        <TicketFlow flow={flow} />
+                    </Card>
+
                     <Card title={trans('approver.detail.ticket_info')}>
                         <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'Tidak ada deskripsi.'}</p>
                         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-2">
@@ -277,10 +281,6 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                             feedbackNote={ticket.feedbackNote}
                             ratingActive={ticket.ratingActive ?? true}
                         />
-                    </Card>
-
-                    <Card title={trans('approver.detail.status_history')}>
-                        <TicketFlow flow={flow} />
                     </Card>
                 </div>
             </div>

@@ -296,9 +296,21 @@ class EmployeeSync
     private static function createUser(array $attrs, array $config): void
     {
         DB::transaction(function () use ($attrs, $config) {
+            $status = $attrs['status'] ?? 'active';
+
             $user = User::create([
                 ...$attrs,
-                'status' => $attrs['status'] ?? 'active',
+                'status' => $status,
+                // A brand-new account has no Admin decision to protect yet, so
+                // this is the one place helpdesk_access may follow the company
+                // API instead of defaulting to 'enabled': an employee who
+                // arrives already inactive would otherwise sit at the schema
+                // default with access nobody actually granted, and the User &
+                // Role Management row action menu would misleadingly offer
+                // "Nonaktifkan Akses" — as if turning it off were still
+                // pending — for someone the Admin never activated in the
+                // first place.
+                'helpdesk_access' => $status === 'active' ? 'enabled' : 'disabled',
                 // No local password: these accounts authenticate against the
                 // company portal. A random one keeps the column non-null.
                 'password' => Hash::make(Str::random(40)),
