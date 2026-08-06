@@ -16,6 +16,7 @@ const MODULE_KEYS = {
     team_lead: 'teamlead',
     ticket_management: 'tickets',
     integration: 'integration',
+    auth: 'auth',
 };
 
 const moduleLabel = (code) => trans(`admin.audit.module_name.${MODULE_KEYS[code]}`, {}, code);
@@ -39,6 +40,8 @@ const ACTION_KEYS = {
     remind_rating: 'rating_remind',
     return: 'returned',
     sync: 'sync',
+    login: 'login',
+    start: 'start',
 };
 
 const actionLabel = (code) => (code === 'update'
@@ -225,6 +228,9 @@ function DetailModal({ log, onClose }) {
                         </div>
                         <h2 className="mt-1.5 truncate text-lg font-bold text-gray-900 dark:text-ink-1">{log.target_name}</h2>
                         <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{log.administrator} · {log.waktu}</p>
+                        <p className="mt-0.5 truncate text-xs text-gray-400 dark:text-ink-3" title={log.url || undefined}>
+                            {trans('admin.audit.col_ip')}: {log.ip_address || '—'} · {trans('admin.audit.col_url')}: {log.url || '—'}
+                        </p>
                     </div>
                     <button onClick={onClose} className="shrink-0 rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600">✕</button>
                 </div>
