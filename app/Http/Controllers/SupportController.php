@@ -129,6 +129,7 @@ class SupportController extends Controller
             'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('support.tickets.data', $ticket),
             'commentsUrl' => route('support.tickets.comments.store', $ticket),
+            'startUrl' => route('support.tickets.start', $ticket),
             'resolveUrl' => route('support.tickets.resolve', $ticket),
             'returnUrl' => route('support.tickets.return', $ticket),
             'ticketsUrl' => route('support.tickets'),
@@ -180,6 +181,41 @@ class SupportController extends Controller
         NotificationService::notifyDiscussionParticipants($ticket, $supportUser, 'Support IT', $data['message']);
 
         return response()->json($this->presentComment($comment), 201);
+    }
+
+    /**
+     * "Kerjakan Sekarang" — the agent's explicit acknowledgement that they're
+     * starting on an Open ticket, from the popup shown when they land on its
+     * detail page. Only ever fires from Open: once work has started there's
+     * no "start" left to record, and a ticket that isn't Open yet has no
+     * agent action to take at all.
+     */
+    public function start(Ticket $ticket): JsonResponse
+    {
+        $supportUser = CurrentActor::support();
+        $agent = $this->agentFor($supportUser);
+        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless($ticket->status === 'Open', 422, 'Tiket ini tidak bisa dimulai dari status saat ini.');
+
+        // Starting work is the agent picking the ticket up — same reasoning
+        // resolve()/returnTicket() use: it answers the SLA response clock
+        // even though nothing was posted in the discussion thread.
+        $ticket->markFirstResponse();
+
+        $ticket->update(['status' => 'In Progress']);
+
+        AuditTrail::record($supportUser, [
+            'module' => 'ticket_support',
+            'action' => 'start',
+            'target_type' => 'ticket',
+            'target_id' => $ticket->id,
+            'target_name' => $ticket->ticket_no,
+            'old_value' => ['status' => 'Open'],
+            'new_value' => ['status' => 'In Progress'],
+            'description' => "{$supportUser->name} mulai mengerjakan tiket \"{$ticket->ticket_no}\".",
+        ]);
+
+        return response()->json(['status' => $ticket->fresh()->status]);
     }
 
     /**
@@ -453,7 +489,7 @@ class SupportController extends Controller
             ] : null,
             'sla' => [
                 ...$t->slaPayload(),
-                'label' => $isDone ? 'Selesai dalam SLA' : $t->sla_label,
+                'label' => $isDone && $t->sla_kind !== 'breach' ? 'Selesai dalam SLA' : $t->sla_label,
             ],
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,

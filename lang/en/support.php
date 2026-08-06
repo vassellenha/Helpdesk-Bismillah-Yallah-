@@ -125,6 +125,14 @@ return [
         'reopened_banner' => 'The requester reopened this ticket',
     ],
 
+    'start_modal' => [
+        'title' => 'Start working on this ticket?',
+        'body' => 'Ticket :id will be marked "In Progress". You can start now or put it off — the ticket stays Open until you start it.',
+        'later' => 'Later',
+        'now' => 'Work On It Now',
+        'starting' => 'Starting…',
+    ],
+
     'confirm' => [
         'sending' => 'Sending…',
         'no' => 'No',

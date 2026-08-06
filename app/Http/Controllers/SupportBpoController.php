@@ -124,6 +124,7 @@ class SupportBpoController extends Controller
             'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('support-bpo.tickets.data', $ticket),
             'commentsUrl' => route('support-bpo.tickets.comments.store', $ticket),
+            'startUrl' => route('support-bpo.tickets.start', $ticket),
             'resolveUrl' => route('support-bpo.tickets.resolve', $ticket),
             'escalateUrl' => route('support-bpo.tickets.escalate', $ticket),
             'returnUrl' => route('support-bpo.tickets.return', $ticket),
@@ -176,6 +177,41 @@ class SupportBpoController extends Controller
         NotificationService::notifyDiscussionParticipants($ticket, $bpoUser, 'Support BPO', $data['message']);
 
         return response()->json($this->presentComment($comment), 201);
+    }
+
+    /**
+     * "Kerjakan Sekarang" — the agent's explicit acknowledgement that they're
+     * starting on an Open ticket, from the popup shown when they land on its
+     * detail page. Only ever fires from Open: once work has started there's
+     * no "start" left to record, and a ticket that isn't Open yet has no
+     * agent action to take at all.
+     */
+    public function start(Ticket $ticket): JsonResponse
+    {
+        $bpoUser = CurrentActor::supportBpo();
+        $agent = $this->agentFor($bpoUser);
+        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless($ticket->status === 'Open', 422, 'Tiket ini tidak bisa dimulai dari status saat ini.');
+
+        // Starting work is the agent picking the ticket up — same reasoning
+        // resolve()/escalate()/returnTicket() use: it answers the SLA
+        // response clock even though nothing was posted in the discussion.
+        $ticket->markFirstResponse();
+
+        $ticket->update(['status' => 'In Progress']);
+
+        AuditTrail::record($bpoUser, [
+            'module' => 'ticket_support',
+            'action' => 'start',
+            'target_type' => 'ticket',
+            'target_id' => $ticket->id,
+            'target_name' => $ticket->ticket_no,
+            'old_value' => ['status' => 'Open'],
+            'new_value' => ['status' => 'In Progress'],
+            'description' => "{$bpoUser->name} mulai mengerjakan tiket \"{$ticket->ticket_no}\".",
+        ]);
+
+        return response()->json(['status' => $ticket->fresh()->status]);
     }
 
     public function resolve(Request $request, Ticket $ticket): JsonResponse
@@ -522,7 +558,7 @@ class SupportBpoController extends Controller
             ] : null,
             'sla' => [
                 ...$t->slaPayload(),
-                'label' => $isDone ? 'Selesai dalam SLA' : $t->sla_label,
+                'label' => $isDone && $t->sla_kind !== 'breach' ? 'Selesai dalam SLA' : $t->sla_label,
             ],
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,

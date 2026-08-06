@@ -128,6 +128,14 @@ return [
         'reopened_banner' => 'Requester membuka kembali tiket ini',
     ],
 
+    'start_modal' => [
+        'title' => 'Mulai kerjakan tiket ini?',
+        'body' => 'Tiket :id akan ditandai "In Progress". Anda bisa memulainya sekarang atau menundanya — tiket akan tetap Open sampai Anda memulainya.',
+        'later' => 'Nanti',
+        'now' => 'Kerjakan Sekarang',
+        'starting' => 'Memulai…',
+    ],
+
     'confirm' => [
         'sending' => 'Mengirim…',
         'no' => 'Tidak',

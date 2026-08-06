@@ -83,6 +83,7 @@ Route::prefix('support')->name('support.')->group(function () {
     Route::get('/tickets/{ticket}', [SupportController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{ticket}/data', [SupportController::class, 'data'])->name('tickets.data');
     Route::post('/tickets/{ticket}/comments', [SupportController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/tickets/{ticket}/start', [SupportController::class, 'start'])->name('tickets.start');
     Route::post('/tickets/{ticket}/resolve', [SupportController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/tickets/{ticket}/return', [SupportController::class, 'returnTicket'])->name('tickets.return');
     Route::post('/notifications/{notification}/read', [SupportController::class, 'markNotificationRead'])->name('notifications.read');
@@ -96,6 +97,7 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
     Route::get('/tickets/{ticket}', [SupportBpoController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{ticket}/data', [SupportBpoController::class, 'data'])->name('tickets.data');
     Route::post('/tickets/{ticket}/comments', [SupportBpoController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/tickets/{ticket}/start', [SupportBpoController::class, 'start'])->name('tickets.start');
     Route::post('/tickets/{ticket}/resolve', [SupportBpoController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/tickets/{ticket}/escalate', [SupportBpoController::class, 'escalate'])->name('tickets.escalate');
     Route::post('/tickets/{ticket}/return', [SupportBpoController::class, 'returnTicket'])->name('tickets.return');

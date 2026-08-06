@@ -106,7 +106,34 @@ function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onC
     );
 }
 
-export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
+function StartWorkModal({ ticketId, starting, error, onDismiss, onStart }) {
+    useLockBodyScroll();
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onDismiss}>
+            <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-panel-2 p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 dark:bg-accent-soft text-blue-600 dark:text-accent-text">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3 20 12 6 21Z" /></svg>
+                </span>
+                <h2 className="text-[16px] font-bold text-gray-900 dark:text-ink-1">{trans('support.start_modal.title')}</h2>
+                <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-ink-2">{trans('support.start_modal.body', { id: ticketId })}</p>
+
+                {error && <p className="mt-3 rounded-lg bg-red-50 dark:bg-bad-soft p-2.5 text-xs text-red-700 dark:text-bad-text">{error}</p>}
+
+                <div className="mt-5 flex gap-3">
+                    <button onClick={onDismiss} disabled={starting} className="flex-1 rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-50">
+                        {trans('support.start_modal.later')}
+                    </button>
+                    <button onClick={onStart} disabled={starting} className="flex-1 rounded-full bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">
+                        {starting ? trans('support.start_modal.starting') : trans('support.start_modal.now')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, startUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
     const [flow, setFlow] = useState(initialFlow);
     const [comments, setComments] = useState(initialComments);
@@ -116,6 +143,26 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
     const [confirmAction, setConfirmAction] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [startOpen, setStartOpen] = useState(initialTicket.status === 'Open');
+    const [starting, setStarting] = useState(false);
+    const [startError, setStartError] = useState('');
+
+    async function startWork() {
+        setStarting(true);
+        setStartError('');
+        try {
+            await apiFetch(startUrl, { method: 'POST' });
+            const fresh = await apiFetch(dataUrl);
+            setTicket(fresh.ticket);
+            setComments(fresh.comments);
+            setFlow(fresh.flow);
+            setStartOpen(false);
+        } catch (e) {
+            setStartError(e.message || trans('support.detail.action_failed'));
+        } finally {
+            setStarting(false);
+        }
+    }
 
     async function sendReply() {
         if (!reply.trim()) return;
@@ -361,6 +408,16 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                     error={error}
                     onCancel={() => !submitting && setConfirmAction(null)}
                     onConfirm={confirmActionSubmit}
+                />
+            )}
+
+            {startOpen && (
+                <StartWorkModal
+                    ticketId={ticket.id}
+                    starting={starting}
+                    error={startError}
+                    onDismiss={() => !starting && setStartOpen(false)}
+                    onStart={startWork}
                 />
             )}
         </div>
