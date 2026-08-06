@@ -466,7 +466,9 @@ class Ticket extends Model
     public function getSlaKindAttribute(): string
     {
         if (in_array($this->status, self::DONE_STATUSES, true)) {
-            return 'ontrack';
+            $minutes = $this->sla_minutes_remaining;
+
+            return $minutes !== null && $minutes <= 0 ? 'breach' : 'met';
         }
 
         $minutes = $this->sla_minutes_remaining;
@@ -487,7 +489,11 @@ class Ticket extends Model
     public function getSlaLabelAttribute(): string
     {
         if (in_array($this->status, self::DONE_STATUSES, true)) {
-            return 'Met';
+            $minutes = $this->sla_minutes_remaining;
+
+            return $minutes !== null && $minutes <= 0
+                ? 'Breach +'.self::formatDuration(abs($minutes))
+                : 'Met';
         }
 
         if ($this->status === 'Waiting for Approval') {
