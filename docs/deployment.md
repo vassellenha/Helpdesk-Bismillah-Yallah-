@@ -332,7 +332,15 @@ php artisan down --retry=15 || true
 git pull origin main
 
 composer install --no-dev --optimize-autoloader
-npm ci && npm run build
+
+# DUA BARIS TERPISAH, bukan `npm ci && npm run build`.
+#
+# `set -e` DIABAIKAN untuk perintah yang bukan bagian terakhir dari rangkaian
+# `&&`. Ditulis sebagai satu baris, kegagalan `npm ci` tidak menghentikan
+# skrip — deploy lanjut terus dan mencetak "selesai", padahal aset tidak
+# pernah dibangun dan tampilan di browser tetap versi lama.
+npm ci
+npm run build
 
 php artisan migrate --force
 
@@ -400,4 +408,5 @@ upload → queue → OCR → chunk → index benar-benar tersambung.
 | EVA menjawab payah padahal materi ada | Indeks FULLTEXT tidak terbentuk (cek langkah 14 no. 3) |
 | Layar putih / 500 | `storage/logs/laravel.log`. Biasanya izin `storage/` |
 | CSS/JS tidak muncul | `npm run build` belum jalan, atau `public/hot` tertinggal — hapus berkas itu |
+| Deploy sukses tapi tampilan tidak berubah | `npm ci` gagal `EACCES` — `node_modules` dimiliki user lain (biasanya dibuat pakai `sudo`). Perbaiki: `sudo chown -R $USER:www-data /var/www/helpdesk` lalu `npm ci && npm run build`. Perubahan PHP tetap masuk, perubahan JSX/CSS tidak — itu yang bikin gejalanya membingungkan |
 | Perubahan `.env` tidak terbaca | `php artisan optimize:clear` lalu `optimize` |
