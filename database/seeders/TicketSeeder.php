@@ -6,6 +6,7 @@ use App\Models\ServiceCatalogService;
 use App\Models\ServiceCatalogSubject;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
+use App\Support\TicketNumber;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
@@ -44,10 +45,10 @@ class TicketSeeder extends Seeder
         $otherServices = ServiceCatalogService::inRandomOrder()->take(4)->get();
 
         $now = Carbon::now();
-        $seq = 1;
-        $nextNo = function (string $prefix) use ($now, &$seq) {
-            return $prefix.'-'.$now->format('Y').'-'.str_pad((string) $seq++, 4, '0', STR_PAD_LEFT);
-        };
+        // Aturan penomoran tidak disalin ulang di sini. Deretnya per layanan,
+        // jadi menghitungnya sendiri dengan satu $seq bersama akan menghasilkan
+        // nomor yang berbeda dari yang dibuat form Requester.
+        $nextNo = fn (string $prefix, ?string $serviceName) => TicketNumber::next($prefix, $serviceName, $now);
 
         // 6 Waiting for Approval — real catalog subject that requires approval.
         for ($i = 0; $i < 6; $i++) {
@@ -90,12 +91,7 @@ class TicketSeeder extends Seeder
         $priority = self::PRIORITIES[array_rand(self::PRIORITIES)];
         $policy = $policies[$priority] ?? $policies->first();
         $createdAt = $now->clone()->subMinutes($minutesAgo);
-
-        $prefix = match ($subject->issueCategory->name) {
-            'Access Request' => 'AR',
-            'Service Request' => 'SR',
-            default => 'INC',
-        };
+        $prefix = TicketNumber::prefixFor($subject->issueCategory->name);
 
         $status = match (true) {
             $isDraft => 'Draft',
@@ -104,7 +100,7 @@ class TicketSeeder extends Seeder
         };
 
         Ticket::create([
-            'ticket_no' => $nextNo($prefix),
+            'ticket_no' => $nextNo($prefix, $subject->service->name),
             'title' => $subject->name.' — '.$subject->service->name,
             'requester_name' => $requester->name,
             'requester_id' => $requester->id,
@@ -138,15 +134,10 @@ class TicketSeeder extends Seeder
         $policy = $policies[$priority] ?? $policies->first();
         $createdAt = $now->clone()->subMinutes($minutesAgo);
         $issueCategory = collect(['Incident', 'Service Request', 'Access Request'])->random();
-
-        $prefix = match ($issueCategory) {
-            'Access Request' => 'AR',
-            'Service Request' => 'SR',
-            default => 'INC',
-        };
+        $prefix = TicketNumber::prefixFor($issueCategory);
 
         Ticket::create([
-            'ticket_no' => $nextNo($prefix),
+            'ticket_no' => $nextNo($prefix, $service?->name),
             'title' => 'Permintaan lain-lain'.($service ? ' — '.$service->name : ''),
             'requester_name' => $requester->name,
             'requester_id' => $requester->id,

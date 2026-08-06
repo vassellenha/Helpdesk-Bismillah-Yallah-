@@ -7,6 +7,7 @@ use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\CurrentActor;
+use App\Support\TicketNumber;
 use App\Support\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,11 +52,7 @@ class TicketController extends Controller
         $resolutionDueAt = $now->clone()->addMinutes($policy->resolution_time_minutes);
         $warningAt = $now->clone()->addMinutes((int) round($policy->resolution_time_minutes * $policy->warning_threshold_percent / 100));
 
-        $prefix = match ($data['issue_category'] ?? null) {
-            'Access Request' => 'AR',
-            'Service Request' => 'SR',
-            default => 'INC',
-        };
+        $prefix = TicketNumber::prefixFor($data['issue_category'] ?? null);
 
         $status = match (true) {
             $isDraft => 'Draft',
@@ -66,7 +63,7 @@ class TicketController extends Controller
         $assignedAgentId = $this->resolveAssignedAgentId($data['catalog_subject_id'] ?? null);
 
         $ticket = Ticket::create([
-            'ticket_no' => $prefix.'-'.$now->format('Y').'-'.$this->nextTicketNumber($now),
+            'ticket_no' => TicketNumber::next($prefix, $data['service_name'] ?? null, $now),
             'title' => $data['title'],
             'requester_name' => $requester->name,
             'requester_id' => $requester->id,
@@ -230,15 +227,6 @@ class TicketController extends Controller
      * actually in use for the year is immune to gaps from deletions — it
      * only ever moves forward, regardless of how many rows disappeared.
      */
-    private function nextTicketNumber(Carbon $now): string
-    {
-        $maxSuffix = (int) Ticket::query()
-            ->where('ticket_no', 'like', '%-'.$now->format('Y').'-%')
-            ->selectRaw("MAX(CAST(SUBSTRING_INDEX(ticket_no, '-', -1) AS UNSIGNED)) as m")
-            ->value('m');
-
-        return str_pad((string) ($maxSuffix + 1), 4, '0', STR_PAD_LEFT);
-    }
 
     /**
      * A catalog subject may only have one of its two agent slots filled —
