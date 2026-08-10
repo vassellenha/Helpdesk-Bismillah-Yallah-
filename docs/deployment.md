@@ -158,6 +158,11 @@ MAIL_PORT=587
 MAIL_USERNAME=...
 MAIL_PASSWORD=...
 MAIL_FROM_ADDRESS=helpdesk@adhi.co.id
+MAIL_FROM_NAME="Helpdesk ADHI"
+
+# Sakelar email notifikasi tiket. Setel `false` pada deploy PERTAMA, lalu
+# nyalakan setelah aplikasi tenang — alasannya di bagian 11a.
+NOTIFY_EMAIL_ENABLED=false
 
 # Biner OCR — ditulis eksplisit supaya tidak bergantung pada PATH milik PHP-FPM.
 EVA_PDFINFO_PATH=/usr/bin/pdfinfo
@@ -300,6 +305,44 @@ sudo systemctl status helpdesk-worker
 `--max-time=3600` membuat worker berhenti sendiri tiap jam dan dinyalakan ulang
 systemd. Itu disengaja: proses PHP yang hidup berhari-hari akan menahan kode lama
 di memori setelah deploy, dan kebocoran memori menumpuk.
+
+---
+
+## 11a. Email notifikasi tiket
+
+Setiap notifikasi yang membunyikan lonceng in-app juga bisa dikirim sebagai email.
+Yang menentukan bukan kode di tiap controller, melainkan satu daftar putih di
+[`config/notifications.php`](../config/notifications.php) → `notifications.email.types`.
+Tipe yang tidak ada di daftar itu diam; tipe baru yang ditambahkan bulan depan
+otomatis ikut diam sampai seseorang memutuskan ia pantas mengganggu inbox orang.
+
+**Nyalakan bertahap, jangan langsung di deploy pertama.** Peringatan SLA memang
+sengaja tidak ikut dikirim email, tapi tiket lama yang statusnya berubah tepat saat
+go-live tetap bisa memicu gelombang surel ke ratusan karyawan sekaligus — dan
+gelombang pertama itu yang membuat orang menandai pengirimnya sebagai spam.
+Urutannya:
+
+```bash
+# 1. Deploy dengan NOTIFY_EMAIL_ENABLED=false. Lonceng in-app tetap jalan penuh.
+# 2. Pastikan SMTP-nya benar, kirim ke diri sendiri dulu:
+php artisan tinker --execute="Mail::raw('tes helpdesk', fn(\$m) => \$m->to('kamu@adhi.co.id')->subject('Tes SMTP'));"
+
+# 3. Baru nyalakan.
+sudo -u deploy sed -i 's/^NOTIFY_EMAIL_ENABLED=.*/NOTIFY_EMAIL_ENABLED=true/' /var/www/helpdesk/.env
+php artisan config:cache
+sudo systemctl restart helpdesk-worker      # worker memuat config saat start
+```
+
+**Wajib restart worker setelah mengubah `MAIL_*` atau `NOTIFY_*`.** Config yang
+sudah di-cache tidak membaca `.env` lagi, dan worker menyimpannya di memori sejak
+proses dimulai — tanpa restart, surel tetap memakai kredensial lama sampai
+`--max-time` tercapai.
+
+Kalau surel tidak sampai, urutan pemeriksaannya: worker hidup → `php artisan
+queue:failed` → `storage/logs/laravel.log`. Kegagalan SMTP sengaja tidak pernah
+menggagalkan aksi yang memicunya (menutup tiket tidak boleh batal gara-gara mail
+server mati), jadi jejaknya **hanya** ada di log sebagai `[Notifikasi] Email gagal
+terkirim.`
 
 ---
 
