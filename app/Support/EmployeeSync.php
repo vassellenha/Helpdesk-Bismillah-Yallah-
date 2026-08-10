@@ -36,6 +36,15 @@ class EmployeeSync
      */
     public static function run(bool $dryRun = false): array
     {
+        // A full company directory can take minutes to fetch and hash — well
+        // past the default request time budget. CLI (the scheduled sync) is
+        // unaffected, but the three HTTP-triggered call sites (User & Role
+        // Management's "Sync Data Pegawai" button, and Integrasi's test/sync)
+        // inherit PHP's max_execution_time and were dying mid-run: the fetch
+        // alone ate most of the 120s, then Hash::make() for each new account
+        // pushed it over, killing the request before recordAudit() ever ran.
+        set_time_limit(0);
+
         $config = config('integrations.employee_directory');
         $matchBy = $config['match_by'] ?? 'nip';
         $fallbackBy = $config['fallback_match_by'] ?? null;
@@ -146,8 +155,27 @@ class EmployeeSync
             $summary['kept_empty'] += count($keptEmpty);
             $summary['kept_admin_override'] += count($keptOverride);
 
+            /*
+             | synced_at ditulis untuk SETIAP orang yang ditemukan di sumber,
+             | termasuk yang datanya tidak berubah sama sekali.
+             |
+             | Yang dicatat bukan "kapan barisnya terakhir diubah" — itu sudah
+             | tugas updated_at — melainkan "kapan orang ini terakhir terlihat
+             | di direktori perusahaan". Pegawai yang datanya stabil bertahun-tahun
+             | tetap pegawai sungguhan, dan kalau kolom ini hanya diisi saat ada
+             | perubahan, justru merekalah yang akan tampak seperti akun lokal
+             | sisa uji coba.
+             */
+            if (! $dryRun) {
+                $user->synced_at = now();
+            }
+
             if ($changed === []) {
                 $summary['unchanged']++;
+
+                if (! $dryRun) {
+                    $user->save();
+                }
 
                 continue;
             }
@@ -193,6 +221,23 @@ class EmployeeSync
 
             $value = $row[$source];
             $attrs[$column] = is_string($value) ? trim($value) : $value;
+        }
+
+        /*
+         | Alamat kosong disimpan sebagai NULL, bukan "".
+         |
+         | `users.email` unique: string kosong hanya boleh ada SATU baris, jadi
+         | menuliskan "" akan meloloskan pegawai pertama tanpa email lalu
+         | menabrakkan 1.277 sisanya ke unique index — mematikan sync di tengah
+         | jalan setelah sebagian orang sudah dibuat. NULL boleh berulang.
+         |
+         | Diletakkan di sini, bukan di createUser(), supaya diffRow() ikut
+         | melihat nilai yang sama: dengan overwrite_with_empty = false, NULL
+         | dianggap blank dan email yang sudah ada di helpdesk tidak akan
+         | terhapus hanya karena API tidak mengirimkannya.
+         */
+        if (array_key_exists('email', $attrs) && blank($attrs['email'])) {
+            $attrs['email'] = null;
         }
 
         if (isset($attrs['status'])) {
@@ -315,6 +360,10 @@ class EmployeeSync
                 // company portal. A random one keeps the column non-null.
                 'password' => Hash::make(Str::random(40)),
                 'email_verified_at' => now(),
+                // Menandai akun ini berasal dari direktori perusahaan, bukan
+                // diketik Admin atau ditinggalkan seeder — lihat migrasi
+                // 2026_08_10_130000.
+                'synced_at' => now(),
             ]);
 
             $role = Role::where('name', $config['default_role'] ?? 'Requester')->first();

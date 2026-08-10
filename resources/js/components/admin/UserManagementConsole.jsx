@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import RoleManagerModal from './RoleManagerModal';
 import AddRoleWizard from './AddRoleWizard';
 import AddUserModal from './AddUserModal';
@@ -18,13 +18,17 @@ const ALL_STATUS = '__all_status';
 const ALL_ROLE = '__all_role';
 const ALL_UNIT = '__all_unit';
 
-export default function UserManagementConsole({ users: initialUsers, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi }) {
+export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi }) {
     const [users, setUsers] = useState(initialUsers);
+    const [meta, setMeta] = useState(usersMeta);
+    const [stats, setStats] = useState(userStats);
+    const [loading, setLoading] = useState(false);
     const [roles, setRoles] = useState(initialRoles);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState(ALL_STATUS);
     const [roleFilter, setRoleFilter] = useState(ALL_ROLE);
     const [unitFilter, setUnitFilter] = useState(ALL_UNIT);
+    const [page, setPage] = useState(1);
     const [menu, setMenu] = useState(null); // { user, top, left }
     const [modal, setModal] = useState(null); // 'role' | 'addRole' | 'addUser' | { type: 'manageUser', user }
     const [error, setError] = useState('');
@@ -44,23 +48,78 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
         setMenu({ user, ...menuPositionFor(rect, { height }) });
     }
 
-    const roleNames = useMemo(() => Array.from(new Set(users.flatMap((u) => u.roles))), [users]);
+    // Diambil dari daftar role, bukan diturunkan dari `users`. Sejak `users`
+    // hanya berisi satu halaman, menurunkannya dari sana akan membuat pilihan
+    // filter berubah-ubah tiap pindah halaman — dan role yang kebetulan tidak
+    // ada di halaman 1 hilang dari daftar filter justru saat dibutuhkan.
+    const roleNames = useMemo(() => roles.map((r) => r.name), [roles]);
 
     const statusOptions = useMemo(() => [[ALL_STATUS, trans('admin.users.all_status')], ['Aktif', trans('admin.common.active')], ['Nonaktif', trans('admin.common.inactive')]].map(([value, label]) => ({ value, label })), []);
     const roleOptions = useMemo(() => [{ value: ALL_ROLE, label: trans('admin.users.all_role') }, ...roleNames.map((r) => ({ value: r, label: r }))], [roleNames]);
     const unitOptions = useMemo(() => [{ value: ALL_UNIT, label: trans('admin.users.all_unit') }, ...unitOrganisasi.map((u) => ({ value: u, label: u }))], [unitOrganisasi]);
 
-    const filtered = useMemo(() => {
-        return users.filter((u) => {
-            const q = search.toLowerCase();
-            const matchesSearch =
-                q === '' || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.unit ?? '').toLowerCase().includes(q);
-            const matchesStatus = statusFilter === ALL_STATUS || u.status === statusFilter;
-            const matchesRole = roleFilter === ALL_ROLE || u.roles.includes(roleFilter);
-            const matchesUnit = unitFilter === ALL_UNIT || u.unit === unitFilter;
-            return matchesSearch && matchesStatus && matchesRole && matchesUnit;
-        });
-    }, [users, search, statusFilter, roleFilter, unitFilter]);
+    function queryString(toPage) {
+        const params = new URLSearchParams();
+        if (search.trim() !== '') params.set('search', search.trim());
+        if (statusFilter !== ALL_STATUS) params.set('status', statusFilter);
+        if (roleFilter !== ALL_ROLE) params.set('role', roleFilter);
+        if (unitFilter !== ALL_UNIT) params.set('unit', unitFilter);
+        if (toPage > 1) params.set('page', String(toPage));
+        return params.toString();
+    }
+
+    // Filter dan paginasi dikerjakan server. Daftar lengkapnya tidak pernah ada
+    // di browser — dengan 3.847 pegawai, memuatnya sekali saja sudah beberapa
+    // megabyte JSON tiap halaman dibuka.
+    //
+    // Dua hal yang dijaga di sini:
+    //   - Ketikan di kotak cari ditunda 300 ms, supaya "budi" tidak jadi empat
+    //     permintaan berturut-turut.
+    //   - Setiap permintaan diberi nomor urut, dan hanya yang TERBARU yang boleh
+    //     menulis ke state. Tanpa itu, respons lambat dari kata kunci lama bisa
+    //     datang belakangan dan menimpa hasil pencarian yang sudah benar.
+    const requestSeq = useRef(0);
+    const firstRender = useRef(true);
+
+    async function loadUsers(toPage) {
+        const seq = ++requestSeq.current;
+        setLoading(true);
+        try {
+            const qs = queryString(toPage);
+            const res = await apiFetch(`${listUrl}${qs ? `?${qs}` : ''}`);
+            if (seq !== requestSeq.current) return;
+            setUsers(res.users);
+            setMeta(res.meta);
+            setStats(res.stats);
+        } catch (e) {
+            if (seq === requestSeq.current) setError(e.message || 'Gagal memuat daftar pengguna.');
+        } finally {
+            if (seq === requestSeq.current) setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        // Halaman pertama sudah dirender server; menariknya lagi saat mount
+        // hanya menggandakan query yang sama.
+        if (firstRender.current) {
+            firstRender.current = false;
+            return;
+        }
+
+        const timer = setTimeout(() => loadUsers(page), 300);
+
+        return () => clearTimeout(timer);
+    }, [search, statusFilter, roleFilter, unitFilter, page, listUrl]);
+
+    // Mengubah filter harus mengembalikan ke halaman 1: bertahan di halaman 7
+    // setelah hasilnya menyusut jadi 2 halaman memberi tabel kosong yang terbaca
+    // seperti "tidak ada hasil", padahal hasilnya ada di halaman 1.
+    function changeFilter(setter) {
+        return (value) => {
+            setter(value);
+            setPage(1);
+        };
+    }
 
     async function toggleUserStatus(id) {
         setMenu(null);
@@ -89,8 +148,10 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
         setSyncResult(null);
         setSyncing(true);
         try {
-            const { summary, users: fresh } = await apiFetch('/admin/users/sync', { method: 'POST' });
+            const { summary, users: fresh, meta: freshMeta, stats: freshStats } = await apiFetch('/admin/users/sync', { method: 'POST' });
             setUsers(fresh);
+            setMeta(freshMeta);
+            setStats(freshStats);
             setSyncResult(summary);
         } catch (e) {
             setError(e.message || trans('admin.users.sync_failed'));
@@ -104,9 +165,24 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
         setModal(null);
     }
 
-    function addUser(created) {
-        setUsers((prev) => [created, ...prev]);
+    function addUser() {
         setModal(null);
+        // Tidak lagi menyisipkan baris baru ke awal daftar. Halaman ini terurut
+        // menurut nama dan hanya memuat 25 baris, jadi menempelkannya di atas
+        // menampilkan orang itu di posisi yang salah — dan mendorong satu orang
+        // lain keluar dari halaman tanpa alasan. Muat ulang halaman 1 saja;
+        // urutan yang benar datang dari server.
+        refresh();
+    }
+
+    // Kembali ke halaman 1 dan muat ulang. Kalau sudah di halaman 1, setPage
+    // tidak mengubah apa pun sehingga useEffect diam — karena itu pemuatannya
+    // dipanggil langsung. Kalau tidak, useEffect ikut jalan dan permintaannya
+    // menang lewat nomor urut; satu permintaan berlebih pada aksi sesekali
+    // seperti ini lebih murah daripada state tambahan untuk mencegahnya.
+    function refresh() {
+        setPage(1);
+        loadUsers(1);
     }
 
     function upsertRole(saved) {
@@ -236,9 +312,11 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
             )}
 
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:grid-cols-4">
-                <Stat label={trans('admin.users.stat_total_user')} value={users.length} color="text-blue-600 dark:text-accent-text" bg="bg-blue-50 dark:bg-accent-soft" />
-                <Stat label={trans('admin.users.stat_active')} value={users.filter((u) => u.status === 'Aktif').length} color="text-emerald-600 dark:text-ok-text" bg="bg-emerald-50 dark:bg-ok-soft" />
-                <Stat label={trans('admin.users.stat_inactive')} value={users.filter((u) => u.status === 'Nonaktif').length} color="text-gray-500 dark:text-ink-2" bg="bg-gray-100 dark:bg-panel-3" />
+                {/* Angka dari COUNT di database, bukan dari daftar di layar —
+                    yang di layar cuma satu halaman berisi 25 baris. */}
+                <Stat label={trans('admin.users.stat_total_user')} value={stats.total} color="text-blue-600 dark:text-accent-text" bg="bg-blue-50 dark:bg-accent-soft" />
+                <Stat label={trans('admin.users.stat_active')} value={stats.active} color="text-emerald-600 dark:text-ok-text" bg="bg-emerald-50 dark:bg-ok-soft" />
+                <Stat label={trans('admin.users.stat_inactive')} value={stats.inactive} color="text-gray-500 dark:text-ink-2" bg="bg-gray-100 dark:bg-panel-3" />
                 <Stat label={trans('admin.users.stat_total_role')} value={roles.length} color="text-amber-600 dark:text-warn-text" bg="bg-amber-50 dark:bg-warn-soft" />
             </div>
 
@@ -246,23 +324,28 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                 <div className="flex flex-col gap-3 border-b border-gray-100 dark:border-edge p-4 lg:flex-row lg:items-center lg:justify-between">
                     <input
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         placeholder={trans('admin.users.search')}
                         className="w-full max-w-sm rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                        <SelectMenu value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
-                        <SelectMenu value={roleFilter} onChange={setRoleFilter} options={roleOptions} />
-                        <SelectMenu value={unitFilter} onChange={setUnitFilter} options={unitOptions} />
+                        <SelectMenu value={statusFilter} onChange={changeFilter(setStatusFilter)} options={statusOptions} />
+                        <SelectMenu value={roleFilter} onChange={changeFilter(setRoleFilter)} options={roleOptions} />
+                        <SelectMenu value={unitFilter} onChange={changeFilter(setUnitFilter)} options={unitOptions} />
                         <button
-                            onClick={() => { setSearch(''); setStatusFilter(ALL_STATUS); setRoleFilter(ALL_ROLE); setUnitFilter(ALL_UNIT); }}
+                            onClick={() => { setSearch(''); setStatusFilter(ALL_STATUS); setRoleFilter(ALL_ROLE); setUnitFilter(ALL_UNIT); setPage(1); }}
                             className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300"
                         >
                             Reset Filter
                         </button>
                     </div>
                 </div>
-                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">{trans('admin.users.showing', { shown: filtered.length, total: users.length })}</p>
+                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">
+                    {meta.total === 0
+                        ? trans('admin.users.showing', { shown: 0, total: 0 })
+                        : `Menampilkan ${meta.from}–${meta.to} dari ${meta.total} pengguna`}
+                    {loading && <span className="ml-2 text-gray-300 dark:text-ink-3">· memuat…</span>}
+                </p>
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
@@ -280,10 +363,32 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-transparent">
-                            {filtered.map((u) => (
+                            {users.map((u) => (
                                 <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                                     <td className="px-4 py-3 font-semibold text-gray-900 dark:text-ink-1">{u.name}</td>
-                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">{u.nip}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-ink-2">
+                                        <span>{u.nip || '—'}</span>
+                                        {/* Asal-usul akun. Sesudah sinkronisasi pertama, 3.847 pegawai
+                                            sungguhan berbaur dengan sisa akun seed, dan tanpa penanda ini
+                                            tidak ada cara membedakannya saat bersih-bersih. Dibaca dari
+                                            kolom synced_at, bukan ditebak dari bentuk NPP — satu NPP asli
+                                            ternyata murni angka, persis seperti NIP hasil seed. */}
+                                        {u.from_directory ? (
+                                            <span
+                                                title={`Dari direktori pegawai ADHI · disinkronkan ${u.synced_at}`}
+                                                className="ml-2 rounded px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200 dark:text-emerald-300 dark:ring-emerald-500/40"
+                                            >
+                                                Direktori
+                                            </span>
+                                        ) : (
+                                            <span
+                                                title="Tidak ada di direktori pegawai — akun lokal, data seed, atau dibuat manual oleh Admin"
+                                                className="ml-2 rounded px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-700 ring-1 ring-amber-200 dark:text-amber-300 dark:ring-amber-500/40"
+                                            >
+                                                Lokal
+                                            </span>
+                                        )}
+                                    </td>
                                     <td className="px-4 py-3">
                                         <p className="text-gray-700 dark:text-ink-2">{u.email}</p>
                                         <p className="text-xs text-gray-400 dark:text-ink-3">{u.phone}</p>
@@ -328,7 +433,7 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                                     </td>
                                 </tr>
                             ))}
-                            {filtered.length === 0 && (
+                            {users.length === 0 && !loading && (
                                 <tr>
                                     <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-ink-3">Tidak ada pengguna yang cocok dengan filter.</td>
                                 </tr>
@@ -336,6 +441,26 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                         </tbody>
                     </table>
                 </div>
+
+                {meta.last_page > 1 && (
+                    <div className="flex items-center justify-between gap-3 border-t border-gray-100 dark:border-edge px-4 py-3">
+                        <p className="text-sm text-gray-500 dark:text-ink-3">
+                            Halaman {meta.current_page} dari {meta.last_page}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <PageButton
+                                disabled={meta.current_page <= 1 || loading}
+                                onClick={() => setPage(meta.current_page - 1)}
+                                label="Sebelumnya"
+                            />
+                            <PageButton
+                                disabled={meta.current_page >= meta.last_page || loading}
+                                onClick={() => setPage(meta.current_page + 1)}
+                                label="Berikutnya"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {menu && (
@@ -377,6 +502,19 @@ export default function UserManagementConsole({ users: initialUsers, roles: init
                 <ManageUserModal user={modal.user} roles={roles} onClose={() => setModal(null)} onSave={saveUser} />
             )}
         </div>
+    );
+}
+
+function PageButton({ disabled, onClick, label }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-40"
+        >
+            {label}
+        </button>
     );
 }
 

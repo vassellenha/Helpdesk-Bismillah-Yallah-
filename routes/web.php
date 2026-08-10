@@ -169,8 +169,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     });
 
     Route::prefix('users')->name('users.')->group(function () {
-        // Declared before the /{user} routes so "sync" is never read as an id.
+        // Declared before the /{user} routes so "sync"/"list" is never read as an id.
         Route::post('/sync', [UserRoleController::class, 'syncEmployees'])->name('sync');
+        Route::get('/list', [UserRoleController::class, 'list'])->name('list');
         Route::post('/', [UserRoleController::class, 'storeUser'])->name('store');
         Route::put('/{user}', [UserRoleController::class, 'updateUser'])->name('update');
         Route::post('/{user}/toggle', [UserRoleController::class, 'toggleUserStatus'])->name('toggle');

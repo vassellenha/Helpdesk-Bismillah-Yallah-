@@ -38,7 +38,7 @@ use Illuminate\Notifications\Notifiable;
     'name', 'email', 'username', 'password', 'nip', 'phone', 'address',
     'unit', 'jabatan', 'kode_departemen', 'kode_divisi', 'kode_proyek',
     'nama_proyek', 'status', 'helpdesk_access', 'last_login_at',
-    'admin_overridden_fields',
+    'admin_overridden_fields', 'synced_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -56,6 +56,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'synced_at' => 'datetime',
             'password' => 'hashed',
             'admin_overridden_fields' => 'array',
         ];

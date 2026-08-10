@@ -49,7 +49,7 @@ class EmployeeSyncHelpdeskAccessTest extends TestCase
 
     public function test_karyawan_baru_yang_sudah_nonaktif_dibuat_dengan_akses_nonaktif(): void
     {
-        $this->writeFixture([$this->row('19960130096', 'Denny Firmansyah', 'NONAKTIF')]);
+        $this->writeFixture([$this->row('19960130096', 'Denny Firmansyah', 'N')]);
 
         EmployeeSync::run();
 
@@ -60,7 +60,7 @@ class EmployeeSyncHelpdeskAccessTest extends TestCase
 
     public function test_karyawan_baru_yang_aktif_tetap_dibuat_dengan_akses_aktif(): void
     {
-        $this->writeFixture([$this->row('10027761', 'Agung Wijayanto', 'AKTIF')]);
+        $this->writeFixture([$this->row('10027761', 'Agung Wijayanto', 'Y')]);
 
         EmployeeSync::run();
 
@@ -69,15 +69,24 @@ class EmployeeSyncHelpdeskAccessTest extends TestCase
         $this->assertSame('enabled', $user->helpdesk_access);
     }
 
-    /** @return array<string,mixed> */
-    private function row(string $nip, string $name, string $statusCode): array
+    /**
+     * Shaped like the real ADHI payload (verified 2026-08-10): `npp` not `nip`,
+     * `name` not `nama_lengkap`, and `active` carrying "Y"/"N" rather than
+     * "AKTIF"/"NONAKTIF". Reads the field map from the app config on purpose —
+     * that makes this test a canary: change config/integrations.php without
+     * updating the fixtures here and it fails loudly instead of the real sync
+     * silently mapping nothing.
+     *
+     * @return array<string,mixed>
+     */
+    private function row(string $npp, string $name, string $activeCode, ?string $email = null): array
     {
         return [
-            'nama_lengkap' => $name,
-            'email_korporat' => strtolower(str_replace(' ', '.', $name)).'@adhi.test',
-            'nip' => $nip,
-            'status_pegawai' => $statusCode,
-            'jabatan' => 'Staff',
+            'npp' => $npp,
+            'name' => $name,
+            'email' => $email ?? strtolower(str_replace(' ', '.', $name)).'@adhi.test',
+            'active' => $activeCode,
+            'job_position' => 'Staff',
         ];
     }
 

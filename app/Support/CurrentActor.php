@@ -2,9 +2,9 @@
 
 namespace App\Support;
 
+use App\Exceptions\AccountInactive;
 use App\Models\SupportAgent;
 use App\Models\User;
-use App\Exceptions\AccountInactive;
 use App\Support\Sso\SsoAuthenticator;
 
 /**
@@ -18,8 +18,13 @@ use App\Support\Sso\SsoAuthenticator;
  * persona), who you're "acting as" is switchable at runtime via the
  * switcher in the Support/Support BPO/Approver layouts — see
  * SupportController::switchAgent(), SupportBpoController::switchAgent(),
- * ApprovalController::switchApprover(). The session holds the chosen id;
- * an invalid or missing selection falls back to the original fixed persona.
+ * ApprovalController::switchApprover(). The session holds the chosen id.
+ *
+ * When that selection is missing or invalid, approver() still falls back to a
+ * fixed persona, but support()/supportBpo() no longer do: they fall back to the
+ * first active agent of their team (see firstActiveAgentUser()). A fixed NIP is
+ * only as durable as the seeded row it names, and one of them has already been
+ * deleted once.
  */
 class CurrentActor
 {
@@ -45,7 +50,12 @@ class CurrentActor
     }
 
     /*
-     | Tujuh persona tetap di bawah ini dicari lewat NIP, BUKAN email.
+     | LIMA persona tetap di bawah ini dicari lewat NIP, BUKAN email.
+     |
+     | Dulu tujuh. support() dan supportBpo() keluar dari daftar ini pada
+     | 10 Agu 2026 — keduanya kini jatuh ke agent aktif pertama timnya, karena
+     | mereka punya daftar yang bisa dipilih dan NIP tetapnya terbukti rapuh.
+     | Lima sisanya belum punya penggantinya sampai SSO aktif.
      |
      | Sampai 31 Juli 2026 dicari lewat email, dan itu pecah begitu fitur
      | admin-overridden-fields masuk: seorang admin mengubah nama & email
@@ -97,7 +107,7 @@ class CurrentActor
         return self::mustBeActive(
             self::ssoUserWithRole('Support IT')
                 ?? self::actingAgentUser('it', 'acting_support_agent_id')
-                ?? User::where('nip', '10027761')->firstOrFail(),
+                ?? self::firstActiveAgentUser('it'),
         );
     }
 
@@ -119,7 +129,7 @@ class CurrentActor
         return self::mustBeActive(
             self::ssoUserWithRole('Support BPO')
                 ?? self::actingAgentUser('bpo', 'acting_support_bpo_agent_id')
-                ?? User::where('nip', '19960130096')->firstOrFail(),
+                ?? self::firstActiveAgentUser('bpo'),
         );
     }
 
@@ -166,6 +176,47 @@ class CurrentActor
             // tetap berhuruf besar.
             .lcfirst((string) $user->inactiveReason()).'.'
         );
+    }
+
+    /**
+     * Agent aktif pertama dari satu tim, dipakai saat belum ada yang dipilih.
+     *
+     * Menggantikan fallback NIP tetap yang dulu ada di sini. NIP itu menunjuk
+     * satu baris hasil seed, dan begitu barisnya hilang — Denny Firmansyah
+     * dihapus 10 Agu 2026 setelah switcher agent membuatnya tidak diperlukan —
+     * `firstOrFail()` melempar ModelNotFoundException yang Laravel ubah jadi 404
+     * polos. Bukan di layar mana pun yang sedang dipakai, melainkan di SESI YANG
+     * BARU: `acting_support_bpo_agent_id` hanya ditulis oleh switchAgent(), jadi
+     * browser yang belum pernah memilih siapa pun jatuh ke sini pada permintaan
+     * pertamanya — sebelum switcher-nya sempat muncul untuk dipakai.
+     *
+     * Diurutkan berdasarkan id supaya seseorang yang membuka dua tab tidak
+     * bertindak sebagai dua orang berbeda.
+     *
+     * Ini juga melepas dua dari tujuh persona hardcoded. Lima sisanya (admin,
+     * requester, approver, teamLead, knowledgeAdmin) masih menunggu SSO, karena
+     * mereka bukan agent dan tidak punya daftar yang bisa dipilih otomatis.
+     */
+    private static function firstActiveAgentUser(string $type): User
+    {
+        $user = User::query()
+            ->join('support_agents', 'support_agents.user_id', '=', 'users.id')
+            ->where('support_agents.type', $type)
+            ->where('support_agents.is_active', true)
+            ->active()
+            ->orderBy('support_agents.id')
+            ->select('users.*')
+            ->first();
+
+        if (! $user) {
+            throw new \RuntimeException(
+                "Tidak ada agent {$type} aktif yang tertaut ke akun pengguna. "
+                .'Tambahkan satu lewat Admin → Service Catalog, atau aktifkan kembali '
+                .'salah satu agent yang ada, sebelum layar Support bisa dibuka.'
+            );
+        }
+
+        return $user;
     }
 
     private static function actingAgentUser(string $type, string $sessionKey): ?User

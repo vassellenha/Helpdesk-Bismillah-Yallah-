@@ -34,15 +34,32 @@ class UserRoleController extends Controller
         'helpdesk_access' => 'Akses Helpdesk',
     ];
 
-    public function index(): View
+    /**
+     * Berapa user dikirim per halaman.
+     *
+     * Sebelum ada paginasi, layar ini memuat SELURUH tabel `users` sekaligus.
+     * Dengan 28 akun seed itu tak terasa; begitu sinkronisasi direktori masuk
+     * angkanya jadi 3.847, dan tiap kali halaman dibuka seluruhnya ditarik ke
+     * memori lalu dikirim ke React sebagai satu blok JSON berukuran megabyte.
+     * Batasnya di sini, bukan di komponen, karena yang mahal adalah query dan
+     * payload-nya — memotong di sisi klien tidak menghemat apa pun.
+     */
+    private const PER_PAGE = 25;
+
+    public function index(Request $request): View
     {
-        $users = User::with('roles')->orderBy('name')->get();
+        $page = $this->paginateUsers($request);
         $roles = Role::withCount('users')->orderBy('name')->get();
 
         return view('admin.users', [
             'role' => 'admin',
             'currentUser' => DummyData::currentAdmin(),
-            'users' => $users->map($this->presentUser(...)),
+            'users' => collect($page->items())->map($this->presentUser(...)),
+            'usersMeta' => $this->pageMeta($page),
+            // Statistik dihitung dengan COUNT di database, bukan dari daftar yang
+            // dikirim. Sejak daftarnya cuma satu halaman, menghitungnya di React
+            // akan melaporkan "25 user" untuk perusahaan berisi 3.847 orang.
+            'userStats' => $this->userStats(),
             'roles' => $roles->map($this->presentRole(...)),
             'permissionModules' => DummyData::permissionModules(),
             'permissionActions' => DummyData::permissionActions(),
@@ -51,11 +68,95 @@ class UserRoleController extends Controller
     }
 
     /**
-     * Pull the latest employee master data from the company directory. Returns
-     * the refreshed user list alongside the run summary so the console can
-     * repaint without a page reload. EmployeeSync writes its own audit row.
+     * Satu halaman user beserta meta-nya, untuk pencarian/filter/pindah halaman
+     * tanpa memuat ulang seluruh layar.
      */
-    public function syncEmployees(): JsonResponse
+    public function list(Request $request): JsonResponse
+    {
+        $page = $this->paginateUsers($request);
+
+        return response()->json([
+            'users' => collect($page->items())->map($this->presentUser(...)),
+            'meta' => $this->pageMeta($page),
+            'stats' => $this->userStats(),
+        ]);
+    }
+
+    /**
+     * Query bersama untuk layar penuh dan endpoint JSON, supaya keduanya tidak
+     * bisa menyaring dengan aturan berbeda.
+     *
+     * @return \Illuminate\Pagination\LengthAwarePaginator<int,User>
+     */
+    private function paginateUsers(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+        $status = (string) $request->query('status', '');
+        $role = (string) $request->query('role', '');
+        $unit = (string) $request->query('unit', '');
+
+        return User::with('roles')
+            ->when($search !== '', function ($query) use ($search) {
+                // Kolom yang sama dengan yang dulu dicari di sisi klien, plus NIP:
+                // dengan ribuan baris, NIP/NPP jadi cara tercepat menemukan satu
+                // orang, dan dulu tidak bisa karena pencariannya hanya melihat
+                // nama, email, dan unit.
+                $query->where(function ($q) use ($search) {
+                    foreach (['name', 'email', 'unit', 'nip'] as $column) {
+                        $q->orWhere($column, 'like', '%'.$search.'%');
+                    }
+                });
+            })
+            // "Aktif" di layar ini adalah putusan gabungan dua kolom milik dua
+            // pemilik berbeda (User::isActive()), jadi penyaringannya harus
+            // menirukan aturan yang sama — bukan hanya melihat `status`.
+            ->when($status === 'Aktif', fn ($q) => $q->active())
+            ->when($status === 'Nonaktif', fn ($q) => $q->where(fn ($w) => $w->where('users.status', '!=', 'active')->orWhere('users.helpdesk_access', '!=', 'enabled')))
+            ->when($role !== '', fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', $role)))
+            ->when($unit !== '', fn ($q) => $q->where('unit', $unit))
+            ->orderBy('name')
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
+    }
+
+    /** @return array<string,mixed> */
+    private function pageMeta($page): array
+    {
+        return [
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+            'from' => $page->firstItem(),
+            'to' => $page->lastItem(),
+        ];
+    }
+
+    /** @return array<string,int> */
+    private function userStats(): array
+    {
+        $total = User::count();
+        $active = User::active()->count();
+
+        return [
+            'total' => $total,
+            'active' => $active,
+            'inactive' => $total - $active,
+            'from_directory' => User::whereNotNull('synced_at')->count(),
+        ];
+    }
+
+    /**
+     * Pull the latest employee master data from the company directory. Returns
+     * the refreshed first page alongside the run summary so the console can
+     * repaint without a page reload. EmployeeSync writes its own audit row.
+     *
+     * Satu halaman, bukan seluruh daftar. Justru inilah permintaan yang paling
+     * berbahaya kalau tidak dibatasi: sinkronisasi yang baru saja membuat 3.846
+     * akun akan langsung mengirim balik ketiga-ribu-delapan-ratusan itu dalam
+     * responsnya sendiri — tepat pada saat tabelnya paling besar.
+     */
+    public function syncEmployees(Request $request): JsonResponse
     {
         $summary = EmployeeSync::run();
 
@@ -65,11 +166,13 @@ class UserRoleController extends Controller
             ], 422);
         }
 
-        $users = User::with('roles')->orderBy('name')->get();
+        $page = $this->paginateUsers($request);
 
         return response()->json([
             'summary' => $summary,
-            'users' => $users->map($this->presentUser(...)),
+            'users' => collect($page->items())->map($this->presentUser(...)),
+            'meta' => $this->pageMeta($page),
+            'stats' => $this->userStats(),
         ]);
     }
 
@@ -398,6 +501,14 @@ class UserRoleController extends Controller
             'helpdesk_access' => $u->helpdesk_access,
             'last_login' => $u->last_login_at?->format('d M Y, H:i') ?? '-',
             'joined_at' => $u->created_at->format('d F Y'),
+            // Asal-usul akun. Setelah sync pertama tabel ini bercampur antara
+            // 3.847 pegawai sungguhan dan sisa akun seed, dan bedanya menentukan
+            // keputusan nyata — siapa yang aman dihapus saat bersih-bersih, dan
+            // siapa yang akan ikut dinonaktifkan kalau deactivate_missing
+            // dinyalakan. Dibaca dari kolom, bukan ditebak dari bentuk NPP:
+            // satu dari 3.847 NPP asli ternyata murni angka seperti NIP seed.
+            'from_directory' => $u->synced_at !== null,
+            'synced_at' => $u->synced_at?->format('d M Y, H:i'),
         ];
     }
 
