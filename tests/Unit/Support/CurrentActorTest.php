@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
+use App\Models\Role;
+use App\Models\SupportAgent;
 use App\Models\User;
 use App\Support\CurrentActor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Tujuh persona tetap dicari lewat NIP, bukan email — dan tes ini ada karena
+ * Persona tetap dicari lewat NIP, bukan email — dan tes ini ada karena
  * asumsi sebelumnya (email) baru saja terbukti salah di database dev
  * sungguhan: seorang admin mengubah nama & email "Karina Putri" jadi
  * "Karina AESPA" lewat fitur admin-overridden-fields yang baru masuk, dan
@@ -34,10 +36,21 @@ final class CurrentActorTest extends TestCase
             'email' => 'lama@adhi.co.id',
         ], $overrides));
 
-        $role = \App\Models\Role::firstOrCreate(['name' => $roleName]);
+        $role = Role::firstOrCreate(['name' => $roleName]);
         $user->roles()->attach($role->id);
 
         return $user;
+    }
+
+    /** Menautkan persona ke barisnya di `support_agents` — jalur yang dipakai support()/supportBpo() sekarang. */
+    private function agentFor(User $user, string $type): void
+    {
+        SupportAgent::create([
+            'name' => $user->name,
+            'type' => $type,
+            'is_active' => true,
+            'user_id' => $user->id,
+        ]);
     }
 
     public function test_approver_tetap_ketemu_setelah_nama_dan_email_diubah_admin(): void
@@ -78,11 +91,19 @@ final class CurrentActorTest extends TestCase
         $this->assertSame($persona->id, CurrentActor::requester()->id);
     }
 
+    /**
+     * support() tidak lagi dicari lewat NIP: sejak 10 Agu 2026 ia jatuh ke agent
+     * aktif pertama di `support_agents`, bukan ke satu NIP hasil seed. Yang
+     * diuji tetap sama — mengubah email tidak boleh memutus pencarian — hanya
+     * saja tautannya kini `support_agents.user_id`, yang bahkan lebih kebal
+     * terhadap suntingan Admin daripada NIP.
+     */
     public function test_support_tetap_ketemu_setelah_email_diubah(): void
     {
         $persona = $this->persona('10027761', 'Support IT', [
             'email' => 'aditya.nugraha@adhi.co.id',
         ]);
+        $this->agentFor($persona, 'it');
 
         $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
 
@@ -100,11 +121,13 @@ final class CurrentActorTest extends TestCase
         $this->assertSame($persona->id, CurrentActor::teamLead()->id);
     }
 
+    /** Sama seperti support() di atas — kini lewat `support_agents`, bukan NIP. */
     public function test_support_bpo_tetap_ketemu_setelah_email_diubah(): void
     {
         $persona = $this->persona('19960130096', 'Support BPO', [
             'email' => 'denny.firmansyah@adhi.co.id',
         ]);
+        $this->agentFor($persona, 'bpo');
 
         $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
 

@@ -146,8 +146,27 @@ class EmployeeSync
             $summary['kept_empty'] += count($keptEmpty);
             $summary['kept_admin_override'] += count($keptOverride);
 
+            /*
+             | synced_at ditulis untuk SETIAP orang yang ditemukan di sumber,
+             | termasuk yang datanya tidak berubah sama sekali.
+             |
+             | Yang dicatat bukan "kapan barisnya terakhir diubah" — itu sudah
+             | tugas updated_at — melainkan "kapan orang ini terakhir terlihat
+             | di direktori perusahaan". Pegawai yang datanya stabil bertahun-tahun
+             | tetap pegawai sungguhan, dan kalau kolom ini hanya diisi saat ada
+             | perubahan, justru merekalah yang akan tampak seperti akun lokal
+             | sisa uji coba.
+             */
+            if (! $dryRun) {
+                $user->synced_at = now();
+            }
+
             if ($changed === []) {
                 $summary['unchanged']++;
+
+                if (! $dryRun) {
+                    $user->save();
+                }
 
                 continue;
             }
@@ -332,6 +351,10 @@ class EmployeeSync
                 // company portal. A random one keeps the column non-null.
                 'password' => Hash::make(Str::random(40)),
                 'email_verified_at' => now(),
+                // Menandai akun ini berasal dari direktori perusahaan, bukan
+                // diketik Admin atau ditinggalkan seeder — lihat migrasi
+                // 2026_08_10_130000.
+                'synced_at' => now(),
             ]);
 
             $role = Role::where('name', $config['default_role'] ?? 'Requester')->first();

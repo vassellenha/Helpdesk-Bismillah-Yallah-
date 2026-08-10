@@ -7,6 +7,9 @@
     data-react="UserManagementConsole"
     data-props="{{ json_encode([
         'users' => $users,
+        'usersMeta' => $usersMeta,
+        'userStats' => $userStats,
+        'listUrl' => route('admin.users.list'),
         'roles' => $roles,
         'permissionModules' => $permissionModules,
         'permissionActions' => $permissionActions,
