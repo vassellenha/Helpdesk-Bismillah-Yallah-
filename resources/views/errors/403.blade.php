@@ -20,15 +20,20 @@
     </p>
 
     {{--
-        Akun nonaktif TIDAK diberi tombol navigasi sama sekali.
+        Akun nonaktif TIDAK diberi tombol "Pilih Role".
 
         Keduanya bermuara ke portal pemilih role, dan role mana pun yang diklik
         di sana ditolak lagi oleh gerbang yang sama. Tombol yang memutar kembali
         ke halaman ini bukan cuma tak berguna — ia membuat orang mengira
         masalahnya salah pilih role, lalu mencoba ketujuhnya satu per satu.
 
-        Yang menggantikannya adalah satu-satunya langkah yang benar-benar
-        menyelesaikan: menghubungi Administrator.
+        Tapi untuk TIGA role yang punya mekanisme "bertindak sebagai" (support,
+        support-bpo, approver — lihat CurrentActor::support()/supportBpo()/
+        approver()), persona yang macet itu cuma satu dari beberapa yang sah.
+        Kalau ada agent/approver aktif lain, tawarkan pindah ke situ langsung
+        dari sini — gerbangnya sama, tapi orangnya beda, jadi tidak ditolak
+        lagi. "Hubungi Administrator" tetap tampil sebagai jalan yang benar-
+        benar menyelesaikan (memperbaiki akun aslinya), bukan cuma workaround.
     --}}
     @php
         // getPrevious(), bukan $exception itu sendiri: Laravel membungkus setiap
@@ -36,9 +41,36 @@
         // dan menyimpan yang asli sebagai "previous". Memeriksa $exception
         // langsung selalu meleset, tanpa error — cabang else yang jalan.
         $akunNonaktif = $exception->getPrevious() instanceof \App\Exceptions\AccountInactive;
+
+        $switchContext = null;
+        if ($akunNonaktif) {
+            if (request()->routeIs('dashboard.support-bpo') || request()->routeIs('support-bpo.*')) {
+                $switchContext = ['field' => 'agent_id', 'switchUrl' => route('support-bpo.switch-agent'), 'options' => \App\Support\ActingSwitcher::agentOptions('bpo')];
+            } elseif (request()->routeIs('dashboard.support') || request()->routeIs('support.*')) {
+                $switchContext = ['field' => 'agent_id', 'switchUrl' => route('support.switch-agent'), 'options' => \App\Support\ActingSwitcher::agentOptions('it')];
+            } elseif (request()->routeIs('dashboard.approver') || request()->routeIs('approver.*')) {
+                $switchContext = ['field' => 'approver_id', 'switchUrl' => route('approver.switch-approver'), 'options' => \App\Support\ActingSwitcher::approverOptions()];
+            }
+        }
     @endphp
 
     @if ($akunNonaktif)
+        @if ($switchContext && $switchContext['options']->isNotEmpty())
+            <form method="POST" action="{{ $switchContext['switchUrl'] }}" class="mt-8 flex items-center gap-3">
+                @csrf
+                <select
+                    name="{{ $switchContext['field'] }}"
+                    class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-3 py-2.5 text-sm font-semibold text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400"
+                >
+                    @foreach ($switchContext['options'] as $opt)
+                        <option value="{{ $opt->id }}">{{ $opt->name }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="rounded-xl bg-blue-700 dark:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 dark:hover:bg-blue-400">
+                    Bertindak sebagai
+                </button>
+            </form>
+        @endif
         <p class="mt-6 text-sm text-gray-400 dark:text-ink-3">
             Hubungi Administrator Helpdesk untuk mengaktifkan kembali akun Anda.
         </p>

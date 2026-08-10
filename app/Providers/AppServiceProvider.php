@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\Role;
 use App\Models\SupportAgent;
 use App\Models\User;
 use App\Services\Knowledge\DocumentTextExtractor;
@@ -78,11 +77,7 @@ class AppServiceProvider extends ServiceProvider
      */
     private function buildApproverSwitcher(User $currentUser): array
     {
-        $options = Role::where('name', 'Approver')->firstOrFail()
-            ->users()
-            ->active()
-            ->orderBy('name')
-            ->get(['users.id', 'users.name']);
+        $options = \App\Support\ActingSwitcher::approverOptions();
 
         return [
             'currentApproverId' => $options->first(fn (User $u) => $u->id === $currentUser->id)?->id,
@@ -98,15 +93,7 @@ class AppServiceProvider extends ServiceProvider
      */
     private function buildAgentSwitcher(string $type, \App\Models\User $currentUser, string $routeName): array
     {
-        // is_active milik SupportAgent DAN akses user-nya, dua saklar berbeda.
-        // Agent yang masih aktif tapi akun helpdesk-nya dimatikan Admin tetap
-        // muncul kalau hanya yang pertama diperiksa — dan tiket bisa diarahkan
-        // ke orang yang tidak akan pernah bisa membukanya.
-        $options = SupportAgent::where('type', $type)
-            ->where('is_active', true)
-            ->whereHas('user', fn ($q) => $q->active())
-            ->orderBy('name')
-            ->get(['id', 'name', 'user_id']);
+        $options = \App\Support\ActingSwitcher::agentOptions($type);
 
         return [
             'currentAgentId' => $options->first(fn (SupportAgent $a) => $a->user_id === $currentUser->id)?->id,
