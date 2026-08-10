@@ -10,7 +10,34 @@ yang khas proyek ini ditandai **PENTING**.
 
 ## 0. Yang khas dari proyek ini — baca dulu
 
-Empat hal ini yang paling sering bikin deploy "berhasil" tapi aplikasinya pincang:
+Lima hal ini yang paling sering bikin deploy "berhasil" tapi aplikasinya pincang:
+
+**API pegawai hanya bisa diakses dari dalam jaringan ADHI (VPN).** Ini bukan soal
+kredensial — `EMPLOYEE_DIRECTORY_TOKEN` memang dibiarkan kosong, endpoint-nya
+tidak memakai token. Pembatasannya di lapisan jaringan: dari IP luar ia menjawab
+`401 {"error":"IP denied"}` sambil menyebutkan IP pemanggilnya. Terbukti 10 Agu
+2026: dari IP VPN `103.14.45.2` sukses menarik 3.847 pegawai, dari IP rumah
+`182.3.38.232` ditolak.
+
+Artinya server produksi **wajib** salah satu dari ini, dan ini harus dipastikan
+SEBELUM deploy, bukan sesudah:
+
+- berada di dalam jaringan/datacenter ADHI, atau
+- punya klien VPN yang hidup terus (dan ada yang memantau kalau VPN-nya mati), atau
+- IP publiknya didaftarkan ke pengelola `mobile.adhi.co.id`
+
+Kalau ketiganya tidak terpenuhi, `employees:sync` akan gagal senyap: driver http
+mengembalikan array kosong, dan perintahnya berhenti dengan "Tidak ada data
+pegawai yang diterima". Tidak ada yang rusak, tapi tidak ada pegawai yang masuk —
+dan kalau `EMPLOYEE_SYNC_AUTO` menyala, itu terjadi tiap malam tanpa ada yang
+tahu. Penjaganya sudah ada (`deactivate_missing` hanya jalan kalau `fetched > 0`,
+jadi respons kosong tidak akan menonaktifkan siapa pun), tapi diamnya itu yang
+berbahaya.
+
+Untuk pengembangan sehari-hari tidak perlu VPN: simpan satu tarikan asli ke
+folder yang di-gitignore lalu pakai driver `mock` — lihat
+`EMPLOYEE_DIRECTORY_MOCK_FIXTURE` di `config/integrations.php`.
+
 
 **Wajib MySQL, bukan PostgreSQL.** Pencarian EVA bergantung pada indeks FULLTEXT
 MySQL. Migrasinya memakai penjaga driver, jadi di PostgreSQL indeksnya **dilewati

@@ -30,8 +30,27 @@ return [
             'collection_key' => env('EMPLOYEE_DIRECTORY_COLLECTION_KEY', 'data'),
         ],
 
+        /*
+        | Fixture bawaan berisi 25 pegawai contoh dan IKUT ter-commit — itu
+        | sebabnya isinya harus tetap data karangan. Endpoint aslinya dibatasi
+        | per IP dan bisa menolak kapan saja, jadi path-nya dibuat bisa
+        | dialihkan: simpan satu tarikan asli ke tempat yang di-gitignore
+        | (storage/app/private/ diabaikan seluruhnya) lalu arahkan ke situ untuk
+        | mengembangkan dengan data sungguhan tanpa menyentuh jaringan.
+        |
+        | JANGAN pernah menimpa fixture bawaan dengan tarikan asli: 3.847 nama,
+        | nomor telepon, dan surel karyawan akan masuk ke riwayat git secara
+        | permanen, dan riwayat git tidak bisa benar-benar dibersihkan setelah
+        | ter-push.
+        |
+        | Nilainya ditulis relatif terhadap root proyek (mis.
+        | `storage/app/private/employees-real.json`), bukan path absolut, supaya
+        | .env tidak memuat nama pengguna satu mesin tertentu.
+        */
         'mock' => [
-            'fixture' => database_path('fixtures/employees.json'),
+            'fixture' => ($relative = env('EMPLOYEE_DIRECTORY_MOCK_FIXTURE'))
+                ? base_path($relative)
+                : database_path('fixtures/employees.json'),
         ],
 
         /*
@@ -56,23 +75,34 @@ return [
         ],
 
         /*
-        | PLACEHOLDER MAPPING — these left-hand keys are an educated guess at
-        | the API's field names, made before the spec was available. When the
-        | real payload arrives this array is the only thing that changes; no
-        | class needs touching. Right-hand side must be a real users column.
+        | Dipetakan terhadap payload SUNGGUHAN dari
+        | https://mobile.adhi.co.id/api/index.php/v2/kms2/karyawan/all
+        | (diperiksa 2026-08-10: 3.847 pegawai, dibungkus {status,message,data}).
+        | Kiri = nama field API, kanan = kolom users.
+        |
+        | Field API yang sengaja TIDAK dipetakan karena tidak ada kolom
+        | padanannya: id, gender, photo, job_cluster_id, job_cluster, job_level,
+        | job_position_id, division_name, proy_unit_name.
+        |
+        | `username` dan `address` tidak dikirim API ini sama sekali. Username
+        | terisi sendiri dari email (lihat normalise()); yang tanpa email akan
+        | punya username NULL — kolomnya unique tapi nullable, jadi aman.
         */
         'field_map' => [
-            'nama_lengkap' => 'name',
-            'email_korporat' => 'email',
-            'username' => 'username',
-            'nip' => 'nip',
-            'alamat' => 'address',
-            'no_telepon' => 'phone',
-            'jabatan' => 'jabatan',
-            'status_pegawai' => 'status',
-            'kode_departemen' => 'kode_departemen',
-            'kode_divisi' => 'kode_divisi',
-            'kode_proyek' => 'kode_proyek',
+            'name' => 'name',
+            'email' => 'email',
+            'npp' => 'nip',
+            'phone_number' => 'phone',
+            'job_position' => 'jabatan',
+            'active' => 'status',
+
+            // dept_id = kode 2 digit, dept_name = namanya ("Dept. Keuangan").
+            // Ini menjawab pertanyaan lama soal kolom `unit`: ia memang
+            // pasangan NAMA dari kode departemen, bukan duplikat kode.
+            'dept_name' => 'unit',
+            'dept_id' => 'kode_departemen',
+            'division_id' => 'kode_divisi',
+            'proy_unit_id' => 'kode_proyek',
         ],
 
         // Which mapped column identifies an employee across syncs. NIP is the
@@ -92,15 +122,19 @@ return [
         */
         'fallback_match_by' => 'email',
 
-        // Raw API status value => our users.status enum. Anything unlisted
-        // falls back to 'active' so a new status code never locks people out.
+        /*
+        | Raw API status value => our users.status enum. Anything unlisted falls
+        | back to 'active' so a new status code never locks people out.
+        |
+        | API ini mengirim field `active` berisi "Y"/"N" — bukan "AKTIF"/"RESIGN"
+        | seperti yang ditebak sebelum spec ada. Ini bukan detail kosmetik:
+        | selama "N" tidak terdaftar di sini, ia jatuh ke default 'active', dan
+        | setiap pegawai yang sudah keluar tetap dianggap aktif — lengkap dengan
+        | helpdesk_access 'enabled' saat akunnya dibuat.
+        */
         'status_map' => [
-            'AKTIF' => 'active',
-            'ACTIVE' => 'active',
-            'NONAKTIF' => 'inactive',
-            'INACTIVE' => 'inactive',
-            'RESIGN' => 'inactive',
-            'PENSIUN' => 'inactive',
+            'Y' => 'active',
+            'N' => 'inactive',
         ],
 
         // Role given to accounts the sync creates. Existing users never have

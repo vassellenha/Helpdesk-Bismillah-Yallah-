@@ -195,6 +195,23 @@ class EmployeeSync
             $attrs[$column] = is_string($value) ? trim($value) : $value;
         }
 
+        /*
+         | Alamat kosong disimpan sebagai NULL, bukan "".
+         |
+         | `users.email` unique: string kosong hanya boleh ada SATU baris, jadi
+         | menuliskan "" akan meloloskan pegawai pertama tanpa email lalu
+         | menabrakkan 1.277 sisanya ke unique index — mematikan sync di tengah
+         | jalan setelah sebagian orang sudah dibuat. NULL boleh berulang.
+         |
+         | Diletakkan di sini, bukan di createUser(), supaya diffRow() ikut
+         | melihat nilai yang sama: dengan overwrite_with_empty = false, NULL
+         | dianggap blank dan email yang sudah ada di helpdesk tidak akan
+         | terhapus hanya karena API tidak mengirimkannya.
+         */
+        if (array_key_exists('email', $attrs) && blank($attrs['email'])) {
+            $attrs['email'] = null;
+        }
+
         if (isset($attrs['status'])) {
             $raw = strtoupper((string) $attrs['status']);
             $mapped = $config['status_map'][$raw] ?? null;
