@@ -9,23 +9,36 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Central place that creates ticket_notifications rows. There is no queue
- * worker or scheduler wired up in this app, so SLA warning/breach alerts
- * aren't pushed by a cron job — they're synced lazily whenever the
- * requester loads a page that lists their tickets (see syncSlaAlerts()),
- * which is enough for a single-user demo without a background process.
+ * Central place that creates ticket_notifications rows.
+ *
+ * SLA warning/breach alerts are not pushed by the scheduler: they're synced
+ * lazily whenever a user loads a page that lists their tickets (see
+ * syncSlaAlerts()). That's a deliberate limit worth knowing about — an alert
+ * exists from the moment someone looks, not from the moment the clock passes
+ * the threshold — and it is why those two types are kept out of the email
+ * allowlist in `config/notifications.php`.
  */
 class NotificationService
 {
     public static function notify(User $user, ?Ticket $ticket, string $type, string $title, string $message): TicketNotification
     {
-        return TicketNotification::create([
+        $notification = TicketNotification::create([
             'user_id' => $user->id,
             'ticket_id' => $ticket?->id,
             'type' => $type,
             'title' => $title,
             'message' => $message,
         ]);
+
+        // The bell row is the record; the email is a copy of it. Mirroring here
+        // — one function, rather than at each of the ~25 call sites that raise a
+        // notification — is what keeps the two from drifting: there is no way to
+        // ring the bell and forget the inbox. NotificationMailer decides whether
+        // this particular type is worth an email, and never throws if it isn't
+        // deliverable, so a mail outage cannot fail the action that caused it.
+        NotificationMailer::maybeSend($user, $ticket, $type, $title, $message);
+
+        return $notification;
     }
 
     /**

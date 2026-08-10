@@ -13,8 +13,6 @@ use App\Support\WhatsApp\LogWhatsAppGateway;
 use App\Support\WhatsApp\WhatsAppGateway;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Multi-channel delivery for a Team Lead's SLA teguran. One call fans out to
@@ -113,28 +111,12 @@ class TeguranNotifier
      */
     private static function deliver(string $email, Mailable $mail, string $tag): bool
     {
-        try {
-            // Queued, not sent inline. A real SMTP handshake to Gmail measured
-            // 6.5 seconds on this app — the Team Lead's browser sat waiting that
-            // whole time, and if the mail host were slow or unreachable the
-            // request would hang until timeout, tempting a second click and a
-            // duplicate teguran. Handing it to the queue returns immediately.
-            //
-            // Falls back to sending inline when the queue is synchronous, so a
-            // machine with no worker running still delivers rather than silently
-            // parking the message in the jobs table.
-            if (config('queue.default') === 'sync') {
-                Mail::to($email)->send($mail);
-            } else {
-                Mail::to($email)->queue($mail);
-            }
-
-            return true;
-        } catch (\Throwable $e) {
-            Log::error($tag.' Email gagal terkirim.', ['to' => $email, 'error' => $e->getMessage()]);
-
-            return false;
-        }
+        // Queueing, the sync fallback and the swallow-and-log behaviour all live
+        // in MailDispatcher now, shared with the bell's email mirror. Kept as a
+        // named method here because the two fan-outs above both call it, and
+        // routing them through one line is what guarantees an SLA teguran and a
+        // rating teguran can never end up with different delivery behaviour.
+        return MailDispatcher::send($email, $mail, $tag);
     }
 
     private static function gateway(): WhatsAppGateway
