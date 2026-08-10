@@ -1091,7 +1091,7 @@ class TeamLeadController extends Controller
             ->all();
 
         return [
-            'months' => $months->map(fn (Carbon $m) => $m->format('M'))->all(),
+            'months' => $months->map(fn (Carbon $m) => $m->translatedFormat('M'))->all(),
             'series' => $series,
             'all' => $all,
         ];
@@ -1225,7 +1225,7 @@ class TeamLeadController extends Controller
             $created = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month))->count();
             $resolved = $tickets->filter(fn (Ticket $t) => $t->resolved_at && $t->resolved_at->isSameMonth($month) && $t->resolved_at->isSameYear($month))->count();
 
-            return ['month' => $month->format('M'), 'created' => $created, 'resolved' => $resolved];
+            return ['month' => $month->translatedFormat('M'), 'created' => $created, 'resolved' => $resolved];
         })->values()->all();
     }
 

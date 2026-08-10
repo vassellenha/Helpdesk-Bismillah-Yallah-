@@ -139,7 +139,7 @@ class DashboardController extends Controller
             'slaKind' => $t->sla_kind,
             'slaMinutes' => $t->sla_minutes_remaining,
             'slaPct' => $t->sla_elapsed_percent,
-            'created' => $t->created_at->format('M j, Y'),
+            'created' => $t->created_at->translatedFormat('j M Y'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('requester.tickets.show', $t),
         ];
@@ -168,7 +168,7 @@ class DashboardController extends Controller
             $resolved = $tickets->filter(fn (Ticket $t) => $t->resolved_at && $t->resolved_at->isSameMonth($month) && $t->resolved_at->isSameYear($month));
 
             return [
-                'month' => $month->format('M'),
+                'month' => $month->translatedFormat('M'),
                 'created' => $created->count(),
                 'resolved' => $resolved->count(),
             ];

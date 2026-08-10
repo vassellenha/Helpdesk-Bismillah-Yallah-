@@ -10,6 +10,7 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\TicketDiscussion;
 use App\Support\TicketPeople;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
@@ -121,7 +122,7 @@ class SupportBpoController extends Controller
             'currentUser' => $this->currentUserPayload($bpoUser),
             'notifications' => $this->notifications($bpoUser),
             'ticket' => $this->presentTicket($ticket, $agent),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('support-bpo.tickets.data', $ticket),
@@ -150,7 +151,7 @@ class SupportBpoController extends Controller
 
         return response()->json([
             'ticket' => $this->presentTicket($ticket, $agent),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
         ]);
@@ -164,21 +165,14 @@ class SupportBpoController extends Controller
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
-        $data = $request->validate(['message' => 'required|string|max:3000']);
+        $data = $request->validate(TicketDiscussion::rules());
 
-        $comment = TicketComment::create([
-            'ticket_id' => $ticket->id,
-            'author_name' => $bpoUser->name,
-            'author_role' => 'Support',
-            'message' => $data['message'],
-        ]);
+        $comment = TicketDiscussion::store($ticket, $bpoUser, 'Support', 'Support BPO', $data, $request->file('file'));
 
         // First reply from Support is what stops the response clock.
         $ticket->markFirstResponse($comment->created_at);
 
-        NotificationService::notifyDiscussionParticipants($ticket, $bpoUser, 'Support BPO', $data['message']);
-
-        return response()->json($this->presentComment($comment), 201);
+        return response()->json(TicketDiscussion::present($comment), 201);
     }
 
     /**
@@ -341,7 +335,7 @@ class SupportBpoController extends Controller
 
         return response()->json([
             'escalated' => true,
-            'escalatedAt' => $fresh->escalated_at?->format('M j, Y · H:i'),
+            'escalatedAt' => $fresh->escalated_at?->translatedFormat('j M Y · H:i'),
             'escalationNote' => $fresh->escalation_note,
         ]);
     }
@@ -520,7 +514,7 @@ class SupportBpoController extends Controller
             'sla' => $t->sla_label,
             'slaKind' => $t->sla_kind,
             'requester' => $t->requester?->name ?? '—',
-            'created' => $t->created_at->format('M j, Y'),
+            'created' => $t->created_at->translatedFormat('j M Y'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('support-bpo.tickets.show', $t),
         ];
@@ -537,7 +531,7 @@ class SupportBpoController extends Controller
             'priority' => $t->priority,
             'requester' => $t->requester?->name ?? '—',
             'createdAt' => $t->created_at->toIso8601String(),
-            'at' => $t->created_at->format('M j, Y · H:i'),
+            'at' => $t->created_at->translatedFormat('j M Y · H:i'),
             'href' => route('support-bpo.tickets.show', $t),
         ];
     }
@@ -556,11 +550,11 @@ class SupportBpoController extends Controller
             'service' => trim(($t->service_name ?? '').($t->subcategory_name ? ' · '.$t->subcategory_name : '')) ?: '—',
             'description' => $t->description,
             'attachments' => $t->attachmentsPayload(),
-            'createdAt' => $t->created_at->format('M j, Y · H:i'),
+            'createdAt' => $t->created_at->translatedFormat('j M Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
             'ratingActive' => (bool) $t->rating_active,
-            'reopenNote' => $t->reopen_note ? ['note' => $t->reopen_note, 'at' => $t->reopen_at->format('M j, Y · H:i')] : null,
+            'reopenNote' => $t->reopen_note ? ['note' => $t->reopen_note, 'at' => $t->reopen_at->translatedFormat('j M Y · H:i')] : null,
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'unit' => $t->requester->unit,
@@ -578,21 +572,11 @@ class SupportBpoController extends Controller
             ],
             'canAct' => ! in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Waiting for Approval'], true),
             'escalated' => $t->escalated_at !== null,
-            'escalatedAt' => $t->escalated_at?->format('M j, Y · H:i'),
+            'escalatedAt' => $t->escalated_at?->translatedFormat('j M Y · H:i'),
             'escalationNote' => $t->escalation_note,
         ];
     }
 
-    private function presentComment(TicketComment $c): array
-    {
-        return [
-            'id' => $c->id,
-            'authorName' => $c->author_name,
-            'authorRole' => $c->author_role,
-            'message' => $c->message,
-            'at' => $c->created_at->format('M j · H:i'),
-        ];
-    }
 
     private function currentUserPayload(User $bpoUser): array
     {

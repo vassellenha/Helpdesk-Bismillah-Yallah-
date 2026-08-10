@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
-import { apiFetch } from '../../lib/api';
+import { apiFetch, uploadFile } from '../../lib/api';
 import TicketFlow from '../TicketFlow';
 import NewTicketModal from '../NewTicketModal';
 import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
+import CommentAttachmentChip from '../CommentAttachmentChip';
+import CommentComposer from '../CommentComposer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 
@@ -72,7 +74,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
             await apiFetch(reopenUrl, { method: 'POST', body: JSON.stringify({ note }) });
             onDone();
         } catch (e) {
-            setError(e.message || 'Failed to send to Support.');
+            setError(e.message || trans('requester.detail.send_to_support_failed'));
         } finally {
             setSubmitting(false);
         }
@@ -87,7 +89,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
             await apiFetch(closeUrl, { method: 'POST', body: JSON.stringify({ rating, note: note || null }) });
             onDone();
         } catch (e) {
-            setError(e.message || 'Failed to close the ticket.');
+            setError(e.message || trans('requester.detail.close_failed'));
         } finally {
             setSubmitting(false);
         }
@@ -349,16 +351,18 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
         }
     }
 
-    async function sendReply() {
-        if (!reply.trim()) return;
+    async function sendReply(file) {
+        if (!reply.trim() && !file) return;
         setSending(true);
         setError('');
         try {
-            const comment = await apiFetch(commentsUrl, { method: 'POST', body: JSON.stringify({ message: reply }) });
+            const comment = file
+                ? await uploadFile(commentsUrl, file, { message: reply })
+                : await apiFetch(commentsUrl, { method: 'POST', body: JSON.stringify({ message: reply }) });
             setComments((prev) => [...prev, comment]);
             setReply('');
         } catch (e) {
-            setError(e.message || 'Failed to send reply.');
+            setError(e.message || trans('requester.detail.send_failed'));
         } finally {
             setSending(false);
         }
@@ -423,8 +427,8 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                         <TicketFlow flow={flow} />
                     </Card>
 
-                    <Card title="Informasi Tiket">
-                        <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || 'No description was provided.'}</p>
+                    <Card title={trans('requester.detail.ticket_info')}>
+                        <p className="text-[13px] leading-relaxed text-gray-700 dark:text-ink-2">{ticket.description || trans('requester.detail.no_description')}</p>
                         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-edge pt-4 sm:grid-cols-3">
                             <Field label={trans('requester.detail.category')} value={ticket.category} />
                             <Field label={trans('requester.detail.service')} value={ticket.service} />
@@ -434,11 +438,11 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                     </Card>
 
                     {status !== 'Draft' && status !== 'Returned' && (
-                    <Card title="Discussion">
+                    <Card title={trans('requester.detail.discussion')}>
                         <div className="flex flex-col gap-3">
                             {comments.length === 0 && (
                                 <p className="rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">
-                                    No discussion yet. Add a note if you have more details to share.
+                                    {trans('requester.detail.forum_empty')}
                                 </p>
                             )}
                             {comments.map((c) => (
@@ -448,28 +452,22 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                                         <span className="opacity-70">· {c.authorRole}</span>
                                         <span className="opacity-70">· {c.at}</span>
                                     </div>
-                                    <p className="text-[13px] leading-relaxed">{c.message}</p>
+                                    {c.message && <p className="text-[13px] leading-relaxed">{c.message}</p>}
+                                    <CommentAttachmentChip attachment={c.attachment} dark={c.authorRole === 'Requester'} />
                                 </div>
                             ))}
                         </div>
 
                         {status !== 'Closed' && status !== 'Rejected' && (
-                            <div className="mt-4 flex items-end gap-2 border-t border-gray-100 dark:border-edge pt-4">
-                                <textarea
-                                    value={reply}
-                                    onChange={(e) => setReply(e.target.value)}
-                                    rows={2}
-                                    placeholder="Write a note or reply…"
-                                    className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-400"
-                                />
-                                <button
-                                    onClick={sendReply}
-                                    disabled={sending || !reply.trim()}
-                                    className="rounded-xl bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {sending ? 'Sending…' : 'Send Reply'}
-                                </button>
-                            </div>
+                            <CommentComposer
+                                value={reply}
+                                onChange={setReply}
+                                onSend={sendReply}
+                                sending={sending}
+                                placeholder={trans('requester.detail.forum_placeholder')}
+                                sendingLabel={trans('requester.detail.sending')}
+                                sendLabel={trans('requester.detail.send_reply')}
+                            />
                         )}
                     </Card>
                     )}
@@ -485,7 +483,7 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                         />
                     </Card>
 
-                    <Card title="People">
+                    <Card title={trans('requester.detail.people')}>
                         <div className="flex flex-col gap-3.5">
                             {[ticket.people.requester, ticket.people.approver, ...(ticket.people.support ?? [])].filter(Boolean).map((p, i) => (
                                 <div key={i} className="flex items-center gap-3">

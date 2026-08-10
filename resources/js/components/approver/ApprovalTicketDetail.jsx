@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
-import { apiFetch } from '../../lib/api';
+import { apiFetch, uploadFile } from '../../lib/api';
 import TicketFlow from '../TicketFlow';
 import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
+import CommentAttachmentChip from '../CommentAttachmentChip';
+import CommentComposer from '../CommentComposer';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 // Colour stays here (presentation); every string comes from lang/*/approver.php.
@@ -88,11 +90,13 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
-    async function sendReply() {
-        if (!reply.trim()) return;
+    async function sendReply(file) {
+        if (!reply.trim() && !file) return;
         setSending(true);
         try {
-            const comment = await apiFetch(commentsUrl, { method: 'POST', body: JSON.stringify({ message: reply }) });
+            const comment = file
+                ? await uploadFile(commentsUrl, file, { message: reply })
+                : await apiFetch(commentsUrl, { method: 'POST', body: JSON.stringify({ message: reply }) });
             setComments((prev) => [...prev, comment]);
             setReply('');
         } catch (e) {
@@ -192,28 +196,22 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                                         <span className="opacity-70">· {c.authorRole}</span>
                                         <span className="opacity-70">· {c.at}</span>
                                     </div>
-                                    <p className="text-[13px] leading-relaxed">{c.message}</p>
+                                    {c.message && <p className="text-[13px] leading-relaxed">{c.message}</p>}
+                                    <CommentAttachmentChip attachment={c.attachment} dark={c.authorRole === 'Approver'} />
                                 </div>
                             ))}
                         </div>
 
                         {ticket.status !== 'Closed' && ticket.status !== 'Rejected' && (
-                            <div className="mt-4 flex items-end gap-2 border-t border-gray-100 dark:border-edge pt-4">
-                                <textarea
-                                    value={reply}
-                                    onChange={(e) => setReply(e.target.value)}
-                                    rows={2}
-                                    placeholder={trans('approver.detail.forum_placeholder')}
-                                    className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] outline-none focus:border-blue-400"
-                                />
-                                <button
-                                    onClick={sendReply}
-                                    disabled={sending || !reply.trim()}
-                                    className="rounded-xl bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {sending ? trans('approver.confirm.sending') : 'Kirim'}
-                                </button>
-                            </div>
+                            <CommentComposer
+                                value={reply}
+                                onChange={setReply}
+                                onSend={sendReply}
+                                sending={sending}
+                                placeholder={trans('approver.detail.forum_placeholder')}
+                                sendingLabel={trans('approver.confirm.sending')}
+                                sendLabel="Kirim"
+                            />
                         )}
                     </Card>
                 </div>
@@ -281,6 +279,23 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, comments: 
                             feedbackNote={ticket.feedbackNote}
                             ratingActive={ticket.ratingActive ?? true}
                         />
+                    </Card>
+
+                    <Card title={trans('approver.detail.people')}>
+                        <div className="flex flex-col gap-3.5">
+                            {[ticket.people?.requester, ticket.people?.approver, ...(ticket.people?.support ?? [])].filter(Boolean).map((p, i) => (
+                                <div key={i} className="flex items-center gap-3">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:text-accent-text">
+                                        {p.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+                                    </span>
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-ink-1">{p.name}</p>
+                                        <p className="truncate text-[11px] text-gray-400 dark:text-ink-3">{p.role}</p>
+                                        {p.email && <p className="truncate text-[11px] text-blue-600 dark:text-accent-text">{p.email}</p>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </Card>
                 </div>
             </div>

@@ -61,6 +61,8 @@ return [
         'hint_last_6_months' => 'Last 6 months',
         'hint_waiting_response' => 'Waiting for your response',
         'hint_all_caught_up' => 'All caught up',
+        'greeting' => 'Good morning, :name 👋',
+        'subtitle' => 'Your ticket summary and SLA status as of today, :date.',
     ],
 
     'sla_table' => [
@@ -77,6 +79,12 @@ return [
         'resolved' => 'Resolved',
         'sla_distribution' => 'SLA Distribution',
         'sla_active' => 'SLA active',
+        'sla_subtitle' => 'Tickets with an SLA clock running (excludes those awaiting approval)',
+        'sla_empty' => 'No active tickets',
+        'sla_within_target' => ':pct% of your active tickets are still within SLA targets.',
+        'sla_on_track' => 'On Track',
+        'sla_warning' => 'SLA Warning',
+        'sla_breach' => 'SLA Breach',
     ],
 
     'detail' => [
@@ -99,6 +107,17 @@ return [
         'note_required' => 'Note for the Support team *',
         'note_optional' => 'Note for the Support team (optional)',
         'reopened' => 'Reopened — sent back to the Support team',
+        'ticket_info' => 'Ticket Information',
+        'no_description' => 'No description was provided.',
+        'discussion' => 'Discussion',
+        'forum_empty' => 'No discussion yet. Add a note if you have more details to share.',
+        'forum_placeholder' => 'Write a note or reply…',
+        'send_reply' => 'Send Reply',
+        'sending' => 'Sending…',
+        'send_failed' => 'Failed to send reply.',
+        'send_to_support_failed' => 'Failed to send to Support.',
+        'close_failed' => 'Failed to close the ticket.',
+        'people' => 'People',
     ],
 
     'bulk' => [

@@ -48,7 +48,7 @@ function formatBytes(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function SearchableSelect({ value, placeholder, disabled, options, onChange, searchPlaceholder = 'Search…' }) {
+function SearchableSelect({ value, placeholder, disabled, options, onChange, searchPlaceholder = 'Cari…' }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const ref = useRef(null);
@@ -191,7 +191,7 @@ export default function NewTicketModal({
     submitUrl = '/api/tickets',
     editTicket = null,
     editUrl = null,
-    triggerLabel = 'New Ticket',
+    triggerLabel = 'Tiket Baru',
     evaDraft = null,
 }) {
     const isEdit = !!editTicket;
@@ -347,7 +347,7 @@ export default function NewTicketModal({
         const options = catalog.subcategories
             .filter((sc) => String(sc.service_id) === form.serviceId)
             .map((sc) => ({ value: String(sc.id), label: sc.name }));
-        return [...options, { value: OTHER, label: 'Other' }];
+        return [...options, { value: OTHER, label: 'Lainnya' }];
     }, [catalog, form.serviceId]);
 
     const isOtherSubcategory = form.subcategoryId === OTHER;
@@ -406,7 +406,7 @@ export default function NewTicketModal({
                     continue;
                 }
                 if (file.size > MAX_ATTACHMENT_BYTES) {
-                    setAttachmentError('File is larger than 30MB.');
+                    setAttachmentError('Ukuran berkas melebihi 30MB.');
                     continue;
                 }
                 next.push(file);
@@ -430,7 +430,7 @@ export default function NewTicketModal({
             await apiFetch(`/requester/tickets/${editTicket.id}/attachment/${attachment.id}`, { method: 'DELETE' });
             setExistingAttachments((current) => current.filter((a) => a.id !== attachment.id));
         } catch (e) {
-            setAttachmentError(e.message || 'Failed to remove attachment.');
+            setAttachmentError(e.message || 'Gagal menghapus lampiran.');
         }
     }
 
@@ -447,7 +447,7 @@ export default function NewTicketModal({
     async function submit(isDraft) {
         setError('');
         if (!isDraft && !canSubmit) {
-            setError('Please complete all required fields before submitting.');
+            setError('Lengkapi semua kolom wajib sebelum mengirim.');
             return;
         }
         if (!form.serviceId) {
@@ -492,7 +492,7 @@ export default function NewTicketModal({
 
             setCreated(ticket);
         } catch (e) {
-            setError(e.message || 'Failed to save the ticket.');
+            setError(e.message || 'Gagal menyimpan tiket.');
         } finally {
             setSubmitting(false);
         }
@@ -520,7 +520,7 @@ export default function NewTicketModal({
 
             {open && (
                 <Modal onClose={close} maxWidth="max-w-2xl">
-                    <ModalHeader title="Informasi Tiket" subtitle={isEdit ? 'Update the details of your draft request.' : 'Fill in the details of your request.'} onClose={close} />
+                    <ModalHeader title="Informasi Tiket" subtitle={isEdit ? 'Perbarui detail draf permintaan Anda.' : 'Isi detail permintaan Anda.'} onClose={close} />
 
                     <div className="space-y-4 overflow-y-auto px-6 py-5">
                         {created ? (
@@ -548,11 +548,11 @@ export default function NewTicketModal({
                                 <Field label="Sub Kategori">
                                     <SearchableSelect
                                         value={form.subcategoryId}
-                                        placeholder={form.serviceId ? 'Select a sub category' : 'Pilih Layanan terlebih dahulu'}
+                                        placeholder={form.serviceId ? 'Pilih Sub Kategori' : 'Pilih Layanan terlebih dahulu'}
                                         disabled={!form.serviceId}
                                         options={subcategoryOptions}
                                         onChange={selectSubcategory}
-                                        searchPlaceholder="Search sub category…"
+                                        searchPlaceholder="Cari sub kategori…"
                                     />
                                 </Field>
 
@@ -568,11 +568,11 @@ export default function NewTicketModal({
                                         ) : (
                                             <SearchableSelect
                                                 value={form.subjectId}
-                                                placeholder={form.subcategoryId ? 'Select a subject' : 'Select a sub category first'}
+                                                placeholder={form.subcategoryId ? 'Pilih Subjek' : 'Pilih Sub Kategori terlebih dahulu'}
                                                 disabled={!form.subcategoryId}
                                                 options={subjectOptions}
                                                 onChange={selectSubject}
-                                                searchPlaceholder="Search subject…"
+                                                searchPlaceholder="Cari subjek…"
                                             />
                                         )}
                                     </Field>
@@ -582,13 +582,13 @@ export default function NewTicketModal({
                                                 value={form.issueCategoryId}
                                                 onChange={(v) => set({ issueCategoryId: v })}
                                                 options={[
-                                                    { value: '', label: 'Select a category' },
+                                                    { value: '', label: 'Pilih Kategori Masalah' },
                                                     ...(catalog?.issueCategories ?? []).map((c) => ({ value: String(c.id), label: c.name })),
                                                 ]}
                                             />
                                         ) : (
                                             <div className="flex w-full items-center rounded-[10px] border border-gray-200 dark:border-edge-strong bg-gray-100 dark:bg-panel-3 px-3.5 py-2.5 text-[13px] text-gray-500 dark:text-ink-2">
-                                                {issueCategoryName || 'Select a subject first'}
+                                                {issueCategoryName || 'Pilih Subjek terlebih dahulu'}
                                             </div>
                                         )}
                                     </Field>
@@ -661,7 +661,7 @@ export default function NewTicketModal({
                                         rows={4}
                                         value={form.description}
                                         onChange={(e) => set({ description: e.target.value })}
-                                        placeholder="Describe the issue you are facing in detail…"
+                                        placeholder="Jelaskan masalah yang Anda hadapi secara detail…"
                                         className="min-h-[96px] w-full resize-y rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-3 text-[13px] text-gray-900 dark:text-ink-1 outline-none focus:border-blue-400"
                                     />
                                 </Field>
@@ -721,7 +721,7 @@ export default function NewTicketModal({
                                         />
                                         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700 dark:text-ink-2"><path d="M4 16.2A4.5 4.5 0 0 1 6.5 8a6 6 0 0 1 11.4 1.6A4 4 0 0 1 17.5 17H7"/><path d="M12 12v6"/><path d="m9 14.5 3-2.5 3 2.5"/></svg>
                                         <span className="text-[13px] font-bold text-gray-800 dark:text-ink-1">
-                                            {totalAttachmentCount >= MAX_ATTACHMENTS ? 'Maximum files reached' : 'Click to upload or drag files here'}
+                                            {totalAttachmentCount >= MAX_ATTACHMENTS ? 'Jumlah berkas sudah maksimal' : 'Klik untuk unggah atau seret berkas ke sini'}
                                         </span>
                                         <span className="text-[11px] text-gray-400 dark:text-ink-3">PNG, JPG, PDF, MP4, MOV, WEBM (Max. 30MB) · Maksimal {MAX_ATTACHMENTS} file</span>
                                     </label>
@@ -792,7 +792,7 @@ export default function NewTicketModal({
                                     className="flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-4 14-4-5z"/><path d="m11 14 8-9"/></svg>
-                                    {submitting ? 'Submitting…' : 'Submit Ticket'}
+                                    {submitting ? 'Mengirim…' : 'Kirim Tiket'}
                                 </button>
                             </>
                         )}

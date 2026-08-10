@@ -174,7 +174,7 @@ class TicketTimeline
         return [
             'label' => $label,
             'who' => $who,
-            'at' => $at?->format('M j, Y · H:i'),
+            'at' => $at?->translatedFormat('j M Y · H:i'),
             'state' => $state,
         ];
     }

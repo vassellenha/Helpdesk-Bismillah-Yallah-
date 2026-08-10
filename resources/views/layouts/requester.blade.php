@@ -34,8 +34,6 @@
 
             <div class="flex-1"></div>
 
-            <div data-react="LanguageSwitcher"></div>
-
             <div
                 data-react="RequesterTopNav"
                 data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'ticketsUrl' => route('requester.tickets'), 'markAllReadUrl' => route('requester.notifications.read-all'), 'profileUrl' => route('requester.profile')]) }}"

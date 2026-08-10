@@ -214,7 +214,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">{trans('requester.my_tickets')}</h1>
-                    <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">Track the history and progress of every ticket you have submitted.</p>
+                    <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">{trans('requester.subtitle')}</p>
                 </div>
                 <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} />
             </div>

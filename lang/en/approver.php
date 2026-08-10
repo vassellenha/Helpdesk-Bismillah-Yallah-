@@ -86,6 +86,7 @@ return [
         'forwarded_to' => 'Forwarded to: ',
         'status_history' => 'Status History',
         'sla' => 'SLA',
+        'people' => 'People',
     ],
 
     'confirm' => [

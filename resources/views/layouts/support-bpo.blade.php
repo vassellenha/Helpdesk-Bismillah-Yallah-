@@ -51,8 +51,6 @@
                 </form>
             @endif
 
-            <div data-react="LanguageSwitcher"></div>
-
             <div
                 data-react="ApproverTopNav"
                 data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'inboxUrl' => route('dashboard.support-bpo'), 'ticketsUrl' => route('support-bpo.tickets'), 'markAllReadUrl' => route('support-bpo.notifications.read-all'), 'profileUrl' => route('support-bpo.profile')]) }}"

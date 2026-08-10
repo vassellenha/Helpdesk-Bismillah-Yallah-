@@ -10,7 +10,9 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\TicketDiscussion;
 use App\Support\TicketFlow;
+use App\Support\TicketPeople;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -119,7 +121,7 @@ class ApprovalController extends Controller
                 'decisionLabel' => self::DECISION_LABELS[$d->decision] ?? $d->decision,
                 'note' => $d->note,
                 'forwardedTo' => $d->forwarded_to ?? '—',
-                'at' => $d->created_at->format('M j, Y · H:i'),
+                'at' => $d->created_at->translatedFormat('j M Y · H:i'),
                 'createdAt' => $d->created_at->toIso8601String(),
                 'href' => route('approver.tickets.show', $t),
             ];
@@ -143,7 +145,7 @@ class ApprovalController extends Controller
             'decisionLabel' => 'Menunggu Keputusan',
             'note' => '—',
             'forwardedTo' => '—',
-            'at' => $t->created_at->format('M j, Y · H:i'),
+            'at' => $t->created_at->translatedFormat('j M Y · H:i'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('approver.tickets.show', $t),
         ]);
@@ -176,7 +178,7 @@ class ApprovalController extends Controller
         $approver = CurrentActor::approver();
         abort_unless($ticket->approver_id === $approver->id, 403);
 
-        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
         $lastDecision = TicketApproval::where('ticket_id', $ticket->id)->where('approver_id', $approver->id)->latest('created_at')->first();
 
         return view('approver.ticket-detail', [
@@ -184,7 +186,7 @@ class ApprovalController extends Controller
             'currentUser' => $this->currentUserPayload($approver),
             'notifications' => $this->notifications($approver),
             'ticket' => $this->presentTicket($ticket, $lastDecision),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('approver.tickets.data', $ticket),
@@ -204,12 +206,12 @@ class ApprovalController extends Controller
         $approver = CurrentActor::approver();
         abort_unless($ticket->approver_id === $approver->id, 403);
 
-        $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
         $lastDecision = TicketApproval::where('ticket_id', $ticket->id)->where('approver_id', $approver->id)->latest('created_at')->first();
 
         return response()->json([
             'ticket' => $this->presentTicket($ticket, $lastDecision),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
         ]);
@@ -221,18 +223,11 @@ class ApprovalController extends Controller
         abort_unless($ticket->approver_id === $approver->id, 403);
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
-        $data = $request->validate(['message' => 'required|string|max:3000']);
+        $data = $request->validate(TicketDiscussion::rules());
 
-        $comment = TicketComment::create([
-            'ticket_id' => $ticket->id,
-            'author_name' => $approver->name,
-            'author_role' => 'Approver',
-            'message' => $data['message'],
-        ]);
+        $comment = TicketDiscussion::store($ticket, $approver, 'Approver', 'Approver', $data, $request->file('file'));
 
-        NotificationService::notifyDiscussionParticipants($ticket, $approver, 'Approver', $data['message']);
-
-        return response()->json($this->presentComment($comment), 201);
+        return response()->json(TicketDiscussion::present($comment), 201);
     }
 
     /**
@@ -409,7 +404,7 @@ class ApprovalController extends Controller
             'category' => $t->issue_category ?? $t->category ?? '—',
             'priority' => $t->priority,
             'requester' => $t->requester?->name ?? '—',
-            'created' => $t->created_at->format('M j, Y'),
+            'created' => $t->created_at->translatedFormat('j M Y'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('approver.tickets.show', $t),
         ];
@@ -426,7 +421,7 @@ class ApprovalController extends Controller
             'layananKatalog' => trim(($t->service_name ?? '—').($t->subject_name ? ' · '.$t->subject_name : '')),
             'description' => $t->description,
             'attachments' => $t->attachmentsPayload(),
-            'createdAt' => $t->created_at->format('M j, Y · H:i'),
+            'createdAt' => $t->created_at->translatedFormat('j M Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
             'ratingActive' => (bool) $t->rating_active,
@@ -436,27 +431,24 @@ class ApprovalController extends Controller
                 'unit' => $t->requester->unit,
                 'email' => $t->requester->email,
             ] : null,
+            // Same shape the Requester and Support detail screens use, so the
+            // People panel reads identically wherever the ticket is opened.
+            'people' => [
+                'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
+                'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
+                'support' => TicketPeople::supportAgents($t),
+            ],
             'canDecide' => $t->status === 'Waiting for Approval',
             'lastDecision' => $lastDecision ? [
                 'decision' => $lastDecision->decision,
                 'decisionLabel' => self::DECISION_LABELS[$lastDecision->decision] ?? $lastDecision->decision,
                 'note' => $lastDecision->note,
                 'forwardedTo' => $lastDecision->forwarded_to,
-                'at' => $lastDecision->created_at->format('M j, Y · H:i'),
+                'at' => $lastDecision->created_at->translatedFormat('j M Y · H:i'),
             ] : null,
         ];
     }
 
-    private function presentComment(TicketComment $c): array
-    {
-        return [
-            'id' => $c->id,
-            'authorName' => $c->author_name,
-            'authorRole' => $c->author_role,
-            'message' => $c->message,
-            'at' => $c->created_at->format('M j · H:i'),
-        ];
-    }
 
     private function currentUserPayload(User $approver): array
     {

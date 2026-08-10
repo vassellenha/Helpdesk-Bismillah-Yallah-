@@ -90,6 +90,7 @@ return [
         'forwarded_to' => 'Diteruskan ke: ',
         'status_history' => 'Riwayat Status',
         'sla' => 'SLA',
+        'people' => 'Orang Terkait',
     ],
 
     'confirm' => [

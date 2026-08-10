@@ -47,7 +47,6 @@
                     <h1 class="text-lg font-bold text-gray-900 dark:text-ink-1">@yield('title')</h1>
                 </div>
                 <div class="flex items-center gap-4">
-                    <div data-react="LanguageSwitcher"></div>
                     <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications ?? []]) }}"></div>
                     @if(isset($currentUser) && isset($profileUrl))
                         <div

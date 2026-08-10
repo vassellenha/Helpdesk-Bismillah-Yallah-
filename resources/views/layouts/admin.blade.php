@@ -23,7 +23,6 @@
                 @include('partials.admin-nav', ['navClass' => 'hidden min-w-0 items-center gap-0.5 overflow-x-auto lg:flex'])
             </div>
             <div class="flex shrink-0 items-center gap-2 sm:gap-3">
-                <div data-react="LanguageSwitcher"></div>
                 <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '', 'profileUrl' => route('admin.profile')]) }}"></div>
             </div>
         </div>

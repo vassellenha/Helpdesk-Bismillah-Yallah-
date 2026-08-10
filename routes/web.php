@@ -23,7 +23,6 @@ use App\Http\Controllers\Eva\SearchSettingsController as EvaSearchSettingsContro
 use App\Http\Controllers\Eva\TaxonomyController as EvaTaxonomyController;
 use App\Http\Controllers\Eva\TrainingController as EvaTrainingController;
 use App\Http\Controllers\Eva\UnansweredController as EvaUnansweredController;
-use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ProfileController;
@@ -40,7 +39,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PortalController::class, 'index'])->name('portal.index');
 
-Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
 
 // SINTA portal SSO. The helpdesk still works without signing in (see
 // CurrentActor's fixed personas); logging in narrows it to the real person.
