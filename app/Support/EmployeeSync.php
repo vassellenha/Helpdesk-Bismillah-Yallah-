@@ -36,6 +36,15 @@ class EmployeeSync
      */
     public static function run(bool $dryRun = false): array
     {
+        // A full company directory can take minutes to fetch and hash — well
+        // past the default request time budget. CLI (the scheduled sync) is
+        // unaffected, but the three HTTP-triggered call sites (User & Role
+        // Management's "Sync Data Pegawai" button, and Integrasi's test/sync)
+        // inherit PHP's max_execution_time and were dying mid-run: the fetch
+        // alone ate most of the 120s, then Hash::make() for each new account
+        // pushed it over, killing the request before recordAudit() ever ran.
+        set_time_limit(0);
+
         $config = config('integrations.employee_directory');
         $matchBy = $config['match_by'] ?? 'nip';
         $fallbackBy = $config['fallback_match_by'] ?? null;
