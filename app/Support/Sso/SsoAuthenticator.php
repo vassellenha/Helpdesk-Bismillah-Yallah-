@@ -125,7 +125,7 @@ class SsoAuthenticator
         }
 
         if (! $user) {
-            $label = $mapped[$primary] ?? $mapped[$fallback] ?? 'identitas tanpa username/NIP/email';
+            $label = $mapped[$primary] ?? $mapped[$fallback] ?? 'identitas tanpa username/NPP/email';
             Log::warning('[SSO] Identitas tidak punya akun helpdesk.', ['claims' => $mapped]);
 
             return [null, "Akun untuk \"{$label}\" belum ada di helpdesk. Jalankan sinkronisasi data pegawai terlebih dahulu."];

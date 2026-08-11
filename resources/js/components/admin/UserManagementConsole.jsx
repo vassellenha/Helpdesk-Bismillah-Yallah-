@@ -296,13 +296,13 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                     {(syncResult.key_mismatch ?? []).length > 0 && (
                         <div className="mt-2 rounded-lg bg-amber-50 dark:bg-warn-soft p-2.5 text-xs text-amber-800 dark:text-warn-text">
                             <p className="font-semibold">
-                                {syncResult.key_mismatch.length} pegawai NIP-nya berbeda antara API dan helpdesk.
+                                {syncResult.key_mismatch.length} pegawai NPP-nya berbeda antara API dan helpdesk.
                             </p>
                             <ul className="mt-1 list-inside list-disc space-y-0.5">
                                 {syncResult.key_mismatch.map((m) => <li key={m}>{m}</li>)}
                             </ul>
                             <p className="mt-1.5">
-                                Datanya tetap tersinkron lewat email, tapi NIP-nya sengaja tidak diubah — NIP adalah kunci
+                                Datanya tetap tersinkron lewat email, tapi NPP-nya sengaja tidak diubah — NPP adalah kunci
                                 identitas, jadi perbaikannya harus diputuskan manusia.
                             </p>
                         </div>

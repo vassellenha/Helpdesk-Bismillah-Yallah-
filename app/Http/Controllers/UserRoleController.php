@@ -20,7 +20,7 @@ class UserRoleController extends Controller
 {
     private const FIELD_LABELS = [
         'name' => 'Nama',
-        'nip' => 'NIP',
+        'nip' => 'NPP',
         'email' => 'Email',
         'username' => 'Username',
         'phone' => 'Nomor Telepon',
