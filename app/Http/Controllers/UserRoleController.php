@@ -63,7 +63,7 @@ class UserRoleController extends Controller
             'roles' => $roles->map($this->presentRole(...)),
             'permissionModules' => DummyData::permissionModules(),
             'permissionActions' => DummyData::permissionActions(),
-            'unitOrganisasi' => DummyData::unitOrganisasi(),
+            'unitOrganisasi' => $this->unitOptions(),
         ]);
     }
 
@@ -113,10 +113,50 @@ class UserRoleController extends Controller
             ->when($status === 'Aktif', fn ($q) => $q->active())
             ->when($status === 'Nonaktif', fn ($q) => $q->where(fn ($w) => $w->where('users.status', '!=', 'active')->orWhere('users.helpdesk_access', '!=', 'enabled')))
             ->when($role !== '', fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', $role)))
+            // Cocok persis dengan nilai yang dikirim dropdown, dan dropdown itu
+            // kini disusun dari kolom yang sama (lihat unitOptions()) — jadi
+            // setiap pilihan yang bisa diklik pasti punya baris.
             ->when($unit !== '', fn ($q) => $q->where('unit', $unit))
             ->orderBy('name')
             ->paginate(self::PER_PAGE)
             ->withQueryString();
+    }
+
+    /**
+     * Pilihan "Unit Kerja" — diambil dari NILAI YANG BENAR-BENAR ADA di kolom
+     * `users.unit`, bukan dari daftar tetap.
+     *
+     * Sebelumnya isinya DummyData::unitOrganisasi(): delapan nama karangan yang
+     * ditulis saat repo ini masih mockup. Penyaringnya mencocokkan persis ke
+     * `users.unit`, jadi dropdown itu hanya bekerja selama isi tabelnya kebetulan
+     * memakai kata yang sama.
+     *
+     * Begitu data pegawai ditarik dari API perusahaan, `unit` diisi `dept_name`
+     * milik ADHI (lihat claim map di config/integrations.php) — nama departemen
+     * sungguhan yang tidak satu pun ada di daftar karangan itu. Hasilnya:
+     * setiap pilihan mengembalikan nol baris, dan filternya tampak "tidak
+     * berfungsi" padahal justru bekerja dengan benar atas nilai yang memang tidak
+     * pernah ada.
+     *
+     * Di lokal pun daftar itu sebenarnya sudah bocor — empat dari dua belas unit
+     * yang ada di tabel tidak terdaftar, sehingga user di unit tersebut tidak
+     * pernah bisa disaring sama sekali. Yang membedakan hanyalah di lokal
+     * delapan sisanya kebetulan cocok, jadi kerusakannya tidak terlihat.
+     *
+     * DISTINCT atas satu kolom ber-index rendah: jumlah departemen berkisar
+     * puluhan, bukan ribuan, jadi ini bukan daftar yang perlu dipaginasi.
+     *
+     * @return list<string>
+     */
+    private function unitOptions(): array
+    {
+        return User::query()
+            ->whereNotNull('unit')
+            ->where('unit', '!=', '')
+            ->distinct()
+            ->orderBy('unit')
+            ->pluck('unit')
+            ->all();
     }
 
     /** @return array<string,mixed> */
