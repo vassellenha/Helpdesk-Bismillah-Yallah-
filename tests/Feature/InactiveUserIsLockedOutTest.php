@@ -10,28 +10,26 @@ use App\Support\CurrentActor;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 
 /**
  * User nonaktif tidak bisa membuka helpdesk sama sekali.
  *
- * Sebelum ini, penguncian hanya berlaku pada sesi SSO — SsoAuthenticator::user()
- * memutus sesinya tiap permintaan. Tapi selama SSO masih "mock", aplikasi jatuh
- * ke tujuh persona tetap yang dicari lewat NIP, dan jalur itu TIDAK memeriksa
- * apa pun: mematikan akses seorang persona lewat konsol Admin tidak berpengaruh,
- * layarnya tetap terbuka.
+ * DUA saklar, masing-masing punya hak veto sendiri: `status` milik data
+ * kepegawaian (ditulis EmployeeSync dari API perusahaan) dan `helpdesk_access`
+ * milik helpdesk ini sendiri (ditulis Admin). Salah satu berkata tidak sudah
+ * cukup untuk mengunci akun.
  *
- * Konsekuensi yang dijaga di sini disengaja dan perlu diketahui: mematikan
- * persona berarti mematikan SELURUH layar role itu, bukan hanya bagi orang
- * tersebut. Di mode persona, persona ITULAH satu-satunya identitas yang ada —
- * tidak ada "orang lain" yang bisa membuka layar yang sama.
+ * Yang dijaga di sini adalah bahwa penguncian itu berlaku SETELAH sesi berjalan.
+ * Middleware `auth` hanya tahu sesinya sah; ia tidak tahu apa-apa soal kedua
+ * kolom ini, dan keduanya bisa berubah kapan saja sesudah orangnya masuk. Karena
+ * itu pemeriksaannya ada di CurrentActor — satu-satunya pintu yang dilewati
+ * setiap controller untuk tahu siapa yang bertindak.
  */
 final class InactiveUserIsLockedOutTest extends TestCase
 {
-    use RefreshDatabase;
-
-    /** NIP persona Requester — lihat CurrentActor. */
-    private const REQUESTER_NIP = '19950418102';
+    use ActsAsRole, RefreshDatabase;
 
     public function test_persona_yang_dimatikan_admin_tidak_bisa_membuka_layarnya(): void
     {
@@ -141,13 +139,23 @@ final class InactiveUserIsLockedOutTest extends TestCase
         }
     }
 
+    /**
+     * Seorang Requester yang SUDAH MASUK, dengan dua saklar keaktifannya bisa
+     * disetel per tes.
+     *
+     * Login-nya bagian dari persiapan, bukan detail: yang diuji berkas ini
+     * adalah penolakan sesudah sesi sah terbentuk. Tanpa login, setiap tes di
+     * sini hanya akan membuktikan bahwa tamu diantar ke halaman masuk — hal
+     * yang benar, tapi bukan yang sedang ditanyakan.
+     */
     private function persona(string $status = 'active', string $helpdeskAccess = 'enabled'): User
     {
-        return User::factory()->create([
+        $user = User::factory()->create([
             'name' => 'Andi Pratama',
-            'nip' => self::REQUESTER_NIP,
             'status' => $status,
             'helpdesk_access' => $helpdeskAccess,
         ]);
+
+        return $this->actingAsUserWithRoles($user, 'requester');
     }
 }

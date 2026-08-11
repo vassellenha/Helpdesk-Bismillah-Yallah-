@@ -34,23 +34,6 @@
 
             <div class="flex-1"></div>
 
-            @if(($approverSwitcher['options'] ?? collect())->count() > 1)
-                <form method="POST" action="{{ $approverSwitcher['switchUrl'] }}" class="flex items-center gap-2">
-                    @csrf
-                    <label for="approver_id" class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">Bertindak sebagai</label>
-                    <select
-                        id="approver_id"
-                        name="approver_id"
-                        onchange="this.form.submit()"
-                        class="rounded-[10px] border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-2.5 py-1.5 text-[13px] font-semibold text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400"
-                    >
-                        @foreach($approverSwitcher['options'] as $opt)
-                            <option value="{{ $opt->id }}" @selected($opt->id === $approverSwitcher['currentApproverId'])>{{ $opt->name }}</option>
-                        @endforeach
-                    </select>
-                </form>
-            @endif
-
             <div
                 data-react="ApproverTopNav"
                 data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'inboxUrl' => route('dashboard.approver'), 'ticketsUrl' => route('approver.tickets'), 'markAllReadUrl' => route('approver.notifications.read-all'), 'profileUrl' => route('approver.profile')]) }}"
@@ -62,14 +45,6 @@
         </main>
     </div>
 
-    @php
-        $switcherRoles = collect(config('helpdesk.roles'))
-            ->map(fn ($r) => ['key' => $r['key'], 'initials' => $r['initials'], 'label' => $r['label'], 'url' => route($r['links'][0]['route'])])
-            ->values();
-    @endphp
-    <div
-        data-react="RoleSwitcher"
-        data-props="{{ json_encode(['roles' => $switcherRoles, 'current' => $role ?? 'approver', 'portalUrl' => route('portal.index')]) }}"
-    ></div>
+    @include('partials.role-switcher')
 </body>
 </html>

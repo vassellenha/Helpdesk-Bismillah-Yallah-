@@ -524,7 +524,7 @@ export default function NewTicketModal({
 
                     <div className="space-y-4 overflow-y-auto px-6 py-5">
                         {created ? (
-                            <div className="rounded-xl bg-emerald-50 dark:bg-ok-soft p-4 text-sm text-emerald-800">
+                            <div className="rounded-xl bg-emerald-50 dark:bg-ok-soft p-4 text-sm text-emerald-800 dark:text-ok-text">
                                 <p className="font-semibold">
                                     {created.is_draft ? `Draft ${created.ticket_no} saved.` : `Ticket ${created.ticket_no} submitted.`}
                                 </p>

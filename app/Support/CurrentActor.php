@@ -3,166 +3,115 @@
 namespace App\Support;
 
 use App\Exceptions\AccountInactive;
-use App\Models\SupportAgent;
 use App\Models\User;
 use App\Support\Sso\SsoAuthenticator;
+use Illuminate\Support\Facades\Auth;
 
 /**
- * This mockup has no login/auth flow — every admin screen acts as the same
- * seeded Administrator. Audit trail rows need a real actor_id FK, so this
- * resolves that single persona to its actual users row instead of the
- * display-only DummyData::currentAdmin() array.
+ * Siapa yang sedang bertindak di layar sebuah role.
  *
- * support()/supportBpo()/approver() are the exception: since a ticket can
- * be routed to any of several agents/approvers (not just one fixed
- * persona), who you're "acting as" is switchable at runtime via the
- * switcher in the Support/Support BPO/Approver layouts — see
- * SupportController::switchAgent(), SupportBpoController::switchAgent(),
- * ApprovalController::switchApprover(). The session holds the chosen id.
+ * SEBELUMNYA kelas ini memegang tujuh persona tetap yang dicari lewat NIP:
+ * tanpa login sama sekali, membuka /dashboard/support membuat siapa pun menjadi
+ * agent IT, dan membuka /admin membuat siapa pun menjadi Administrator. Itu
+ * memang disengaja selagi repo ini mockup tanpa autentikasi.
  *
- * When that selection is missing or invalid, approver() still falls back to a
- * fixed persona, but support()/supportBpo() no longer do: they fall back to the
- * first active agent of their team (see firstActiveAgentUser()). A fixed NIP is
- * only as durable as the seeded row it names, and one of them has already been
- * deleted once.
+ * SEKARANG jawabannya selalu orang yang benar-benar masuk. Persona tetapnya
+ * dicabut seluruhnya — bukan sekadar dilewati, karena selama masih ada jalur
+ * yang mengembalikan identitas tanpa login, pertanyaan "apakah user X boleh
+ * membuka layar Y" tidak punya jawaban yang bisa diuji: URL-nya selalu tembus.
+ * Itulah yang membuat pencabutan ini jadi syarat, bukan pilihan.
+ *
+ * Gerbang sebenarnya ada di middleware (`auth` + `role:`) yang menjaga setiap
+ * grup rute. Pemeriksaan di sini adalah lapis keduanya, dan sengaja
+ * dipertahankan: rute baru yang lupa dipasangi middleware akan tetap ditolak di
+ * sini, bukan diam-diam menjalankan aksi atas nama orang yang tidak berhak.
  */
 class CurrentActor
 {
-    /**
-     * A SINTA-authenticated person takes precedence over the fixed persona for
-     * whichever role screen they actually hold — so once SSO is live, actions
-     * are attributed to the real user instead of a seeded stand-in.
-     *
-     * Gated on holding the role, not merely being logged in: a Requester opening
-     * an Admin URL must not silently become the Admin actor. Without a session,
-     * or without the role, this returns null and the persona applies as before,
-     * which is what keeps the mockup usable with no login at all.
-     */
-    private static function ssoUserWithRole(string $role): ?User
-    {
-        $user = SsoAuthenticator::user();
-
-        if (! $user) {
-            return null;
-        }
-
-        return $user->roles->contains('name', $role) ? $user : null;
-    }
-
-    /*
-     | LIMA persona tetap di bawah ini dicari lewat NIP, BUKAN email.
-     |
-     | Dulu tujuh. support() dan supportBpo() keluar dari daftar ini pada
-     | 10 Agu 2026 — keduanya kini jatuh ke agent aktif pertama timnya, karena
-     | mereka punya daftar yang bisa dipilih dan NIP tetapnya terbukti rapuh.
-     | Lima sisanya belum punya penggantinya sampai SSO aktif.
-     |
-     | Sampai 31 Juli 2026 dicari lewat email, dan itu pecah begitu fitur
-     | admin-overridden-fields masuk: seorang admin mengubah nama & email
-     | "Karina Putri" jadi "Karina AESPA" lewat konsol User Management, dan
-     | approver() langsung firstOrFail() — approver() melempar
-     | ModelNotFoundException yang Laravel ubah jadi halaman 404 polos, bukan
-     | error yang jelas mengarah ke penyebabnya.
-     |
-     | NIP dipilih bukan asal beda kolom: itu KUNCI PENCOCOKAN EmployeeSync
-     | sendiri (`$matchBy = 'nip'` bawaan di config/integrations.php).
-     | Mengubah NIP seseorang berarti memutus pencocokan sinkronisasi
-     | karyawannya sendiri — jauh lebih jarang disentuh iseng dibanding nama
-     | tampilan atau email yang memang dirancang bisa admin ubah bebas.
-     |
-     | Ini bukan jaminan mutlak (NIP secara teknis tetap kolom yang bisa
-     | diedit lewat form yang sama), tapi memindahkan risikonya dari "kolom
-     | yang orang ubah untuk iseng/uji coba" ke "kolom yang mengubahnya
-     | berarti sengaja mematahkan identitas sinkronisasi karyawan itu
-     | sendiri".
-    */
-
     public static function admin(): User
     {
-        return self::mustBeActive(
-            self::ssoUserWithRole('Administrator')
-                ?? User::where('nip', '19870114001')->firstOrFail(),
-        );
+        return self::forRole('admin');
     }
 
     public static function requester(): User
     {
-        return self::mustBeActive(
-            self::ssoUserWithRole('Requester')
-                ?? User::where('nip', '19950418102')->firstOrFail(),
-        );
+        return self::forRole('requester');
     }
 
     public static function approver(): User
     {
-        return self::mustBeActive(
-            self::ssoUserWithRole('Approver')
-                ?? self::actingApproverUser()
-                ?? User::where('nip', '19900322014')->firstOrFail(),
-        );
+        return self::forRole('approver');
     }
 
     public static function support(): User
     {
-        return self::mustBeActive(
-            self::ssoUserWithRole('Support IT')
-                ?? self::actingAgentUser('it', 'acting_support_agent_id')
-                ?? self::firstActiveAgentUser('it'),
-        );
+        return self::forRole('support');
     }
 
-    /**
-     * Dedicated Team Lead persona — kept separate from approver() (Karina,
-     * who also holds the Team Lead role) so the supervisor's own
-     * notification feed never mixes with the approver inbox.
-     */
     public static function teamLead(): User
     {
-        return self::mustBeActive(
-            self::ssoUserWithRole('Team Lead')
-                ?? User::where('nip', '19891117033')->firstOrFail(),
-        );
+        return self::forRole('team-lead');
     }
 
     public static function supportBpo(): User
     {
-        return self::mustBeActive(
-            self::ssoUserWithRole('Support BPO')
-                ?? self::actingAgentUser('bpo', 'acting_support_bpo_agent_id')
-                ?? self::firstActiveAgentUser('bpo'),
-        );
+        return self::forRole('support-bpo');
     }
 
     public static function knowledgeAdmin(): User
     {
-        return self::mustBeActive(
-            self::ssoUserWithRole('Knowledge Administrator')
-                ?? User::where('nip', '19920504052')->firstOrFail(),
-        );
+        return self::forRole('eva');
+    }
+
+    /**
+     * User yang sedang masuk, atau null kalau tidak ada — tanpa memeriksa role.
+     *
+     * Dipakai layar yang tidak terikat satu role tertentu (portal, tombol
+     * switch role) dan oleh forRole() di bawah.
+     */
+    public static function user(): ?User
+    {
+        // Guard Laravel adalah sumber utamanya; SsoAuthenticator ikut mengisi
+        // guard itu sejak login SSO disambungkan. Kunci sesi SSO tetap dibaca
+        // sebagai cadangan supaya sesi yang sudah berjalan sebelum penyambungan
+        // itu tidak ikut terputus di tengah jalan.
+        return Auth::user() ?? SsoAuthenticator::user();
+    }
+
+    /**
+     * Aktor untuk sebuah kunci role, atau tolak.
+     *
+     * 401 untuk tamu dan 403 untuk orang yang masuk tapi tidak memegang
+     * role-nya — dua keadaan yang berbeda dan butuh jawaban berbeda: yang
+     * pertama diantar ke halaman masuk, yang kedua diberi tahu bahwa akunnya
+     * memang tidak berhak dan tidak ada gunanya masuk ulang.
+     */
+    private static function forRole(string $key): User
+    {
+        $user = self::user();
+
+        if (! $user) {
+            abort(401, 'Silakan masuk terlebih dahulu.');
+        }
+
+        $roleName = RoleRegistry::roleNameFor($key);
+
+        if (! $user->roles->contains('name', $roleName)) {
+            abort(403, "Akun Anda tidak punya role {$roleName}.");
+        }
+
+        return self::mustBeActive($user);
     }
 
     /**
      * Gerbang terakhir sebelum siapa pun menjadi aktor.
      *
-     * Ditaruh di sini, bukan di middleware, karena INI satu-satunya pintu yang
-     * dilewati setiap controller untuk tahu siapa yang sedang bertindak. Sebuah
-     * middleware harus didaftarkan per rute dan pasti ada yang terlewat; gerbang
-     * di sini berlaku otomatis untuk seluruh layar dan endpoint, termasuk yang
-     * ditulis besok.
-     *
-     * Menjaga TIGA jalur sekaligus, dan ketiganya bisa berubah setelah sesi
-     * dimulai:
-     *   - Persona tetap (mode mockup) — sebelumnya tidak diperiksa sama sekali.
-     *   - Approver/agent yang sedang "diperankan" lewat switcher — orangnya bisa
-     *     dinonaktifkan setelah terlanjur terpilih ke sesi.
-     *   - User SSO — sudah dijaga SsoAuthenticator, diperiksa ulang di sini
-     *     supaya aturannya berdiri di satu tempat, bukan bergantung pada urutan
-     *     pemanggilan.
-     *
-     * KONSEKUENSI yang disengaja: di mode persona, mematikan akses seorang
-     * persona mematikan SELURUH layar role itu — persona itulah satu-satunya
-     * identitas yang ada di sana. Itu memang yang diminta: user nonaktif tidak
-     * boleh berinteraksi dengan fitur apa pun.
+     * Dipertahankan apa adanya dari versi persona. Middleware `auth` menerima
+     * sesi yang sah, tapi tidak tahu apa-apa soal DUA saklar milik helpdesk ini
+     * (`status` dari data kepegawaian dan `helpdesk_access` dari Admin), dan
+     * keduanya bisa berubah SETELAH sesi dimulai. Diperiksa di sini, bukan di
+     * middleware, karena ini satu-satunya pintu yang dilewati setiap controller
+     * untuk tahu siapa yang bertindak — termasuk controller yang ditulis besok.
      */
     private static function mustBeActive(User $user): User
     {
@@ -176,76 +125,5 @@ class CurrentActor
             // tetap berhuruf besar.
             .lcfirst((string) $user->inactiveReason()).'.'
         );
-    }
-
-    /**
-     * Agent aktif pertama dari satu tim, dipakai saat belum ada yang dipilih.
-     *
-     * Menggantikan fallback NIP tetap yang dulu ada di sini. NIP itu menunjuk
-     * satu baris hasil seed, dan begitu barisnya hilang — Denny Firmansyah
-     * dihapus 10 Agu 2026 setelah switcher agent membuatnya tidak diperlukan —
-     * `firstOrFail()` melempar ModelNotFoundException yang Laravel ubah jadi 404
-     * polos. Bukan di layar mana pun yang sedang dipakai, melainkan di SESI YANG
-     * BARU: `acting_support_bpo_agent_id` hanya ditulis oleh switchAgent(), jadi
-     * browser yang belum pernah memilih siapa pun jatuh ke sini pada permintaan
-     * pertamanya — sebelum switcher-nya sempat muncul untuk dipakai.
-     *
-     * Diurutkan berdasarkan id supaya seseorang yang membuka dua tab tidak
-     * bertindak sebagai dua orang berbeda.
-     *
-     * Ini juga melepas dua dari tujuh persona hardcoded. Lima sisanya (admin,
-     * requester, approver, teamLead, knowledgeAdmin) masih menunggu SSO, karena
-     * mereka bukan agent dan tidak punya daftar yang bisa dipilih otomatis.
-     */
-    private static function firstActiveAgentUser(string $type): User
-    {
-        $user = User::query()
-            ->join('support_agents', 'support_agents.user_id', '=', 'users.id')
-            ->where('support_agents.type', $type)
-            ->where('support_agents.is_active', true)
-            ->active()
-            ->orderBy('support_agents.id')
-            ->select('users.*')
-            ->first();
-
-        if (! $user) {
-            throw new \RuntimeException(
-                "Tidak ada agent {$type} aktif yang tertaut ke akun pengguna. "
-                .'Tambahkan satu lewat Admin → Service Catalog, atau aktifkan kembali '
-                .'salah satu agent yang ada, sebelum layar Support bisa dibuka.'
-            );
-        }
-
-        return $user;
-    }
-
-    private static function actingAgentUser(string $type, string $sessionKey): ?User
-    {
-        $agentId = session($sessionKey);
-        if (! $agentId) {
-            return null;
-        }
-
-        $agent = SupportAgent::find($agentId);
-        if (! $agent || $agent->type !== $type || ! $agent->user_id) {
-            return null;
-        }
-
-        return User::find($agent->user_id);
-    }
-
-    private static function actingApproverUser(): ?User
-    {
-        $userId = session('acting_approver_id');
-        if (! $userId) {
-            return null;
-        }
-
-        $user = User::find($userId);
-        if (! $user || $user->status !== 'active' || ! $user->roles()->where('name', 'Approver')->exists()) {
-            return null;
-        }
-
-        return $user;
     }
 }

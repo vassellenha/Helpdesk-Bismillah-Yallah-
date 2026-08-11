@@ -4,144 +4,125 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Support;
 
-use App\Models\Role;
-use App\Models\SupportAgent;
+use App\Exceptions\AccountInactive;
 use App\Models\User;
 use App\Support\CurrentActor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 
 /**
- * Persona tetap dicari lewat NIP, bukan email — dan tes ini ada karena
- * asumsi sebelumnya (email) baru saja terbukti salah di database dev
- * sungguhan: seorang admin mengubah nama & email "Karina Putri" jadi
- * "Karina AESPA" lewat fitur admin-overridden-fields yang baru masuk, dan
- * approver() langsung 404 — bukan exception yang jelas, seluruh halaman
- * approver tampak seperti route yang hilang.
+ * Aktor sekarang adalah ORANG YANG MASUK, bukan persona tetap.
  *
- * NIP dipilih karena itu KUNCI PENCOCOKAN EmployeeSync sendiri
- * ($matchBy = 'nip' bawaan di config/integrations.php) — mengubahnya berarti
- * memutus pencocokan sinkronisasi karyawan itu sendiri, jauh lebih jarang
- * disentuh iseng dibanding nama tampilan atau email.
+ * Berkas ini dulu menguji hal yang berlawanan: bahwa tujuh persona tetap
+ * ditemukan lewat NIP dan bertahan meski admin mengubah nama & email mereka.
+ * Seluruh mekanisme itu dicabut saat login dipasang — selama ada jalur yang
+ * mengembalikan identitas tanpa login, hak akses tidak bisa diuji sama sekali,
+ * karena URL role mana pun selalu tembus.
+ *
+ * Yang diuji sekarang adalah gerbangnya: siapa yang diterima, siapa yang
+ * ditolak, dan dengan alasan apa.
  */
 final class CurrentActorTest extends TestCase
 {
-    use RefreshDatabase;
+    use ActsAsRole, RefreshDatabase;
 
-    private function persona(string $nip, string $roleName, array $overrides = []): User
+    public function test_mengembalikan_user_yang_masuk_untuk_role_yang_dipegangnya(): void
     {
-        $user = User::factory()->create(array_merge([
-            'nip' => $nip,
-            'name' => 'Nama Lama',
-            'email' => 'lama@adhi.co.id',
-        ], $overrides));
+        $user = $this->actingAsRole('approver');
 
-        $role = Role::firstOrCreate(['name' => $roleName]);
-        $user->roles()->attach($role->id);
-
-        return $user;
+        $this->assertSame($user->id, CurrentActor::approver()->id);
     }
 
-    /** Menautkan persona ke barisnya di `support_agents` — jalur yang dipakai support()/supportBpo() sekarang. */
-    private function agentFor(User $user, string $type): void
+    public function test_satu_user_bisa_menjadi_aktor_di_semua_role_yang_dipegangnya(): void
     {
-        SupportAgent::create([
-            'name' => $user->name,
-            'type' => $type,
-            'is_active' => true,
-            'user_id' => $user->id,
-        ]);
+        // Pola yang paling umum di data nyata: hampir semua orang memegang
+        // Requester di samping peran fungsionalnya.
+        $user = $this->actingAsRole('requester', 'team-lead');
+
+        $this->assertSame($user->id, CurrentActor::requester()->id);
+        $this->assertSame($user->id, CurrentActor::teamLead()->id);
     }
 
-    public function test_approver_tetap_ketemu_setelah_nama_dan_email_diubah_admin(): void
+    public function test_menolak_user_yang_tidak_memegang_role_itu(): void
     {
-        $persona = $this->persona('19900322014', 'Approver', [
-            'name' => 'Karina Putri',
-            'email' => 'karina.putri@adhi.co.id',
-        ]);
+        $this->actingAsRole('requester');
 
-        // Admin mengedit tampilan — persis kejadian yang memicu 404 di database
-        // dev sungguhan. NIP-nya TIDAK berubah.
-        $persona->update(['name' => 'Karina AESPA', 'email' => 'karina.mantep@adhi.co.id']);
-
-        $ditemukan = CurrentActor::approver();
-
-        $this->assertSame($persona->id, $ditemukan->id);
+        // Inti dari seluruh perubahan: seorang Requester yang membuka layar
+        // Admin TIDAK diam-diam menjadi Administrator.
+        $this->assertAbortsWith(403, fn () => CurrentActor::admin());
     }
 
-    public function test_admin_tetap_ketemu_setelah_email_diubah(): void
+    public function test_menolak_tamu_dengan_401_bukan_403(): void
     {
-        $persona = $this->persona('19870114001', 'Administrator', [
-            'email' => 'marcell.laforteza@adhi.co.id',
-        ]);
-
-        $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
-
-        $this->assertSame($persona->id, CurrentActor::admin()->id);
+        // Dua keadaan yang berbeda dan butuh jawaban berbeda: tamu diantar ke
+        // halaman masuk, sedangkan orang yang salah role tidak perlu disuruh
+        // masuk ulang — akunnya memang tidak berhak.
+        $this->assertAbortsWith(401, fn () => CurrentActor::admin());
     }
 
-    public function test_requester_tetap_ketemu_setelah_email_diubah(): void
+    public function test_akun_nonaktif_ditolak_meski_rolenya_benar(): void
     {
-        $persona = $this->persona('19950418102', 'Requester', [
-            'email' => 'andi.pratama@adhi.co.id',
-        ]);
+        $user = User::factory()->create(['helpdesk_access' => 'disabled']);
+        $this->actingAsUserWithRoles($user, 'admin');
 
-        $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
+        // Saklar helpdesk-nya dimatikan Admin SETELAH sesi berjalan; sesi yang
+        // sah tidak boleh menjadi alasan untuk melewatinya.
+        $this->expectException(AccountInactive::class);
 
-        $this->assertSame($persona->id, CurrentActor::requester()->id);
+        CurrentActor::admin();
+    }
+
+    public function test_akun_yang_nonaktif_di_data_kepegawaian_juga_ditolak(): void
+    {
+        $user = User::factory()->create(['status' => 'inactive']);
+        $this->actingAsUserWithRoles($user, 'admin');
+
+        $this->expectException(AccountInactive::class);
+
+        CurrentActor::admin();
+    }
+
+    public function test_user_mengembalikan_null_untuk_tamu(): void
+    {
+        $this->assertNull(CurrentActor::user());
+    }
+
+    public function test_user_tidak_peduli_role_sama_sekali(): void
+    {
+        // Dipakai portal dan tombol switch role, yang justru bertugas MENYUSUN
+        // daftar role — jadi tidak boleh menuntut salah satunya lebih dulu.
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->assertSame($user->id, CurrentActor::user()?->id);
+    }
+
+    public function test_menolak_akun_tanpa_role_apa_pun(): void
+    {
+        // Akun yang sudah ada di direktori pegawai tapi belum diberi role
+        // apa pun oleh Admin: masuk sah, tapi belum ada layar yang terbuka.
+        $this->actingAs(User::factory()->create());
+
+        $this->assertAbortsWith(403, fn () => CurrentActor::requester());
     }
 
     /**
-     * support() tidak lagi dicari lewat NIP: sejak 10 Agu 2026 ia jatuh ke agent
-     * aktif pertama di `support_agents`, bukan ke satu NIP hasil seed. Yang
-     * diuji tetap sama — mengubah email tidak boleh memutus pencarian — hanya
-     * saja tautannya kini `support_agents.user_id`, yang bahkan lebih kebal
-     * terhadap suntingan Admin daripada NIP.
+     * abort() menyimpan statusnya di getStatusCode(), BUKAN di exception code
+     * (yang selalu 0) — expectExceptionCode() lolos begitu saja tanpa pernah
+     * memeriksa status yang dimaksud.
      */
-    public function test_support_tetap_ketemu_setelah_email_diubah(): void
+    private function assertAbortsWith(int $status, callable $act): void
     {
-        $persona = $this->persona('10027761', 'Support IT', [
-            'email' => 'aditya.nugraha@adhi.co.id',
-        ]);
-        $this->agentFor($persona, 'it');
+        try {
+            $act();
+        } catch (HttpException $e) {
+            $this->assertSame($status, $e->getStatusCode());
 
-        $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
+            return;
+        }
 
-        $this->assertSame($persona->id, CurrentActor::support()->id);
-    }
-
-    public function test_team_lead_tetap_ketemu_setelah_email_diubah(): void
-    {
-        $persona = $this->persona('19891117033', 'Team Lead', [
-            'email' => 'raka.mahendra@adhi.co.id',
-        ]);
-
-        $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
-
-        $this->assertSame($persona->id, CurrentActor::teamLead()->id);
-    }
-
-    /** Sama seperti support() di atas — kini lewat `support_agents`, bukan NIP. */
-    public function test_support_bpo_tetap_ketemu_setelah_email_diubah(): void
-    {
-        $persona = $this->persona('19960130096', 'Support BPO', [
-            'email' => 'denny.firmansyah@adhi.co.id',
-        ]);
-        $this->agentFor($persona, 'bpo');
-
-        $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
-
-        $this->assertSame($persona->id, CurrentActor::supportBpo()->id);
-    }
-
-    public function test_knowledge_admin_tetap_ketemu_setelah_email_diubah(): void
-    {
-        $persona = $this->persona('19920504052', 'Knowledge Administrator', [
-            'email' => 'nina.amelia@adhi.co.id',
-        ]);
-
-        $persona->update(['email' => 'sudah-ganti@adhi.co.id']);
-
-        $this->assertSame($persona->id, CurrentActor::knowledgeAdmin()->id);
+        $this->fail("Seharusnya ditolak dengan {$status}, tapi tidak ada penolakan sama sekali.");
     }
 }

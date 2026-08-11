@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\SupportAgent;
-use App\Models\User;
 use App\Services\Knowledge\DocumentTextExtractor;
 use App\Services\Knowledge\FulltextKnowledgeSearch;
 use App\Services\Knowledge\KnowledgeSearch;
@@ -13,6 +11,7 @@ use App\Services\Knowledge\PopplerTesseractPdfReader;
 use App\Services\Knowledge\SubjectMatcher;
 use App\Services\Knowledge\SubjectSearch;
 use App\Support\CurrentActor;
+use App\Support\RoleRegistry;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -54,51 +53,41 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer('layouts.support', fn ($view) => $view->with(
-            'agentSwitcher',
-            $this->buildAgentSwitcher('it', CurrentActor::support(), 'support.switch-agent')
-        ));
+        /*
+        | Daftar role untuk tombol switch role, dibagikan ke SEMUA layout.
+        |
+        | MENGGANTIKAN tiga komposer "bertindak sebagai" yang dulu ada di sini
+        | (agentSwitcher untuk support & support-bpo, approverSwitcher untuk
+        | approver). Ketiganya membiarkan satu sesi menjadi ORANG LAIN, dan itu
+        | tidak bisa hidup berdampingan dengan pengujian hak akses: selama siapa
+        | pun bisa berpindah menjadi agent mana pun, "user ini tidak boleh
+        | melihat itu" tidak pernah benar-benar terbukti.
+        |
+        | Yang menggantikannya berpindah antar ROLE MILIK SENDIRI, bukan antar
+        | orang. Isinya dihitung dari user yang sedang masuk, jadi orang dengan
+        | satu role menerima daftar berisi satu — dan partial-nya tidak merender
+        | apa pun (lihat partials/role-switcher.blade.php).
+        |
+        | Satu komposer untuk delapan layout, bukan blok @php yang disalin di
+        | masing-masing seperti sebelumnya. Salinan kedelapan itu yang paling
+        | mungkin ketinggalan saat aturannya berubah.
+        */
+        View::composer([
+            'layouts.admin',
+            'layouts.app',
+            'layouts.approver',
+            'layouts.eva',
+            'layouts.requester',
+            'layouts.support',
+            'layouts.support-bpo',
+            'layouts.team-lead',
+        ], function ($view) {
+            $user = CurrentActor::user();
 
-        View::composer('layouts.support-bpo', fn ($view) => $view->with(
-            'agentSwitcher',
-            $this->buildAgentSwitcher('bpo', CurrentActor::supportBpo(), 'support-bpo.switch-agent')
-        ));
-
-        View::composer('layouts.approver', fn ($view) => $view->with(
-            'approverSwitcher',
-            $this->buildApproverSwitcher(CurrentActor::approver())
-        ));
-    }
-
-    /**
-     * Every active user holding the Approver role is a valid person to "act
-     * as" — see CurrentActor::approver()'s doc comment for why this
-     * switching exists at all.
-     */
-    private function buildApproverSwitcher(User $currentUser): array
-    {
-        $options = \App\Support\ActingSwitcher::approverOptions();
-
-        return [
-            'currentApproverId' => $options->first(fn (User $u) => $u->id === $currentUser->id)?->id,
-            'options' => $options,
-            'switchUrl' => route('approver.switch-approver'),
-        ];
-    }
-
-    /**
-     * Every active agent of the given type who has a linked user account is
-     * a valid person to "act as" — see CurrentActor's support()/supportBpo()
-     * doc comment for why this switching exists at all.
-     */
-    private function buildAgentSwitcher(string $type, \App\Models\User $currentUser, string $routeName): array
-    {
-        $options = \App\Support\ActingSwitcher::agentOptions($type);
-
-        return [
-            'currentAgentId' => $options->first(fn (SupportAgent $a) => $a->user_id === $currentUser->id)?->id,
-            'options' => $options,
-            'switchUrl' => route($routeName),
-        ];
+            $view->with(
+                'roleSwitcherEntries',
+                $user ? RoleRegistry::switcherEntriesFor($user) : collect(),
+            );
+        });
     }
 }

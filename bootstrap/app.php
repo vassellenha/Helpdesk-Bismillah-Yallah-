@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Middleware\EnsureEvaConsoleAccess;
+use App\Http\Middleware\EnsureRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,8 +14,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'eva.access' => EnsureEvaConsoleAccess::class,
+            'role' => EnsureRole::class,
         ]);
+
+        // Ke mana tamu diantar saat menyentuh rute ber-`auth`. Defaultnya
+        // `route('login')` — yang memang selalu terdaftar (lihat
+        // Auth\LoginController) — tapi permintaan JSON tidak boleh dialihkan
+        // sama sekali: React island yang memanggil endpoint di balik sesi yang
+        // kedaluwarsa harus menerima 401 yang bisa dibaca kodenya, bukan HTML
+        // halaman login berstatus 200 yang gagal di-parse res.json().
+        $middleware->redirectGuestsTo(
+            fn (Request $request) => $request->expectsJson() ? null : route('login'),
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Endpoint API mengembalikan JSON juga saat GAGAL, bukan hanya sukses.

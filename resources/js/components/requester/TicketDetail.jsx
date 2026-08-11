@@ -288,8 +288,8 @@ function ResolutionNoteBanner({ resolutionNote }) {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
             </span>
             <div className="min-w-0">
-                <p className="text-[13px] font-bold text-emerald-800">Diselesaikan oleh {resolutionNote.agentName}</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-emerald-900">{resolutionNote.note}</p>
+                <p className="text-[13px] font-bold text-emerald-800 dark:text-ok-text">Diselesaikan oleh {resolutionNote.agentName}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-emerald-900 dark:text-ok-text">{resolutionNote.note}</p>
                 <p className="mt-1.5 text-[11px] text-emerald-600 dark:text-ok-text">{resolutionNote.at}</p>
             </div>
         </div>

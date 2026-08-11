@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -44,7 +45,7 @@ use ZipArchive;
  */
 final class AdversarialAuditTest extends TestCase
 {
-    use RefreshDatabase;
+    use ActsAsRole, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -54,16 +55,24 @@ final class AdversarialAuditTest extends TestCase
         SubjectMatcher::forget();
         SynonymExpander::forget();
 
-        // CurrentActor mencari dua persona ini lewat email. Tanpa barisnya
-        // setiap endpoint tulis EVA meledak 404 sebelum sampai ke logikanya —
-        // itu sendiri satu temuan, diuji di bawah.
-        $admin = User::factory()->create(['name' => 'Marcell', 'email' => 'marcell.laforteza@adhi.co.id', 'nip' => '19870114001']);
+        $admin = User::factory()->create([
+            'name' => 'Marcell',
+            'email' => 'marcell.laforteza@adhi.co.id',
+            'nip' => '19870114001',
+            'status' => 'active',
+            'helpdesk_access' => 'enabled',
+        ]);
         User::factory()->create(['name' => 'Andi', 'email' => 'andi.pratama@adhi.co.id', 'nip' => '19950418102']);
 
-        // Konsol EVA kini dijaga `eva.access`. Mayoritas tes di berkas ini
+        // Konsol EVA dijaga `auth` + `role:eva`. Mayoritas tes di berkas ini
         // menguji jalur ADMIN TERAUTENTIKASI, jadi identitasnya dipasang di
         // sini; dua tes penjaga di §3 melepasnya lagi lewat sebagaiTamu().
-        $this->actingAs($admin);
+        //
+        // TIGA role, bukan satu: gerbang rutenya menuntut 'eva', tapi controller
+        // di dalamnya memanggil CurrentActor::admin() (atribusi audit trail) dan
+        // CurrentActor::requester() (draf tiket), dan sejak persona tetap
+        // dicabut kedua panggilan itu menolak siapa pun yang tidak memegangnya.
+        $this->actingAsUserWithRoles($admin, 'eva', 'admin', 'requester');
 
         $this->seedCatalog();
         $this->stubPencarianA();
@@ -424,11 +433,16 @@ final class AdversarialAuditTest extends TestCase
     */
 
     /**
-     * [AMAN] Seluruh layar konsol menolak tamu dengan 401 — bukan 500.
+     * [AMAN] Seluruh layar konsol menolak tamu — kini dengan mengantar mereka
+     * ke halaman masuk, bukan 401 buntu.
      *
-     * Bedanya penting: `middleware('auth')` bawaan Laravel akan me-redirect ke
-     * `route('login')` yang tidak ada di repo ini, dan tamu justru menerima
-     * RouteNotFoundException. `eva.access` menolak langsung.
+     * Dulu 401 memang jawaban yang benar: belum ada login sama sekali, jadi
+     * `route('login')` tidak terdaftar dan redirect apa pun akan berakhir
+     * RouteNotFoundException alias 500. Sejak login dipasang, rute itu ada di
+     * SEMUA lingkungan (di produksi ia mengalihkan ke SSO), jadi tamu bisa
+     * diantar ke tempat yang benar-benar berguna.
+     *
+     * Yang diuji tetap sama: tak satu pun layar ini terbuka tanpa identitas.
      */
     public function test_aman_semua_layar_eva_menolak_tamu(): void
     {
@@ -441,7 +455,7 @@ final class AdversarialAuditTest extends TestCase
             '/eva/recommendation', '/eva/training',
         ] as $url) {
             $this->assertGuest();
-            $this->get($url)->assertUnauthorized();
+            $this->get($url)->assertRedirect(route('login'));
         }
     }
 

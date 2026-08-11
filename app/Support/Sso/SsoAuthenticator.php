@@ -4,6 +4,7 @@ namespace App\Support\Sso;
 
 use App\Models\AuditTrail;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -145,6 +146,14 @@ class SsoAuthenticator
      */
     public static function login(User $user): void
     {
+        // Guard Laravel ikut diisi, bukan hanya kunci sesi milik SSO sendiri.
+        // Sejak seluruh rute dijaga middleware `auth`, sesi yang hanya tercatat
+        // di kunci SSO tidak dianggap masuk sama sekali: orang yang baru saja
+        // berhasil login lewat SINTA akan langsung dilempar balik ke halaman
+        // masuk. Satu-satunya tempat kedua identitas itu perlu disatukan adalah
+        // di sini, saat login benar-benar terjadi.
+        Auth::login($user);
+
         session([
             self::SESSION_KEY => $user->id,
             self::SESSION_NAME => $user->name,
@@ -163,6 +172,7 @@ class SsoAuthenticator
 
     public static function logout(): void
     {
+        Auth::logout();
         session()->forget([self::SESSION_KEY, self::SESSION_NAME]);
     }
 

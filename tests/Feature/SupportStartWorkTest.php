@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 
 /**
@@ -19,7 +20,7 @@ use Tests\TestCase;
  */
 class SupportStartWorkTest extends TestCase
 {
-    use RefreshDatabase;
+    use ActsAsRole, RefreshDatabase;
 
     public function test_support_it_memulai_tiket_open_menjadi_in_progress(): void
     {
@@ -73,6 +74,11 @@ class SupportStartWorkTest extends TestCase
     {
         $user = User::factory()->create(['name' => $name, 'nip' => $nip, 'status' => 'active', 'helpdesk_access' => 'enabled']);
         $agent = SupportAgent::create(['name' => $name, 'type' => $type, 'is_active' => true, 'user_id' => $user->id]);
+
+        // Agent-nya sendiri yang masuk. Dulu tes ini tidak login sama sekali:
+        // CurrentActor jatuh ke agent aktif pertama timnya, yang kebetulan juga
+        // agent inilah. Sekarang aktor = orang yang masuk, jadi harus disebut.
+        $this->actingAsUserWithRoles($user, $type === 'bpo' ? 'support-bpo' : 'support');
 
         $now = Carbon::now();
         $ticket = Ticket::create([

@@ -349,24 +349,6 @@ class SupportController extends Controller
         return response()->json(['read' => true]);
     }
 
-    /**
-     * A catalog Subject can route to any of several IT agents, not just one
-     * fixed persona, so which agent this "mockup login" acts as is
-     * switchable here — the choice is remembered in session and read back
-     * by CurrentActor::support() on every request.
-     */
-    public function switchAgent(Request $request): \Illuminate\Http\RedirectResponse
-    {
-        $data = $request->validate(['agent_id' => 'required|integer|exists:support_agents,id']);
-
-        $agent = SupportAgent::findOrFail($data['agent_id']);
-        abort_unless($agent->type === 'it' && $agent->user_id, 422, 'Agent IT tidak valid untuk beralih.');
-
-        session(['acting_support_agent_id' => $agent->id]);
-
-        return redirect()->back();
-    }
-
     private function agentFor(User $supportUser): SupportAgent
     {
         return SupportAgent::where('user_id', $supportUser->id)->firstOrFail();

@@ -38,14 +38,6 @@
         @yield('content')
     </main>
 
-    @php
-        $switcherRoles = collect(config('helpdesk.roles'))
-            ->map(fn ($r) => ['key' => $r['key'], 'initials' => $r['initials'], 'label' => $r['label'], 'url' => route($r['links'][0]['route'])])
-            ->values();
-    @endphp
-    <div
-        data-react="RoleSwitcher"
-        data-props="{{ json_encode(['roles' => $switcherRoles, 'current' => $role ?? null, 'portalUrl' => route('portal.index')]) }}"
-    ></div>
+    @include('partials.role-switcher')
 </body>
 </html>

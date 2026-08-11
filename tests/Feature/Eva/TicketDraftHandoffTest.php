@@ -12,6 +12,7 @@ use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SubjectMatch;
 use App\Services\Knowledge\SubjectSearch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 
 /**
@@ -30,16 +31,15 @@ use Tests\TestCase;
  */
 final class TicketDraftHandoffTest extends TestCase
 {
-    use RefreshDatabase;
+    use ActsAsRole, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // CurrentActor mencari persona ini lewat NIP — tanpa barisnya, setiap
-        // endpoint widget maupun dashboard gagal keras dengan 404 sebelum
-        // sampai ke logika yang sedang diuji.
-        User::factory()->create(['name' => 'Andi Pratama', 'email' => 'andi.pratama@adhi.co.id', 'nip' => '19950418102']);
+        // Widget maupun dashboard requester sama-sama menuntut sesi ber-role
+        // Requester: yang pertama lewat `auth`, yang kedua lewat `role:requester`.
+        $this->actingAsRole('requester');
 
         // Pencarian dan pencocokan subject dipalsukan lewat INTERFACE-nya,
         // bukan lewat kelas konkretnya: SubjectMatcher final dan tidak bisa

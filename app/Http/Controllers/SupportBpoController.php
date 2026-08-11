@@ -408,24 +408,6 @@ class SupportBpoController extends Controller
         return response()->json(['read' => true]);
     }
 
-    /**
-     * A catalog Subject can route to any of several BPO agents, not just
-     * one fixed persona, so which agent this "mockup login" acts as is
-     * switchable here — the choice is remembered in session and read back
-     * by CurrentActor::supportBpo() on every request.
-     */
-    public function switchAgent(Request $request): \Illuminate\Http\RedirectResponse
-    {
-        $data = $request->validate(['agent_id' => 'required|integer|exists:support_agents,id']);
-
-        $agent = SupportAgent::findOrFail($data['agent_id']);
-        abort_unless($agent->type === 'bpo' && $agent->user_id, 422, 'Agent BPO tidak valid untuk beralih.');
-
-        session(['acting_support_bpo_agent_id' => $agent->id]);
-
-        return redirect()->back();
-    }
-
     private function agentFor(User $bpoUser): SupportAgent
     {
         return SupportAgent::where('user_id', $bpoUser->id)->firstOrFail();
