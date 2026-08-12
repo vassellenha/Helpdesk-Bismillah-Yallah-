@@ -2,33 +2,11 @@
 <html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
+    @include('partials.theme-boot')
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @include('partials.favicon')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') · {{ config('helpdesk.product') }}</title>
-
-    {{--
-      Tema dipasang SEBELUM stylesheet apa pun terunduh, dan sengaja bukan lewat
-      React: kelas `.dark` harus sudah menempel pada gambar pertama yang dilukis
-      browser. Kalau menunggu bundel JS selesai, pengguna bermode gelap melihat
-      kilatan halaman putih di setiap perpindahan halaman.
-
-      Skrip inline, bukan berkas terpisah, karena permintaan berkas tambahan
-      justru mengembalikan jeda yang mau dihindari.
-    --}}
-    <script>
-        (function () {
-            try {
-                var pilihan = localStorage.getItem('helpdesk-theme');
-                // Belum pernah memilih → ikuti OS. Sudah memilih → pilihannya menang.
-                var gelap = pilihan ? pilihan === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-                document.documentElement.classList.toggle('dark', gelap);
-            } catch (e) {
-                // localStorage bisa dilarang (mode privat sebagian browser).
-                // Diamkan: halaman tetap tampil, hanya jatuh ke mode terang.
-            }
-        })();
-    </script>
     @viteReactRefresh
     @include('partials.translations')
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])

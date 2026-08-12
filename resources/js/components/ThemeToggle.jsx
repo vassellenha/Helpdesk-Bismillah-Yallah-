@@ -5,16 +5,31 @@ import { useEffect, useState } from 'react';
  *
  * Tema disimpan sebagai kelas `.dark` di <html> — bukan di state React ini.
  * Alasannya: yang mewarnai halaman adalah CSS, dan CSS harus tahu temanya
- * sebelum React sempat dimuat. Skrip kecil di <head> (lihat layouts/app.blade.php)
- * yang memasang kelas itu lebih dulu; komponen ini hanya membalik dan mencatat
- * pilihannya. Kalau urutannya dibalik, halaman akan berkedip putih dulu setiap
- * kali dimuat.
+ * sebelum React sempat dimuat. Skrip di partials/theme-boot.blade.php (di-include
+ * SEMUA layout) yang memasang kelas itu lebih dulu; komponen ini hanya membalik
+ * dan mencatat pilihannya. Kalau urutannya dibalik, halaman akan berkedip putih
+ * dulu setiap kali dimuat.
+ *
+ * Pilihannya dicatat di cookie, bukan localStorage — lihat alasannya di partial
+ * tersebut. Yang penting di sini: nama dan format cookie-nya harus tetap sama
+ * dengan yang dibaca partial itu, karena keduanya adalah dua sisi dari satu
+ * kesepakatan.
  *
  * Tiga keadaan, bukan dua: gelap, terang, dan BELUM MEMILIH. Yang ketiga itu
  * yang mengikuti setelan OS. Begitu tombol ini ditekan sekali, pilihan pengguna
  * menang selamanya di peramban itu — termasuk saat OS-nya berubah.
  */
-const STORAGE_KEY = 'helpdesk-theme';
+const COOKIE = 'helpdesk_theme';
+
+// Setahun. Tema bukan sesuatu yang pantas hilang karena seseorang menutup
+// peramannya — sekali dipilih, ia berlaku sampai diubah lagi.
+const MAX_AGE = 60 * 60 * 24 * 365;
+
+function bacaCookie() {
+    const cocok = document.cookie.match(/(?:^|;\s*)helpdesk_theme=(dark|light)/);
+
+    return cocok ? cocok[1] : null;
+}
 
 export default function ThemeToggle() {
     const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
@@ -26,7 +41,7 @@ export default function ThemeToggle() {
         const media = window.matchMedia('(prefers-color-scheme: dark)');
 
         function follow(e) {
-            if (localStorage.getItem(STORAGE_KEY)) return;
+            if (bacaCookie()) return;
             document.documentElement.classList.toggle('dark', e.matches);
             setDark(e.matches);
         }
@@ -39,7 +54,11 @@ export default function ThemeToggle() {
     function toggle() {
         const next = ! dark;
         document.documentElement.classList.toggle('dark', next);
-        localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light');
+        // `path=/` menentukan: tanpa itu cookie hanya berlaku di direktori
+        // halaman tempat tombol ditekan, sehingga tema kembali terang begitu
+        // pindah dari /requester ke /support. SameSite=Lax supaya tetap terbawa
+        // saat berpindah halaman biasa.
+        document.cookie = `${COOKIE}=${next ? 'dark' : 'light'}; path=/; max-age=${MAX_AGE}; SameSite=Lax`;
         setDark(next);
     }
 
@@ -64,14 +83,19 @@ export default function ThemeToggle() {
               di ukuran ini keduanya jadi bercak abu-abu.
             */}
 
-            {/* SIANG — Mjolnir. Kepala balok + gagang pendek + pangkal. */}
+            {/* SIANG — matahari. Cakram pejal + delapan sinar. */}
             <svg
-                width="18" height="18" viewBox="0 0 24 24" fill="currentColor"
+                width="18" height="18" viewBox="0 0 24 24"
                 className={`absolute transition-all duration-200 ${dark ? 'scale-0 -rotate-90 opacity-0' : 'scale-100 rotate-0 opacity-100'}`}
             >
-                <rect x="2.5" y="4" width="19" height="8.5" rx="1.6" />
-                <rect x="10.6" y="12.5" width="2.8" height="6.2" />
-                <rect x="8.6" y="18.4" width="6.8" height="2.6" rx="1.1" />
+                <circle cx="12" cy="12" r="5" fill="currentColor" />
+                {/* Sinarnya bergaris, bukan pejal: pada 18px, sinar pejal
+                    setebal apa pun akan menyatu dengan cakramnya dan hasilnya
+                    cuma lingkaran bergerigi. */}
+                <path
+                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                    d="M12 1.6v2.6 M12 19.8v2.6 M22.4 12h-2.6 M4.2 12H1.6 M19.35 4.65l-1.85 1.85 M6.5 17.5l-1.85 1.85 M19.35 19.35l-1.85-1.85 M6.5 6.5 4.65 4.65"
+                />
             </svg>
 
             {/* MALAM — sabit Moon Knight. Simetris, kedua tanduk meruncing. */}
