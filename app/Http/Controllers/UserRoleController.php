@@ -11,6 +11,7 @@ use App\Support\DummyData;
 use App\Support\EmployeeSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -86,7 +87,7 @@ class UserRoleController extends Controller
      * Query bersama untuk layar penuh dan endpoint JSON, supaya keduanya tidak
      * bisa menyaring dengan aturan berbeda.
      *
-     * @return \Illuminate\Pagination\LengthAwarePaginator<int,User>
+     * @return LengthAwarePaginator<int,User>
      */
     private function paginateUsers(Request $request)
     {
