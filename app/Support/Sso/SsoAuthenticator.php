@@ -2,7 +2,6 @@
 
 namespace App\Support\Sso;
 
-use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -139,11 +138,7 @@ class SsoAuthenticator
         return [$user, null];
     }
 
-    /**
-     * The single moment any role — requester, approver, support IT, support
-     * BPO, team lead, admin — actually opens the helpdesk, so it's the one
-     * place a "login" audit entry belongs regardless of who logged in.
-     */
+    /** Menyatukan identitas SSO dengan guard Laravel saat login SINTA berhasil. */
     public static function login(User $user): void
     {
         // Guard Laravel ikut diisi, bukan hanya kunci sesi milik SSO sendiri.
@@ -159,15 +154,11 @@ class SsoAuthenticator
             self::SESSION_NAME => $user->name,
         ]);
 
-        AuditTrail::record($user, [
-            'module' => 'auth',
-            'action' => 'login',
-            'target_type' => 'user',
-            'target_id' => $user->id,
-            'target_name' => $user->name,
-            'new_value' => ['roles' => $user->roles->pluck('name')->values()->all()],
-            'description' => "{$user->name} login ke helpdesk.",
-        ]);
+        // Baris audit "login" TIDAK ditulis di sini lagi. Auth::login() di atas
+        // memicu event Login, dan App\Listeners\RecordLoginAudit yang
+        // mencatatnya — satu tempat untuk semua pintu masuk, termasuk login
+        // pengembangan yang tidak lewat kelas ini sama sekali. Menuliskannya di
+        // sini juga akan menghasilkan dua baris untuk satu login.
     }
 
     public static function logout(): void

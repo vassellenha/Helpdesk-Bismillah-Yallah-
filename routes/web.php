@@ -169,6 +169,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('/users', [UserRoleController::class, 'index'])->name('users');
     Route::get('/sla', [SlaPolicyController::class, 'index'])->name('sla');
     Route::get('/audit-trail', [AuditTrailController::class, 'index'])->name('audit-trail');
+    Route::get('/audit-trail/list', [AuditTrailController::class, 'list'])->name('audit-trail.list');
 
     Route::prefix('integrations')->name('integrations.')->group(function () {
         Route::post('/test', [IntegrationController::class, 'test'])->name('test');

@@ -14,12 +14,12 @@
     <p class="mt-2 text-sm leading-relaxed text-gray-500 dark:text-ink-3">
         {{ $isAdminPortal
             ? 'Pintu khusus konsol admin. Hanya akun yang memegang role Administrator yang diterima di sini.'
-            : 'Masuk dengan email atau nomor telepon Anda. Layar yang terbuka mengikuti role yang Anda pegang.' }}
+            : 'Masuk dengan email kantor Anda. Layar yang terbuka mengikuti role yang Anda pegang.' }}
     </p>
 
-    {{-- Semua penolakan dikirim lewat bag `identifier` — akun tidak ketemu,
-         akun nonaktif, dan role yang tidak memenuhi. Ketiganya soal "akun ini",
-         jadi ditampilkan sebagai satu blok, bukan tersebar per kolom. --}}
+    {{-- Semua penolakan dikirim lewat bag `email` — email tidak ketemu, akun
+         nonaktif, dan role yang tidak memenuhi. Ketiganya soal "akun ini", jadi
+         ditampilkan sebagai satu blok, bukan tersebar per kolom. --}}
     @if ($errors->any())
         <div class="mt-6 rounded-xl bg-red-50 dark:bg-bad-soft p-4 text-sm font-medium text-red-700 dark:text-bad-text">
             {{ $errors->first() }}
@@ -30,23 +30,20 @@
         @csrf
 
         <div>
-            <label for="identifier" class="block text-[13px] font-semibold text-gray-700 dark:text-ink-2">
-                Email atau Nomor Telepon
+            <label for="email" class="block text-[13px] font-semibold text-gray-700 dark:text-ink-2">
+                Email
             </label>
             <input
-                id="identifier"
-                type="text"
-                name="identifier"
-                value="{{ old('identifier') }}"
+                id="email"
+                type="email"
+                name="email"
+                value="{{ old('email') }}"
                 required
                 autofocus
                 autocomplete="username"
-                placeholder="nama@adhi.co.id atau 08123456789"
+                placeholder="nama@adhi.co.id"
                 class="mt-1.5 w-full rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-3.5 py-2.5 text-sm text-gray-900 dark:text-ink-1 outline-none focus:border-blue-400"
             >
-            <p class="mt-1.5 text-[11px] text-gray-400 dark:text-ink-3">
-                Salah satu saja. Nomor boleh ditulis 08…, +628…, atau 628….
-            </p>
         </div>
 
         <label class="flex items-center gap-2 text-[13px] text-gray-600 dark:text-ink-2">

@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Login pengembangan — email ATAU nomor telepon, TANPA password.
+ * Login pengembangan — cukup email, TANPA password.
  *
  * ALASAN ADANYA: menguji hak akses. Sebelum ini repo tidak punya login sama
  * sekali — setiap layar role jatuh ke persona tetap (lihat CurrentActor), jadi
@@ -113,27 +113,31 @@ class DevLoginController extends Controller
         abort_unless(self::enabled(), 404);
 
         $data = $request->validate([
-            'identifier' => ['required', 'string', 'max:255'],
-        ], [], ['identifier' => 'email atau nomor telepon']);
+            // `email` sebagai aturan, bukan sekadar `string`: salah ketik yang
+            // jelas-jelas bukan alamat ditolak di muka dengan pesan yang tepat,
+            // alih-alih diteruskan ke basis data lalu kembali sebagai "akun
+            // tidak ditemukan" yang menyesatkan.
+            'email' => ['required', 'string', 'email', 'max:255'],
+        ]);
 
-        $user = $this->findBy(trim($data['identifier']));
+        $user = $this->findByEmail(trim($data['email']));
 
         if (! $user) {
             throw ValidationException::withMessages([
-                'identifier' => 'Tidak ada akun dengan email atau nomor telepon itu.',
+                'email' => 'Tidak ada akun dengan email itu.',
             ]);
         }
 
         if (! $user->isActive()) {
             throw ValidationException::withMessages([
-                'identifier' => "Akun {$user->name} tidak dapat mengakses Helpdesk: "
+                'email' => "Akun {$user->name} tidak dapat mengakses Helpdesk: "
                     .lcfirst((string) $user->inactiveReason()).'.',
             ]);
         }
 
         if ($isAdminPortal && ! $user->roles->contains('name', RoleRegistry::roleNameFor(self::ADMIN_KEY))) {
             throw ValidationException::withMessages([
-                'identifier' => "Akun {$user->name} tidak punya role Administrator.",
+                'email' => "Akun {$user->name} tidak punya role Administrator.",
             ]);
         }
 
@@ -152,85 +156,39 @@ class DevLoginController extends Controller
     }
 
     /**
-     * Cari akun lewat email ATAU nomor telepon — salah satu saja, satu kolom
-     * isian yang sama.
+     * Cari akun lewat email.
      *
-     * Email didahulukan karena semua 29 akun punya email sedangkan hanya
-     * sebagian punya telepon, jadi jalur itu yang paling sering kena.
+     * Sempat menerima nomor telepon juga sebagai alternatif; itu dicabut atas
+     * permintaan — satu jalur masuk lebih sedikit untuk salah paham, dan kolom
+     * `phone` memang tidak dijamin unik oleh skema mana pun.
+     *
+     * LOWER() di kedua sisi supaya perilakunya sama di MySQL (collation-nya
+     * umumnya sudah case-insensitive) dan SQLite (yang `=`-nya tidak) — tanpa
+     * ini, "Andi@adhi.co.id" gagal di tes tapi berhasil di server, atau
+     * sebaliknya.
      *
      * Lebih dari satu akun cocok = DITOLAK, bukan diambil yang pertama.
-     * Nomor telepon tidak dijamin unik oleh skema mana pun, dan sinkronisasi
-     * pegawai bisa saja memasukkan dua orang dengan nomor kantor yang sama.
-     * Memilih salah satunya diam-diam berarti kadang-kadang masuk sebagai orang
-     * yang salah — persis kelas kekeliruan yang paling sulit disadari saat
-     * sedang menguji hak akses.
-     */
-    private function findBy(string $identifier): ?User
-    {
-        // Email: dibandingkan case-insensitive lewat LOWER() supaya perilakunya
-        // sama di MySQL (collation umumnya sudah case-insensitive) dan SQLite
-        // (yang `=`-nya tidak).
-        $byEmail = User::whereRaw('LOWER(email) = ?', [Str::lower($identifier)])->get();
-
-        if ($byEmail->count() > 1) {
-            $this->rejectAmbiguous($byEmail->count());
-        }
-
-        if ($byEmail->count() === 1) {
-            return $byEmail->first();
-        }
-
-        $variants = self::phoneVariants($identifier);
-
-        if ($variants === []) {
-            return null;
-        }
-
-        $byPhone = User::whereIn('phone', $variants)->get();
-
-        if ($byPhone->count() > 1) {
-            $this->rejectAmbiguous($byPhone->count());
-        }
-
-        return $byPhone->first();
-    }
-
-    private function rejectAmbiguous(int $jumlah): never
-    {
-        throw ValidationException::withMessages([
-            'identifier' => "Ada {$jumlah} akun dengan data itu, jadi tidak jelas yang mana yang dimaksud. "
-                .'Pakai email yang spesifik, atau minta Administrator merapikan datanya.',
-        ]);
-    }
-
-    /**
-     * Bentuk-bentuk penulisan nomor yang sama.
      *
-     * Data tersimpan dalam format `+6281…`, tapi yang mengetik hampir selalu
-     * menulis `081…`. Menuntut satu bentuk persis akan membuat login by telepon
-     * tampak rusak padahal nomornya benar, jadi keempat bentuk yang lazim
-     * dicoba sekaligus.
-     *
-     * @return list<string>
+     * Ada indeks unik `users_email_unique`, tapi itu TIDAK menutup celahnya:
+     * keunikan diperiksa apa adanya, sedangkan pencarian di sini lewat LOWER().
+     * Di basis data yang perbandingannya peka huruf besar-kecil, "A@adhi.co.id"
+     * dan "a@adhi.co.id" adalah dua baris yang sah menurut indeks — dan
+     * keduanya cocok dengan satu pencarian yang sama. Mengambil yang pertama
+     * diam-diam berarti kadang masuk sebagai orang yang salah, persis kekeliruan
+     * yang paling sulit disadari saat sedang menguji hak akses.
      */
-    private static function phoneVariants(string $input): array
+    private function findByEmail(string $email): ?User
     {
-        $digits = preg_replace('/\D+/', '', $input) ?? '';
+        $cocok = User::whereRaw('LOWER(email) = ?', [Str::lower($email)])->get();
 
-        // Terlalu pendek untuk sebuah nomor: hampir pasti ini email yang tidak
-        // ketemu, dan mencocokkannya ke kolom telepon hanya mengundang
-        // kecocokan kebetulan.
-        if (strlen($digits) < 7) {
-            return [];
+        if ($cocok->count() > 1) {
+            throw ValidationException::withMessages([
+                'email' => "Ada {$cocok->count()} akun dengan email itu, jadi tidak jelas yang mana yang dimaksud. "
+                    .'Minta Administrator merapikan datanya terlebih dahulu.',
+            ]);
         }
 
-        $lokal = match (true) {
-            str_starts_with($digits, '62') => substr($digits, 2),
-            str_starts_with($digits, '0') => substr($digits, 1),
-            default => $digits,
-        };
-
-        return array_values(array_unique(['+62'.$lokal, '62'.$lokal, '0'.$lokal, $lokal]));
+        return $cocok->first();
     }
 
     /**

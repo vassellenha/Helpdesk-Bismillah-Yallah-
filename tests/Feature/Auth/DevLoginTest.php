@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Login pengembangan — email ATAU nomor telepon, tanpa password.
+ * Login pengembangan — cukup email, tanpa password.
  *
  * Dua pintu: /login untuk semua pegawai, /admin/login khusus pemegang role
  * Administrator. Yang berbeda hanya gerbang role setelah orangnya dikenali, dan
@@ -38,11 +38,11 @@ final class DevLoginTest extends TestCase
         return $user;
     }
 
-    private function masuk(string $identifier, bool $admin = false)
+    private function masuk(string $email, bool $admin = false)
     {
         return $this->post(
             $admin ? route('admin.login.attempt') : route('login.attempt'),
-            ['identifier' => $identifier],
+            ['email' => $email],
         );
     }
 
@@ -53,47 +53,6 @@ final class DevLoginTest extends TestCase
         $this->masuk('andi@adhi.co.id')->assertRedirect(route('dashboard.requester'));
 
         $this->assertAuthenticatedAs($user);
-    }
-
-    public function test_masuk_dengan_nomor_telepon(): void
-    {
-        $user = $this->user(
-            ['email' => 'andi@adhi.co.id', 'phone' => '+6281200011122'],
-            ['requester'],
-        );
-
-        $this->masuk('+6281200011122')->assertRedirect(route('dashboard.requester'));
-
-        $this->assertAuthenticatedAs($user);
-    }
-
-    /**
-     * Nomor tersimpan dalam format +628…, tapi yang mengetik hampir selalu
-     * menulis 08…. Menuntut satu bentuk persis membuat login by telepon tampak
-     * rusak padahal nomornya benar.
-     */
-    #[\PHPUnit\Framework\Attributes\DataProvider('bentukNomorProvider')]
-    public function test_bentuk_penulisan_nomor_yang_lazim_semuanya_diterima(string $ditulis): void
-    {
-        $user = $this->user(
-            ['email' => 'andi@adhi.co.id', 'phone' => '+6281200011122'],
-            ['requester'],
-        );
-
-        $this->masuk($ditulis)->assertRedirect(route('dashboard.requester'));
-
-        $this->assertAuthenticatedAs($user);
-    }
-
-    public static function bentukNomorProvider(): array
-    {
-        return [
-            'E.164' => ['+6281200011122'],
-            'tanpa plus' => ['6281200011122'],
-            'awalan nol' => ['081200011122'],
-            'pakai spasi' => ['0812 0001 1122'],
-            'pakai strip' => ['0812-0001-1122'],
-        ];
     }
 
     public function test_email_tidak_peduli_besar_kecil_huruf(): void
@@ -109,29 +68,44 @@ final class DevLoginTest extends TestCase
     {
         $this->user(['email' => 'andi@adhi.co.id'], ['requester']);
 
-        $this->masuk('bukan.siapa.siapa@adhi.co.id')->assertSessionHasErrors('identifier');
+        $this->masuk('bukan.siapa.siapa@adhi.co.id')->assertSessionHasErrors('email');
 
         $this->assertGuest();
     }
 
     public function test_kolom_kosong_ditolak(): void
     {
-        $this->masuk('')->assertSessionHasErrors('identifier');
+        $this->masuk('')->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_yang_jelas_bukan_email_ditolak_di_muka(): void
+    {
+        // Aturan `email` menolaknya sebagai galat validasi, bukan meneruskannya
+        // ke basis data lalu kembali sebagai "akun tidak ditemukan" — dua hal
+        // berbeda yang pantas dibalas pesan berbeda.
+        $this->masuk('08123456789')->assertSessionHasErrors('email');
 
         $this->assertGuest();
     }
 
     /**
-     * Nomor telepon tidak dijamin unik oleh skema mana pun. Memilih salah satu
-     * diam-diam berarti kadang masuk sebagai orang yang salah — kekeliruan yang
-     * paling sulit disadari justru saat sedang menguji hak akses.
+     * Indeks unik `users_email_unique` TIDAK menutup celah ini: keunikan
+     * diperiksa apa adanya, sedangkan pencarian login lewat LOWER(). Dua baris
+     * yang cuma beda kapitalisasi lolos indeks — dan keduanya cocok dengan satu
+     * pencarian yang sama.
+     *
+     * Ditemukan justru karena tes versi pertama memakai dua email identik dan
+     * ditolak basis data; asumsi awal saya bahwa email tidak berindeks unik
+     * ternyata keliru.
      */
-    public function test_nomor_yang_dipakai_dua_akun_ditolak_bukan_ditebak(): void
+    public function test_email_yang_hanya_beda_kapitalisasi_ditolak_bukan_ditebak(): void
     {
-        $this->user(['email' => 'a@adhi.co.id', 'phone' => '+6281200011122'], ['requester']);
-        $this->user(['email' => 'b@adhi.co.id', 'phone' => '+6281200011122'], ['requester']);
+        $this->user(['email' => 'kembar@adhi.co.id'], ['requester']);
+        $this->user(['email' => 'Kembar@adhi.co.id'], ['approver']);
 
-        $this->masuk('081200011122')->assertSessionHasErrors('identifier');
+        $this->masuk('kembar@adhi.co.id')->assertSessionHasErrors('email');
 
         $this->assertGuest();
     }
@@ -140,7 +114,7 @@ final class DevLoginTest extends TestCase
     {
         $this->user(['email' => 'resign@adhi.co.id', 'status' => 'inactive'], ['requester']);
 
-        $this->masuk('resign@adhi.co.id')->assertSessionHasErrors('identifier');
+        $this->masuk('resign@adhi.co.id')->assertSessionHasErrors('email');
 
         $this->assertGuest();
     }
@@ -170,7 +144,7 @@ final class DevLoginTest extends TestCase
     {
         $this->user(['email' => 'andi@adhi.co.id'], ['requester']);
 
-        $this->masuk('andi@adhi.co.id', admin: true)->assertSessionHasErrors('identifier');
+        $this->masuk('andi@adhi.co.id', admin: true)->assertSessionHasErrors('email');
 
         // Ditolak DAN tidak ditinggalkan setengah masuk.
         $this->assertGuest();
