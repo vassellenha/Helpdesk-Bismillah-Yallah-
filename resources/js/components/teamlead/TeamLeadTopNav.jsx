@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ThemeToggle from '../ThemeToggle';
 import { apiFetch } from '../../lib/api';
 import MyProfileModal from '../MyProfileModal';
 import { t as trans } from '../../lib/i18n';
@@ -62,6 +63,7 @@ export default function TeamLeadTopNav({ notifications = [], user = {}, dashboar
 
     return (
         <div ref={ref} className="flex items-center gap-2">
+            <ThemeToggle />
             <div className="relative">
                 <button
                     type="button"

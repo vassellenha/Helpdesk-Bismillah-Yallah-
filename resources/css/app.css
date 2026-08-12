@@ -1,6 +1,20 @@
 @import 'tailwindcss';
 @import './eva.css';
 
+/*
+ * `dark:` kini digerakkan kelas `.dark` di <html>, bukan lagi langsung oleh
+ * prefers-color-scheme.
+ *
+ * Alasannya sakelar terang/gelap di topbar: selama `dark:` menempel pada media
+ * query, pilihan pengguna tidak punya cara mengalahkan setelan sistemnya —
+ * seseorang yang OS-nya gelap tidak akan pernah bisa memilih mode terang.
+ *
+ * Setelan OS TIDAK hilang; ia tetap jadi nilai awal, hanya dipindahkan ke JS
+ * (lihat skrip tema di layouts/app.blade.php) yang memasang `.dark` saat OS
+ * gelap DAN pengguna belum pernah memilih sendiri.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
@@ -69,16 +83,17 @@
 }
 
 /*
- * Dark mode follows the OS/browser setting only — there is no in-app
- * toggle, so `dark:` below is Tailwind's default `prefers-color-scheme`
- * media strategy. `color-scheme: dark` hands native chrome (scrollbars,
- * date pickers, autofill) over to the browser's own dark rendering for
- * free, on top of the explicit dark: utility classes on our own markup.
+ * `color-scheme: dark` menyerahkan chrome bawaan browser — scrollbar, date
+ * picker, autofill — ke rendering gelapnya sendiri, di atas kelas dark: pada
+ * markup kita.
+ *
+ * Dipasang pada `.dark`, bukan pada media query: sejak ada sakelar di topbar,
+ * satu-satunya kebenaran tentang tema yang sedang aktif adalah kelas itu.
+ * Membiarkannya di media query membuat pengguna bermode terang di OS gelap
+ * mendapat scrollbar hitam di halaman putih.
  */
-@media (prefers-color-scheme: dark) {
-    :root {
-        color-scheme: dark;
-    }
+:root.dark {
+    color-scheme: dark;
 }
 
 /*
@@ -101,20 +116,18 @@
     --chart-red: #ef4444;
     --chart-empty: #e5e7eb;
 }
-@media (prefers-color-scheme: dark) {
-    :root {
-        --chart-grid: rgb(148 163 184 / 0.18);
-        --chart-axis: #9aa9bc;
-        --chart-label: #e8eef7;
-        --chart-tooltip-bg: #182137;
-        --chart-tooltip-border: rgb(148 163 184 / 0.18);
-        --chart-tooltip-text: #e8eef7;
-        --chart-blue: #3b82f6;
-        --chart-green: #34d399;
-        --chart-amber: #f59e0b;
-        --chart-red: #ef4444;
-        --chart-empty: #212b4a;
-    }
+:root.dark {
+    --chart-grid: rgb(148 163 184 / 0.18);
+    --chart-axis: #9aa9bc;
+    --chart-label: #e8eef7;
+    --chart-tooltip-bg: #182137;
+    --chart-tooltip-border: rgb(148 163 184 / 0.18);
+    --chart-tooltip-text: #e8eef7;
+    --chart-blue: #3b82f6;
+    --chart-green: #34d399;
+    --chart-amber: #f59e0b;
+    --chart-red: #ef4444;
+    --chart-empty: #212b4a;
 }
 
 /*
@@ -180,11 +193,9 @@
      */
     --brand-word-gradient: linear-gradient(135deg, #2a4a9e 0%, #131f3f 58%);
 }
-@media (prefers-color-scheme: dark) {
-    :root {
-        --brand-word: rgb(255 255 255 / 0.96);
-        --brand-word-gradient: linear-gradient(135deg, #ffffff 0%, #c8dcff 100%);
-    }
+:root.dark {
+    --brand-word: rgb(255 255 255 / 0.96);
+    --brand-word-gradient: linear-gradient(135deg, #ffffff 0%, #c8dcff 100%);
 }
 
 .brand-lockup {

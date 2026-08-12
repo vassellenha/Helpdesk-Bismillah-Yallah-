@@ -1,5 +1,6 @@
 import RoleSwitcher from './RoleSwitcher';
 import NotificationBell from './NotificationBell';
+import ThemeToggle from './ThemeToggle';
 import TicketWorkspace from './TicketWorkspace';
 import AgentsPanel from './AgentsPanel';
 import SlaChart from './SlaChart';
@@ -54,6 +55,7 @@ import TeamLeadTicketDetail from './teamlead/TeamLeadTicketDetail';
 export const registry = {
     RoleSwitcher,
     NotificationBell,
+    ThemeToggle,
     TicketWorkspace,
     AgentsPanel,
     SlaChart,

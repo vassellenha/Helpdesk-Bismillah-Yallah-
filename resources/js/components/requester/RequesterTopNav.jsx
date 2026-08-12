@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ThemeToggle from '../ThemeToggle';
 import { t as trans } from '../../lib/i18n';
 import { apiFetch } from '../../lib/api';
 import MyProfileModal from '../MyProfileModal';
@@ -53,6 +54,7 @@ export default function RequesterTopNav({ notifications = [], user = {}, tickets
 
     return (
         <div ref={ref} className="flex items-center gap-2">
+            <ThemeToggle />
             <div className="relative">
                 <button
                     type="button"

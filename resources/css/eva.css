@@ -157,8 +157,12 @@
  | ketahuan di portal, tempat widget EVA duduk di atas latar milik tim.
  | ============================================================ */
 
-@media (prefers-color-scheme: dark) {
-    .eva-app {
+/*
+ * Dipicu kelas `.dark` di <html>, bukan prefers-color-scheme — sejak topbar
+ * punya sakelar terang/gelap, setelan OS bukan lagi penentu akhirnya. Tanpa ini
+ * konsol EVA akan tetap gelap saat pengguna memilih mode terang.
+ */
+:root.dark .eva-app {
         color-scheme: dark;
 
         /* Permukaan — panel-0 paling gelap, naik makin terang */
@@ -226,7 +230,6 @@
         --shadow-09: rgb(0 0 0 / 0.42);
         --shadow-25: rgb(0 0 0 / 0.6);
         --glow-blue: rgb(59 130 246 / 0.4);
-    }
 }
 
 .eva-app *,
