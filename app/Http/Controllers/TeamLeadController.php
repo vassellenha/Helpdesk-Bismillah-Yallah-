@@ -10,8 +10,10 @@ use App\Models\TicketComment;
 use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
+use App\Support\Export\XlsxWriter;
 use App\Support\NotificationService;
 use App\Support\PriorityRegistry;
+use App\Support\Reports\TeamLeadReport;
 use App\Support\TeguranNotifier;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
@@ -175,10 +177,10 @@ class TeamLeadController extends Controller
             'teguranTickets' => $this->teguranTickets($tickets),
             'auditRows' => $this->auditRows(),
             'reportUnits' => $this->reportUnits(),
-            'reportTypes' => self::REPORT_TYPES,
-            'reports' => collect(self::REPORT_TYPES)->keys()
-                ->mapWithKeys(fn (string $t) => [$t => $this->buildReport($t, $tickets, $agents)])->all(),
-            'reportExportUrl' => url('/team-lead/reports/export'),
+            'reportTypes' => TeamLeadReport::TYPES,
+            'reportDefaults' => $this->reportDefaults(),
+            'reportPreviewUrl' => route('team-lead.reports.preview'),
+            'reportExportUrl' => route('team-lead.reports.export'),
             'remindUrlBase' => url('/team-lead/tickets'),
             'remindRatingUrlBase' => url('/team-lead/agents'),
             'ratingTeguranThreshold' => self::RATING_TEGURAN_THRESHOLD,
@@ -222,60 +224,162 @@ class TeamLeadController extends Controller
     }
 
     /**
-     * Streams a report as a real file: CSV (opens in Excel) or a dompdf-
-     * rendered PDF, filtered by period + unit. Same builder as the on-screen
-     * preview so the download matches what the Team Lead sees.
+     * Pratinjau laporan di layar — persis penyaring yang dipakai unduhan.
+     *
+     * SEBELUMNYA tabel pratinjau dibangun sekali dari jendela periode dashboard
+     * (30 hari terakhir) dan dikirim sebagai prop, jadi mengubah tanggal atau
+     * unit di panel generator tidak mengubah apa pun di layar — padahal berkas
+     * yang terunduh memakai tanggal itu. Pratinjau dan unduhan bisa
+     * menampilkan angka yang berbeda tanpa ada yang salah ketik.
+     */
+    public function previewReport(Request $request): JsonResponse
+    {
+        CurrentActor::teamLead();
+
+        $filters = $request->validate($this->reportRules());
+        $composed = $this->composeReport($filters);
+
+        return response()->json([
+            'type' => $filters['type'],
+            'title' => $composed['report']['title'],
+            'columns' => $composed['report']['columns'],
+            'rows' => $composed['report']['rows'],
+            'periodLabel' => $composed['periodLabel'],
+            'unitLabel' => $composed['unitLabel'],
+        ]);
+    }
+
+    /**
+     * Mengunduh laporan sebagai berkas sungguhan: .xlsx (workbook Excel asli)
+     * atau PDF hasil dompdf, tersaring periode + unit. Pembangun barisnya sama
+     * dengan previewReport() di atas sehingga isinya selalu sama.
      */
     public function exportReport(Request $request)
     {
-        $data = $request->validate([
-            'type' => ['required', Rule::in(array_keys(self::REPORT_TYPES))],
+        CurrentActor::teamLead();
+
+        $filters = $request->validate([
+            ...$this->reportRules(),
             'format' => 'required|in:pdf,excel',
-            'from' => 'nullable|date',
-            'to' => 'nullable|date',
-            'unit' => 'nullable|string',
         ]);
 
-        $query = $this->scopeTickets(Ticket::with(['assignedAgent', 'requester:id,unit']));
-        if (! empty($data['from'])) {
-            $query->whereDate('created_at', '>=', $data['from']);
-        }
-        if (! empty($data['to'])) {
-            $query->whereDate('created_at', '<=', $data['to']);
-        }
-        // ALL_UNITS is the language-independent sentinel the UI sends. The old
-        // Indonesian label is still accepted so a bookmarked export URL keeps
-        // working; a translated label must never be read as a real unit name.
-        $noUnitFilter = in_array($data['unit'] ?? null, [null, '', self::ALL_UNITS, 'Semua Unit'], true);
-        if (! $noUnitFilter) {
-            $query->whereHas('requester', fn ($q) => $q->where('unit', $data['unit']));
+        $composed = $this->composeReport($filters);
+        $report = $composed['report'];
+        $base = 'laporan-'.$filters['type'].'-'.now()->format('Ymd-Hi');
+
+        if ($filters['format'] === 'excel') {
+            $binary = XlsxWriter::sheet(
+                $report['title'],
+                array_map(fn (array $c) => $c['label'], $report['columns']),
+                $report['rows'],
+            );
+
+            return response($binary, 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="'.$base.'.xlsx"',
+                'Content-Length' => (string) strlen($binary),
+            ]);
         }
 
-        $tickets = $query->get();
-        $agents = $this->scopedAgentQuery()->get();
-        $report = $this->buildReport($data['type'], $tickets, $agents);
-
-        $periodLabel = trim((empty($data['from']) ? '' : $data['from']).(empty($data['to']) ? '' : ' s/d '.$data['to'])) ?: 'Semua periode';
-        $unitLabel = $noUnitFilter ? __('teamlead.reporting.all_unit') : $data['unit'];
-        $base = 'laporan-'.$data['type'].'-'.now()->format('Ymd');
-
-        if ($data['format'] === 'excel') {
-            return response()->streamDownload(function () use ($report) {
-                $handle = fopen('php://output', 'w');
-                fputcsv($handle, array_map(fn ($c) => $c['label'], $report['columns']));
-                foreach ($report['rows'] as $row) {
-                    fputcsv($handle, $row);
-                }
-                fclose($handle);
-            }, $base.'.csv', ['Content-Type' => 'text/csv']);
-        }
+        // Lima kolom di A4 tegak membuat kolom terakhir terpotong; laporan
+        // selebar itu dicetak mendatar.
+        $paper = count($report['columns']) > 4 ? 'landscape' : 'portrait';
 
         return Pdf::loadView('reports.team-lead', [
             'report' => $report,
-            'periodLabel' => $periodLabel,
-            'unitLabel' => $unitLabel,
+            'periodLabel' => $composed['periodLabel'],
+            'unitLabel' => $composed['unitLabel'],
             'generatedAt' => now()->format('d M Y · H:i'),
-        ])->download($base.'.pdf');
+        ])->setPaper('a4', $paper)->download($base.'.pdf');
+    }
+
+    /**
+     * Aturan validasi penyaring laporan, dipakai pratinjau maupun unduhan.
+     *
+     * `to` wajib tidak mendahului `from`: rentang terbalik dulu diterima
+     * diam-diam dan selalu menghasilkan laporan kosong, yang di layar tidak
+     * bisa dibedakan dari "memang tidak ada tiket".
+     *
+     * @return array<string,mixed>
+     */
+    private function reportRules(): array
+    {
+        return [
+            'type' => ['required', Rule::in(array_keys(TeamLeadReport::TYPES))],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'unit' => ['nullable', 'string', 'max:150'],
+        ];
+    }
+
+    /**
+     * @param  array<string,mixed>  $filters
+     * @return array{report:array{title:string,columns:array<int,array{label:string,align:string}>,rows:array<int,array<int,string>>},periodLabel:string,unitLabel:string}
+     */
+    private function composeReport(array $filters): array
+    {
+        $noUnitFilter = $this->isAllUnits($filters['unit'] ?? null);
+        $tickets = $this->reportTickets($filters, $noUnitFilter);
+        $agents = $this->scopedAgentQuery()->get();
+
+        return [
+            'report' => TeamLeadReport::build($filters['type'], $tickets, $this->agentOptions($agents, $tickets)),
+            'periodLabel' => $this->periodLabel($filters['from'] ?? null, $filters['to'] ?? null),
+            'unitLabel' => $noUnitFilter ? __('teamlead.reporting.all_unit') : $filters['unit'],
+        ];
+    }
+
+    /**
+     * @param  array<string,mixed>  $filters
+     * @return Collection<int,Ticket>
+     */
+    private function reportTickets(array $filters, bool $noUnitFilter): Collection
+    {
+        $query = $this->scopeTickets(Ticket::with(['assignedAgent', 'requester:id,unit']));
+
+        if (! empty($filters['from'])) {
+            $query->whereDate('created_at', '>=', $filters['from']);
+        }
+        if (! empty($filters['to'])) {
+            $query->whereDate('created_at', '<=', $filters['to']);
+        }
+        if (! $noUnitFilter) {
+            $query->whereHas('requester', fn ($q) => $q->where('unit', $filters['unit']));
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * ALL_UNITS adalah sentinel bebas-bahasa yang dikirim UI. Label Indonesia
+     * lamanya tetap diterima supaya URL ekspor yang sudah di-bookmark masih
+     * jalan; label terjemahan tidak boleh terbaca sebagai nama unit sungguhan.
+     */
+    private function isAllUnits(?string $unit): bool
+    {
+        return in_array($unit, [null, '', self::ALL_UNITS, 'Semua Unit'], true);
+    }
+
+    private function periodLabel(?string $from, ?string $to): string
+    {
+        return trim((empty($from) ? '' : $from).(empty($to) ? '' : ' s/d '.$to))
+            ?: __('teamlead.reporting.all_period');
+    }
+
+    /**
+     * Rentang awal panel generator: awal bulan berjalan sampai hari ini.
+     * Sebelumnya dua tanggal ini ditulis mati di JSX ('2026-07-01' s/d
+     * '2026-07-31'), jadi setiap bulan berikutnya membuka layar ini dengan
+     * periode yang sudah lewat.
+     *
+     * @return array{from:string,to:string}
+     */
+    private function reportDefaults(): array
+    {
+        return [
+            'from' => Carbon::now()->startOfMonth()->toDateString(),
+            'to' => Carbon::today()->toDateString(),
+        ];
     }
 
     /** Team-Lead internal note on a ticket (persists to the shared comments). */
@@ -1314,101 +1418,62 @@ class TeamLeadController extends Controller
         ];
     }
 
+    /** Entri riwayat yang ditampilkan sekaligus di feed Riwayat. */
+    private const AUDIT_FEED_LIMIT = 60;
+
+    /**
+     * Modul jejak audit milik siklus hidup tiket. Aktornya bukan Team Lead,
+     * tapi tiketnya ada di bawah pengawasannya.
+     */
+    private const AUDIT_TICKET_MODULES = ['ticket_support', 'ticket_approval', 'ticket_management'];
+
+    /**
+     * Feed Riwayat: tindakan korektif Team Lead DITAMBAH perjalanan tiket yang
+     * ada dalam cakupan timnya.
+     *
+     * SEBELUMNYA hanya baris bermodul `team_lead` yang dibaca, jadi jejak audit
+     * ini cuma memantulkan kembali tindakan Team Lead sendiri. Eskalasi dari
+     * Support BPO ke Tim IT dan penutupan tiket oleh PIC IT sudah lama tercatat
+     * di audit_trails (SupportBpoController::escalate(),
+     * SupportController::resolve()), tapi tidak pernah muncul di layar yang
+     * justru bertugas melacaknya — dua peristiwa terpenting bagi seorang
+     * supervisor hilang dari jejak auditnya.
+     *
+     * SEKARANG cakupannya ditentukan tiketnya, bukan siapa pelakunya: setiap
+     * entri bertarget tiket yang PIC-nya anggota tim ini ikut terbaca. Tiket
+     * BPO masuk cakupan tepat saat dieskalasi — eskalasi memindahkan PIC-nya ke
+     * agent IT — sehingga baris eskalasi itu sendiri sudah ikut terlihat.
+     */
     private function auditRows(): array
     {
-        return AuditTrail::where('module', 'team_lead')
+        $scopedTicketIds = $this->scopeTickets(Ticket::query())->select('tickets.id');
+
+        return AuditTrail::query()
             ->with('actor:id,name')
+            ->where(function (Builder $q) use ($scopedTicketIds) {
+                $q->where('module', 'team_lead')
+                    ->orWhere(fn (Builder $ticketScope) => $ticketScope
+                        ->whereIn('module', self::AUDIT_TICKET_MODULES)
+                        ->where('target_type', 'ticket')
+                        ->whereIn('target_id', $scopedTicketIds));
+            })
             ->latest('id')
-            ->take(30)
+            ->take(self::AUDIT_FEED_LIMIT)
             ->get()
             ->map(fn (AuditTrail $a) => [
                 'id' => $a->id,
                 'action' => $a->action,
+                'module' => $a->module,
+                'actor' => $a->actor?->name ?? '—',
                 'ticket' => $a->target_name,
                 'detail' => $a->description,
-                'time' => $a->created_at->format('d M · H:i'),
+                'time' => $a->created_at->format('d M Y · H:i'),
             ])
             ->all();
     }
 
     /** Sentinel for "no unit filter" — never a real unit name, never translated. */
     public const ALL_UNITS = '__all';
-
-    public const REPORT_TYPES = [
-        'sla_compliance' => 'SLA Compliance',
-        'sla_breach' => 'SLA Breach',
-        'support_perf' => 'Support Performance',
-        'ticket_summary' => 'Ticket Summary',
-        'top_incident' => 'Top Incident',
-    ];
-
-    /**
-     * Builds one report's title/columns/rows from real tickets. Shared by the
-     * on-screen preview and the CSV/PDF export so both always agree.
-     *
-     * @return array{title:string,columns:array<int,array{label:string,align:string}>,rows:array<int,array<int,string>>}
-     */
-    private function buildReport(string $type, Collection $tickets, Collection $agents): array
-    {
-        $breached = fn (Ticket $t) => in_array($t->status, Ticket::DONE_STATUSES, true)
-            ? ($t->resolved_at && $t->resolved_at->greaterThan($t->resolution_due_at))
-            : (in_array($t->status, Ticket::ACTIVE_STATUSES, true) && $t->sla_kind === 'breach');
-        $counted = $tickets->whereNotIn('status', ['Draft', 'Returned']);
-        $col = fn (string $label, string $align = 'left') => ['label' => $label, 'align' => $align];
-
-        return match ($type) {
-            'sla_breach' => [
-                'title' => 'SLA Breach Report',
-                'columns' => [$col(__('teamlead.report_cols.ticket')), $col(__('teamlead.report_cols.subject')), $col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.priority')), $col(__('teamlead.report_cols.overdue'), 'right')],
-                'rows' => $tickets->whereIn('status', Ticket::ACTIVE_STATUSES)
-                    ->filter(fn (Ticket $t) => $t->sla_kind === 'breach')
-                    ->sortBy('sla_minutes_remaining')
-                    ->map(fn (Ticket $t) => [$t->ticket_no, $t->subject_name ?? $t->title, $t->service_name ?? '—', $t->priority, $t->sla_label])
-                    ->values()->all(),
-            ],
-            'support_perf' => [
-                'title' => 'Support Performance Report',
-                'columns' => [$col(__('teamlead.report_cols.agent')), $col(__('teamlead.report_cols.active_load'), 'right'), $col(__('teamlead.report_cols.done'), 'right'), $col(__('teamlead.report_cols.avg_resolution'), 'right'), $col(__('teamlead.report_cols.sla'), 'right')],
-                'rows' => collect($this->agentOptions($agents, $tickets))
-                    ->map(fn (array $a) => [$a['name'], (string) $a['load'], (string) $a['resolved'], $a['avgResolution'], $a['slaPct'] === null ? '—' : $a['slaPct'].'%'])
-                    ->all(),
-            ],
-            'ticket_summary' => [
-                'title' => 'Ticket Summary Report',
-                'columns' => [$col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.incident'), 'right'), $col(__('teamlead.report_cols.service'), 'right'), $col(__('teamlead.report_cols.access'), 'right'), $col(__('teamlead.report_cols.total'), 'right')],
-                'rows' => $counted->filter(fn (Ticket $t) => $t->service_name)->groupBy('service_name')
-                    ->map(fn (Collection $g, string $app) => [
-                        $app,
-                        (string) $g->where('issue_category', 'Incident')->count(),
-                        (string) $g->where('issue_category', 'Service Request')->count(),
-                        (string) $g->where('issue_category', 'Access Request')->count(),
-                        (string) $g->count(),
-                    ])->sortByDesc(fn ($r) => (int) $r[4])->values()->all(),
-            ],
-            'top_incident' => [
-                'title' => 'Top Incident Report',
-                'columns' => [$col('#'), $col(__('teamlead.report_cols.issue')), $col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.count'), 'right')],
-                'rows' => $counted->groupBy(fn (Ticket $t) => $t->subject_name ?? $t->title)
-                    ->map(fn (Collection $g, string $name) => ['name' => $name, 'apps' => $g->pluck('service_name')->filter()->unique()->take(2)->implode(' · ') ?: '—', 'count' => $g->count()])
-                    ->sortByDesc('count')->take(10)->values()
-                    ->map(fn (array $r, int $i) => [(string) ($i + 1), $r['name'], $r['apps'], (string) $r['count']])->all(),
-            ],
-            default => [
-                'title' => 'SLA Compliance Report',
-                'columns' => [$col(__('teamlead.report_cols.subcategory')), $col(__('teamlead.report_cols.app')), $col(__('teamlead.report_cols.total'), 'right'), $col(__('teamlead.report_cols.breach'), 'right'), $col(__('teamlead.report_cols.compliance'), 'right')],
-                'rows' => $counted->groupBy(fn (Ticket $t) => $t->subcategory_name ?? $t->issue_category ?? 'Lainnya')
-                    ->map(function (Collection $g, string $sub) use ($breached) {
-                        $total = $g->count();
-                        $breach = $g->filter($breached)->count();
-                        $app = $g->groupBy('service_name')->sortByDesc(fn ($x) => $x->count())->keys()->first() ?? '—';
-
-                        return ['sub' => $sub, 'app' => $app, 'total' => $total, 'breach' => $breach, 'comp' => round(($total - $breach) / max($total, 1) * 100, 1)];
-                    })
-                    ->sortByDesc('total')->values()
-                    ->map(fn (array $r) => [$r['sub'], $r['app'], (string) $r['total'], (string) $r['breach'], $r['comp'].'%'])->all(),
-            ],
-        };
-    }
 
     private function reportUnits(): array
     {

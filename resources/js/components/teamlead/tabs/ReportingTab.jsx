@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import SelectMenu from '../../SelectMenu';
+import { apiFetch } from '../../../lib/api';
+import { downloadFile } from '../../../lib/download';
 import { t as trans } from '../../../lib/i18n';
 
-// Must match TeamLeadController::ALL_UNITS. Sent to the export endpoint, so it
-// has to stay a fixed token — a translated label would be read as a unit name.
+// Harus sama dengan TeamLeadController::ALL_UNITS. Nilainya dikirim ke endpoint
+// laporan, jadi harus token tetap — label terjemahan akan terbaca sebagai nama
+// unit sungguhan.
 const ALL_UNITS = '__all';
+
+// Jeda sebelum pratinjau diminta ulang. Tanpa ini, mengetik tanggal lewat
+// keyboard menembakkan satu permintaan per digit.
+const PREVIEW_DEBOUNCE_MS = 350;
+
+const EMPTY_REPORT = { title: '', columns: [], rows: [] };
 
 const TYPE_ICON = {
     sla_compliance: 'M12 2.5l2.3 1.7 2.8-.3 1 2.7 2.5 1.4-.8 2.8.8 2.8-2.5 1.4-1 2.7-2.8-.3L12 21.5l-2.3-1.7-2.8.3-1-2.7-2.5-1.4.8-2.8-.8-2.8 2.5-1.4 1-2.7 2.8.3Z M9 12l2 2 4-4',
@@ -14,19 +23,84 @@ const TYPE_ICON = {
     top_incident: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 8v5 M12 16h.01',
 };
 
-export default function ReportingTab({ reportTypes = {}, reports = {}, reportUnits = [], reportExportUrl = '' }) {
+const today = () => new Date().toISOString().slice(0, 10);
+
+export default function ReportingTab({
+    reportTypes = {},
+    reportUnits = [],
+    reportDefaults = {},
+    reportPreviewUrl = '',
+    reportExportUrl = '',
+}) {
     const keys = Object.keys(reportTypes);
     const [type, setType] = useState(keys[0] ?? 'sla_compliance');
     const [unit, setUnit] = useState(ALL_UNITS);
-    const [from, setFrom] = useState('2026-07-01');
-    const [to, setTo] = useState('2026-07-31');
+    const [from, setFrom] = useState(reportDefaults.from ?? today());
+    const [to, setTo] = useState(reportDefaults.to ?? today());
 
-    const report = reports[type] ?? { title: '', columns: [], rows: [] };
+    const [report, setReport] = useState(EMPTY_REPORT);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [downloading, setDownloading] = useState(null);
 
-    function download(format) {
-        const params = new URLSearchParams({ type, format, from, to, unit });
-        window.location.href = `${reportExportUrl}?${params.toString()}`;
+    // Rentang terbalik ditolak server dengan 422. Menahannya di sini juga
+    // menjaga layar tetap menjelaskan sebabnya, bukan menampilkan tabel kosong.
+    const invalidRange = Boolean(from && to && from > to);
+    const params = useMemo(() => new URLSearchParams({ type, from, to, unit }).toString(), [type, from, to, unit]);
+
+    const previewRequest = useRef(0);
+
+    useEffect(() => {
+        if (invalidRange) {
+            setLoading(false);
+            setError(trans('teamlead.reporting.invalid_range'));
+            setReport(EMPTY_REPORT);
+
+            return undefined;
+        }
+
+        // Balasan yang datang terlambat dari penyaring lama tidak boleh
+        // menimpa hasil penyaring yang sedang aktif.
+        const request = ++previewRequest.current;
+        const timer = setTimeout(async () => {
+            setLoading(true);
+            try {
+                const fresh = await apiFetch(`${reportPreviewUrl}?${params}`);
+                if (request === previewRequest.current) {
+                    setReport(fresh);
+                    setError(null);
+                }
+            } catch (e) {
+                if (request === previewRequest.current) {
+                    setError(e.message || trans('teamlead.reporting.preview_failed'));
+                    setReport(EMPTY_REPORT);
+                }
+            } finally {
+                if (request === previewRequest.current) {
+                    setLoading(false);
+                }
+            }
+        }, PREVIEW_DEBOUNCE_MS);
+
+        return () => clearTimeout(timer);
+    }, [params, invalidRange, reportPreviewUrl]);
+
+    async function download(format) {
+        if (invalidRange || downloading) return;
+
+        setDownloading(format);
+        setError(null);
+        try {
+            await downloadFile(`${reportExportUrl}?${params}&format=${format}`);
+        } catch (e) {
+            setError(e.message || trans('teamlead.reporting.download_failed'));
+        } finally {
+            setDownloading(null);
+        }
     }
+
+    const busy = downloading !== null;
+    const unitLabel = unit === ALL_UNITS ? trans('teamlead.reporting.all_unit') : unit;
 
     return (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_1fr]">
@@ -49,8 +123,8 @@ export default function ReportingTab({ reportTypes = {}, reports = {}, reportUni
 
                 <p className="mb-2 text-[12px] font-bold text-amber-700 dark:text-warn-text">{trans('teamlead.reporting.period')}</p>
                 <div className="mb-4 flex gap-2">
-                    <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-xl border border-gray-200 dark:border-edge-strong px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
-                    <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-xl border border-gray-200 dark:border-edge-strong px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
+                    <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-xl border border-gray-200 dark:border-edge-strong px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
+                    <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="w-full rounded-xl border border-gray-200 dark:border-edge-strong px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
                 </div>
 
                 <p className="mb-2 text-[12px] font-bold text-amber-700 dark:text-warn-text">{trans('teamlead.reporting.unit')}</p>
@@ -62,30 +136,48 @@ export default function ReportingTab({ reportTypes = {}, reports = {}, reportUni
                     />
                 </div>
 
-                <button onClick={() => download('pdf')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 py-3 text-[13px] font-bold text-white shadow-sm hover:bg-blue-700 dark:hover:bg-blue-400">
+                <button
+                    onClick={() => download('pdf')}
+                    disabled={busy || invalidRange}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 py-3 text-[13px] font-bold text-white shadow-sm hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z M14 3v5h5 M9 13h6 M9 17h4"/></svg>
-                    {trans('teamlead.reporting.generate_pdf')}
+                    {downloading === 'pdf' ? trans('teamlead.reporting.downloading') : trans('teamlead.reporting.generate_pdf')}
                 </button>
+
+                {error && <p className="mt-3 rounded-xl bg-red-50 dark:bg-bad-soft px-3 py-2 text-[12px] font-semibold text-red-600 dark:text-bad-text">{error}</p>}
             </div>
 
             <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-edge p-5">
                     <div>
-                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{report.title}</h2>
-                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.reporting.preview', { from, to, unit: unit === ALL_UNITS ? trans('teamlead.reporting.all_unit') : unit })}</p>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{report.title || reportTypes[type]}</h2>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">
+                            {trans('teamlead.reporting.preview', { from, to, unit: unitLabel })}
+                            {' · '}
+                            {loading ? trans('teamlead.reporting.loading') : trans('teamlead.reporting.row_count', { count: report.rows.length })}
+                        </p>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={() => download('pdf')} className="flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-[12px] font-bold text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
+                        <button
+                            onClick={() => download('pdf')}
+                            disabled={busy || invalidRange}
+                            className="flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-[12px] font-bold text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft disabled:cursor-not-allowed disabled:opacity-60"
+                        >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z M14 3v5h5"/></svg>
                             PDF
                         </button>
-                        <button onClick={() => download('excel')} className="flex items-center gap-2 rounded-full border border-emerald-200 px-4 py-2 text-[12px] font-bold text-emerald-600 dark:text-ok-text hover:bg-emerald-50 dark:hover:bg-ok-soft">
+                        <button
+                            onClick={() => download('excel')}
+                            disabled={busy || invalidRange}
+                            className="flex items-center gap-2 rounded-full border border-emerald-200 px-4 py-2 text-[12px] font-bold text-emerald-600 dark:text-ok-text hover:bg-emerald-50 dark:hover:bg-ok-soft disabled:cursor-not-allowed disabled:opacity-60"
+                        >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16v14H4Z M4 10h16 M10 5v14"/></svg>
                             Excel
                         </button>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className={`overflow-x-auto transition-opacity ${loading ? 'opacity-50' : 'opacity-100'}`}>
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
@@ -100,7 +192,13 @@ export default function ReportingTab({ reportTypes = {}, reports = {}, reportUni
                                     ))}
                                 </tr>
                             ))}
-                            {report.rows.length === 0 && <tr><td colSpan={report.columns.length} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.reporting.empty')}</td></tr>}
+                            {report.rows.length === 0 && (
+                                <tr>
+                                    <td colSpan={Math.max(report.columns.length, 1)} className="px-5 py-12 text-center text-sm text-gray-400 dark:text-ink-3">
+                                        {loading ? trans('teamlead.reporting.loading') : error ?? trans('teamlead.reporting.empty')}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

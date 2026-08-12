@@ -142,6 +142,7 @@ Route::prefix('team-lead')->name('team-lead.')->middleware(['auth', 'role:team-l
     Route::post('/tickets/{ticket}/raise-priority', [TeamLeadController::class, 'raisePriority'])->name('tickets.raise-priority');
     Route::post('/agents/{agent}/remind-rating', [TeamLeadController::class, 'remindRating'])->name('agents.remind-rating');
     Route::post('/escalation/raise', [TeamLeadController::class, 'escalateGroup'])->name('escalation.raise');
+    Route::get('/reports/preview', [TeamLeadController::class, 'previewReport'])->name('reports.preview');
     Route::get('/reports/export', [TeamLeadController::class, 'exportReport'])->name('reports.export');
     Route::post('/notifications/{notification}/read', [TeamLeadController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [TeamLeadController::class, 'markAllNotificationsRead'])->name('notifications.read-all');

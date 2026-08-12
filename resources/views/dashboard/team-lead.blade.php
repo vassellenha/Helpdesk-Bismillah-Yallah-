@@ -41,9 +41,12 @@
         'auditRows' => $auditRows,
         'reportUnits' => $reportUnits,
         'reportTypes' => $reportTypes,
-        'reports' => $reports,
+        'reportDefaults' => $reportDefaults,
+        'reportPreviewUrl' => $reportPreviewUrl,
         'reportExportUrl' => $reportExportUrl,
         'remindUrlBase' => $remindUrlBase,
+        'remindRatingUrlBase' => $remindRatingUrlBase,
+        'ratingTeguranThreshold' => $ratingTeguranThreshold,
     ]) }}"
 ></div>
 @endsection
