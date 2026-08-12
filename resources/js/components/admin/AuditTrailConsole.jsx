@@ -153,7 +153,13 @@ export default function AuditTrailConsole({ logs: initialLogs, logsMeta, listUrl
                     <div className="flex flex-wrap items-center gap-2">
                         <SelectMenu value={moduleFilter} onChange={updateFilter(setModuleFilter)} options={moduleOptions} />
                         <SelectMenu value={actionFilter} onChange={updateFilter(setActionFilter)} options={actionOptions} />
-                        <SelectMenu value={adminFilter} onChange={updateFilter(setAdminFilter)} options={adminOptions} />
+                        <SelectMenu
+                            value={adminFilter}
+                            onChange={updateFilter(setAdminFilter)}
+                            options={adminOptions}
+                            searchable
+                            searchPlaceholder="Cari nama pengguna…"
+                        />
                         <input type="date" value={dateFrom} onChange={(e) => updateFilter(setDateFrom)(e.target.value)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none" />
                         <span className="text-sm text-gray-400 dark:text-ink-3">—</span>
                         <input type="date" value={dateTo} onChange={(e) => updateFilter(setDateTo)(e.target.value)} className="rounded-lg border border-gray-200 dark:border-edge-strong px-3 py-2 text-sm text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none" />

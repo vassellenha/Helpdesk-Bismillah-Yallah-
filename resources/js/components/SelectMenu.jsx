@@ -10,9 +10,20 @@ import { useEffect, useRef, useState } from 'react';
  * units, requesters) run to dozens of entries and would otherwise render taller
  * than the viewport, with no way to reach the bottom of the list.
  */
-export default function SelectMenu({ value, onChange, options }) {
+/**
+ * `searchable` sengaja opt-in, bukan otomatis untuk semua dropdown.
+ *
+ * Sebagian besar daftar di app ini pendek dan tetap — status, prioritas, peran —
+ * dan kotak cari di atas empat pilihan hanya menambah satu hal yang harus
+ * dilewati. Yang benar-benar membutuhkannya adalah daftar yang tumbuh mengikuti
+ * data: filter pelaku di Audit Trail kini berisi ribuan pegawai dari direktori
+ * perusahaan, dan menemukan satu nama di sana berarti menggulir ribuan baris.
+ */
+export default function SelectMenu({ value, onChange, options, searchable = false, searchPlaceholder = 'Cari…' }) {
     const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
     const ref = useRef(null);
+    const searchRef = useRef(null);
 
     useEffect(() => {
         function onClickOutside(e) {
@@ -22,7 +33,21 @@ export default function SelectMenu({ value, onChange, options }) {
         return () => document.removeEventListener('mousedown', onClickOutside);
     }, []);
 
+    // Kata kunci lama dibuang setiap menu ditutup. Kalau tidak, membuka menu
+    // berikutnya menampilkan daftar yang sudah tersaring tanpa alasan yang
+    // terlihat — pilihan yang dicari seolah hilang.
+    useEffect(() => {
+        if (! open) {
+            setQuery('');
+            return;
+        }
+        if (searchable) searchRef.current?.focus();
+    }, [open, searchable]);
+
     const current = options.find((o) => o.value === value);
+    const visible = searchable && query.trim() !== ''
+        ? options.filter((o) => String(o.label).toLowerCase().includes(query.trim().toLowerCase()))
+        : options;
 
     return (
         <div ref={ref} className="relative">
@@ -39,7 +64,24 @@ export default function SelectMenu({ value, onChange, options }) {
 
             {open && (
                 <div className="absolute right-0 top-[calc(100%+4px)] z-30 max-h-[280px] w-full min-w-[180px] overflow-y-auto rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-1 shadow-lg">
-                    {options.map((o) => (
+                    {searchable && (
+                        // Menempel di atas saat daftar digulir — pada ribuan
+                        // baris, kotak cari yang ikut menggulir hilang setelah
+                        // beberapa putaran dan tidak bisa ditemukan lagi.
+                        <div className="sticky top-0 z-10 border-b border-gray-100 dark:border-edge bg-white dark:bg-panel-2 p-2">
+                            <input
+                                ref={searchRef}
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder={searchPlaceholder}
+                                className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-2.5 py-1.5 text-[13px] text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none"
+                            />
+                        </div>
+                    )}
+                    {visible.length === 0 && (
+                        <p className="px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">Tidak ada yang cocok.</p>
+                    )}
+                    {visible.map((o) => (
                         <button
                             key={o.value}
                             type="button"
