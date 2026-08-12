@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import useLockBodyScroll from '../lib/useLockBodyScroll';
 
-function isImage(name = '', url = '') {
+// Exported so CommentComposer can decide the same way for a not-yet-uploaded
+// File before it has a server URL — one file-type rule, not two copies.
+export function isImage(name = '', url = '') {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || url);
 }
 
-function isVideo(name = '', url = '') {
+export function isVideo(name = '', url = '') {
     return /\.(mp4|mov|webm)$/i.test(name || url);
 }
 
