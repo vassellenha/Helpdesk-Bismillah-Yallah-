@@ -168,7 +168,7 @@ function PriorityTip({ priority, policy, disabled, index }) {
     return (
         <div
             role="tooltip"
-            className={`pointer-events-none absolute bottom-full z-20 mb-2 w-56 rounded-xl bg-gray-900 px-3 py-2.5 text-left text-[11.5px] leading-relaxed text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${TIP_ALIGN[index]}`}
+            className={`pointer-events-none absolute bottom-full z-20 mb-2 w-56 rounded-2xl border border-white/15 bg-gray-900/70 px-3 py-2.5 text-left text-[11.5px] leading-relaxed text-white opacity-0 shadow-xl shadow-black/20 backdrop-blur-xl backdrop-saturate-150 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${TIP_ALIGN[index]}`}
         >
             <p className="font-semibold">{trans(`requester.priority_help.${priority}`)}</p>
             {disabled ? (
