@@ -5,6 +5,7 @@ import {
     EmptyState, ErrorBanner, Modal, Pagination, usePagination,
     inputStyle, labelStyle, thStyle, tdStyle,
 } from './ui';
+import SearchableSelect from './SearchableSelect';
 
 /** Baris per halaman. Cukup panjang untuk dipindai, cukup pendek untuk dimuat. */
 const PER_PAGE = 15;
@@ -345,6 +346,11 @@ function SubjectCell({ article }) {
 function EditorDrawer({ draft, subjects, onChange, onClose, onSave }) {
     const set = (field) => (e) => onChange({ ...draft, [field]: e.target.value });
 
+    // SearchableSelect mengirim NILAI, bukan event — <select> bawaan mengirim
+    // event. Dua bentuk callback yang berbeda, jadi setternya dipisah supaya
+    // tidak ada yang membungkus `{ target: { value } }` palsu hanya agar cocok.
+    const setValue = (field) => (value) => onChange({ ...draft, [field]: value });
+
     return (
         <div
             style={{
@@ -382,10 +388,12 @@ function EditorDrawer({ draft, subjects, onChange, onClose, onSave }) {
 
                 <div>
                     <label style={labelStyle}>Subject katalog</label>
-                    <select style={inputStyle} value={draft.catalog_subject_id ?? ''} onChange={set('catalog_subject_id')}>
-                        <option value="">— belum tertaut —</option>
-                        {subjects.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </select>
+                    <SearchableSelect
+                        value={draft.catalog_subject_id ?? ''}
+                        onChange={setValue('catalog_subject_id')}
+                        options={subjects.map((s) => ({ value: s.id, label: s.label }))}
+                        searchPlaceholder="Cari subject…"
+                    />
                     <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '5px 0 0' }}>
                         Subject utama yang dicatat ketika artikel ini menjawab pertanyaan. Artikel tanpa
                         subject tidak dihitung dalam angka kesiapan EVA.
@@ -448,10 +456,16 @@ function ExtraSubjectPicker({ subjects, primaryId, selectedIds, onChange }) {
     const labelOf = (id) => subjects.find((s) => s.id === id)?.label ?? `Subject #${id}`;
     const available = subjects.filter((s) => s.id !== primaryId && !selected.includes(s.id));
 
-    const add = (e) => {
-        const id = Number(e.target.value);
-        if (id) onChange([...selected, id]);
-        e.target.value = '';
+    // Menerima NILAI dari SearchableSelect. Versi lamanya membaca
+    // `e.target.value` lalu mengosongkannya kembali — trik khas <select> yang
+    // dipakai sebagai tombol "tambah". Komponen baru tidak menyimpan pilihan
+    // (value-nya tetap ""), jadi pengosongan itu tidak diperlukan lagi.
+    const add = (value) => {
+        const id = Number(value);
+
+        if (id) {
+            onChange([...selected, id]);
+        }
     };
 
     return (
@@ -483,12 +497,15 @@ function ExtraSubjectPicker({ subjects, primaryId, selectedIds, onChange }) {
                 </div>
             )}
 
-            <select style={inputStyle} value="" onChange={add} disabled={available.length === 0}>
-                <option value="">
-                    {available.length === 0 ? '— semua subject sudah tertaut —' : '+ tautkan subject lain…'}
-                </option>
-                {available.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
+            <SearchableSelect
+                value=""
+                onChange={add}
+                options={available.map((s) => ({ value: s.id, label: s.label }))}
+                placeholder={available.length === 0 ? '— semua subject sudah tertaut —' : '+ tautkan subject lain…'}
+                searchPlaceholder="Cari subject…"
+                disabled={available.length === 0}
+                clearLabel={null}
+            />
 
             <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '5px 0 0' }}>
                 Subject lain yang juga dijawab artikel ini. Seluruhnya ikut dihitung sebagai

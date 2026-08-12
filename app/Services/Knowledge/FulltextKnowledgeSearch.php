@@ -34,6 +34,7 @@ final class FulltextKnowledgeSearch implements KnowledgeSearch
         private readonly ConfidenceScorer $scorer,
         private readonly SynonymExpander $synonyms,
         private readonly AnswerSourceSettings $sources,
+        private readonly PassagePicker $passages,
     ) {}
 
     public function cari(string $pertanyaan, int $limit = 5): array
@@ -157,14 +158,32 @@ final class FulltextKnowledgeSearch implements KnowledgeSearch
             ->get();
     }
 
-    /** @return SearchHit[] */
+    /**
+     * @param  Collection<int, Article>  $articles
+     * @return SearchHit[]
+     */
     private function scoreArticles(Collection $articles, array $tokens): array
     {
+        /*
+        | Jawaban diambil dari POTONGAN dokumen yang cocok, bukan dari
+        | `summary`.
+        |
+        | `summary` artikel hasil unggahan dibuat otomatis dari paragraf pertama
+        | dokumennya, dan untuk SOP berkop surat paragraf itu adalah kop
+        | suratnya. Akibatnya setiap pertanyaan tentang dokumen tersebut dijawab
+        | dengan nama perusahaan — artikelnya benar, jawabannya kosong makna.
+        |
+        | `summary` tetap dipakai bila tidak ada potongan yang cocok, dan untuk
+        | artikel yang ditulis tangan (yang tidak punya dokumen sumber): di sana
+        | ringkasannya memang ditulis manusia sebagai jawaban.
+        */
+        $potongan = $this->passages->forArticles($articles, $tokens);
+
         return $articles->map(fn (Article $article) => new SearchHit(
             sourceType: Article::class,
             sourceId: $article->id,
             title: $article->title,
-            answer: (string) ($article->summary ?: $article->body),
+            answer: $potongan[$article->id] ?? (string) ($article->summary ?: $article->body),
             confidence: $this->scorer->score(
                 $tokens,
                 $article->title,

@@ -5,6 +5,7 @@ import {
     EmptyState, ErrorBanner, Modal, Pagination, usePagination,
     inputStyle, labelStyle, thStyle, tdStyle,
 } from './ui';
+import SearchableSelect from './SearchableSelect';
 
 /** Baris per halaman. Cukup panjang untuk dipindai, cukup pendek untuk dimuat. */
 const PER_PAGE = 15;
@@ -164,14 +165,12 @@ export default function EvaFaqManager({
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                             <div style={{ flex: '2 1 320px' }}>
                                 <label style={labelStyle}>Subject katalog</label>
-                                <select
-                                    style={inputStyle}
+                                <SearchableSelect
                                     value={draft.catalog_subject_id ?? ''}
-                                    onChange={(e) => setDraft({ ...draft, catalog_subject_id: e.target.value })}
-                                >
-                                    <option value="">— belum tertaut —</option>
-                                    {subjects.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                                </select>
+                                    onChange={(v) => setDraft({ ...draft, catalog_subject_id: v })}
+                                    options={subjects.map((s) => ({ value: s.id, label: s.label }))}
+                                    searchPlaceholder="Cari subject…"
+                                />
                             </div>
                             <div style={{ flex: '1 1 180px' }}>
                                 <label style={labelStyle}>Tag</label>
