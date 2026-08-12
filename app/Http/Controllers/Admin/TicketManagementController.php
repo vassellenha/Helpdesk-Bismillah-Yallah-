@@ -8,6 +8,7 @@ use App\Models\SupportAgent;
 use App\Models\Ticket;
 use App\Support\CurrentActor;
 use App\Support\DummyData;
+use App\Support\PriorityRegistry;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
@@ -64,7 +65,7 @@ class TicketManagementController extends Controller
             'stats' => $stats,
             'filterOptions' => [
                 'statuses' => $tickets->pluck('status')->unique()->sort()->values(),
-                'priorities' => ['Critical', 'High', 'Medium', 'Low'],
+                'priorities' => PriorityRegistry::all(),
                 'issueCategories' => $tickets->pluck('issue_category')->filter()->unique()->sort()->values(),
                 'requesters' => $tickets->pluck('requester_name')->filter()->unique()->sort()->values(),
                 // Every active support agent, BPO and IT alike — not just the ones
@@ -319,5 +320,4 @@ class TicketManagementController extends Controller
             default => 'Disetujui oleh '.($t->approver?->name ?? '—').'.',
         };
     }
-
 }

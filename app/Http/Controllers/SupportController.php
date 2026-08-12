@@ -10,10 +10,11 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\PriorityRegistry;
 use App\Support\SupportGreeting;
 use App\Support\TicketDiscussion;
-use App\Support\TicketPeople;
 use App\Support\TicketFlow;
+use App\Support\TicketPeople;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,9 @@ use Illuminate\View\View;
 
 class SupportController extends Controller
 {
-    private const PRIORITY_COLOR = ['Critical' => '#dc2626', 'High' => '#d97706', 'Medium' => '#2563eb', 'Low' => '#9ca3af'];
+    // Warna pindah ke PriorityRegistry: prioritas buatan Admin tidak ada di peta
+    // tetap mana pun, dan mengambil kuncinya langsung akan melempar
+    // "Undefined array key" begitu satu tiket "Urgent" masuk ke donat SLA.
 
     private const CATEGORY_COLOR = ['Incident' => '#2563eb', 'Service Request' => '#d97706', 'Access Request' => '#10b981'];
 
@@ -376,7 +379,7 @@ class SupportController extends Controller
     {
         $total = $tickets->count();
 
-        return collect(['Critical', 'High', 'Medium', 'Low'])
+        return collect(PriorityRegistry::all())
             ->map(function (string $priority) use ($tickets, $total) {
                 $count = $tickets->where('priority', $priority)->count();
 
@@ -384,7 +387,7 @@ class SupportController extends Controller
                     'priority' => $priority,
                     'count' => $count,
                     'pct' => $total > 0 ? (int) round($count / $total * 100) : 0,
-                    'color' => self::PRIORITY_COLOR[$priority],
+                    'color' => PriorityRegistry::colorFor($priority),
                 ];
             })
             ->values()
@@ -498,7 +501,6 @@ class SupportController extends Controller
             'escalationNote' => $t->escalation_note,
         ];
     }
-
 
     private function currentUserPayload(User $supportUser): array
     {

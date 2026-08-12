@@ -11,11 +11,15 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\PriorityRegistry;
 use App\Support\TeguranNotifier;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
@@ -41,8 +45,6 @@ class TeamLeadController extends Controller
     /** Below this average, an agent's satisfaction rating is eligible for a Team-Lead teguran. */
     private const RATING_TEGURAN_THRESHOLD = 4.0;
 
-    private const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
-
     private const I_TICKET = 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z M14 5v14';
 
     private const I_INBOX = 'M4 13h5l2 3h2l2-3h5 M5 13 6.5 5.6A2 2 0 0 1 8.5 4h7a2 2 0 0 1 2 1.6L19 13v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z';
@@ -56,7 +58,7 @@ class TeamLeadController extends Controller
     /**
      * Active agents in this Team Lead's team.
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     private function scopedAgentQuery()
     {
@@ -268,7 +270,7 @@ class TeamLeadController extends Controller
             }, $base.'.csv', ['Content-Type' => 'text/csv']);
         }
 
-        return \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.team-lead', [
+        return Pdf::loadView('reports.team-lead', [
             'report' => $report,
             'periodLabel' => $periodLabel,
             'unitLabel' => $unitLabel,
@@ -709,7 +711,7 @@ class TeamLeadController extends Controller
 
     private function slaByPriority(Collection $withSla): Collection
     {
-        return collect(self::PRIORITIES)->map(function (string $priority) use ($withSla) {
+        return collect(PriorityRegistry::all())->map(function (string $priority) use ($withSla) {
             $rows = $withSla->where('priority', $priority);
             $within = $rows->filter(fn (Ticket $t) => $t->sla_kind === 'ontrack')->count();
             $total = $rows->count();
@@ -743,7 +745,7 @@ class TeamLeadController extends Controller
         };
 
         return $tickets
-            ->filter(fn (Ticket $t) => !in_array($t->status, ['Draft', 'Returned'], true))
+            ->filter(fn (Ticket $t) => ! in_array($t->status, ['Draft', 'Returned'], true))
             ->groupBy(fn (Ticket $t) => $t->subject_name ?: $t->title)
             ->map(function (Collection $g, string $subject) use ($breached, $mode, $typeLabel) {
                 $volume = $g->count();
@@ -948,7 +950,7 @@ class TeamLeadController extends Controller
         return [
             'statuses' => array_values(array_diff(Ticket::ACTIVE_STATUSES, Ticket::NO_SLA_STATUSES)),
             'types' => ['Incident', 'Service Request', 'Access Request'],
-            'priorities' => ['Critical', 'High', 'Medium', 'Low'],
+            'priorities' => PriorityRegistry::all(),
             'apps' => $distinct('service_name'),
             'subcats' => $distinct('subcategory_name'),
             'units' => $distinct('requester.unit'),
@@ -1103,7 +1105,11 @@ class TeamLeadController extends Controller
      */
     private function escalationRecs(Collection $active): array
     {
-        $order = ['Low', 'Medium', 'High', 'Critical'];
+        // Menaik: dari paling longgar ke paling mendesak, kebalikan dari urutan
+        // registry. Diturunkan dari registry supaya prioritas buatan Admin ikut
+        // punya "tingkat di atasnya" — kalau tidak, tiket ber-prioritas baru
+        // tidak akan pernah direkomendasikan naik.
+        $order = array_reverse(PriorityRegistry::all());
 
         return $active
             ->filter(fn (Ticket $t) => in_array($t->sla_kind, ['warning', 'breach'], true) && $t->service_name)
@@ -1269,7 +1275,7 @@ class TeamLeadController extends Controller
             : (in_array($t->status, Ticket::ACTIVE_STATUSES, true) && $t->sla_kind === 'breach');
 
         return $tickets
-            ->filter(fn (Ticket $t) => !in_array($t->status, ['Draft', 'Returned'], true))
+            ->filter(fn (Ticket $t) => ! in_array($t->status, ['Draft', 'Returned'], true))
             ->groupBy(fn (Ticket $t) => $t->issue_category ?? $t->category ?? 'Lainnya')
             ->map(function (Collection $g, string $name) use ($breached) {
                 $total = $g->count();
@@ -1491,7 +1497,7 @@ class TeamLeadController extends Controller
 
         $synthesized = collect($items)
             ->sortByDesc('sortAt')
-            ->map(fn (array $i) => \Illuminate\Support\Arr::except($i, ['sortAt']))
+            ->map(fn (array $i) => Arr::except($i, ['sortAt']))
             ->values()
             ->all();
 

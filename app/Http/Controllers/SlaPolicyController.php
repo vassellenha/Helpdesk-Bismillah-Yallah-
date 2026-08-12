@@ -146,8 +146,12 @@ class SlaPolicyController extends Controller
 
     public function activeForRequester(): JsonResponse
     {
+        // Diurutkan menurut target penyelesaian, bukan daftar nama tetap.
+        // `field(priority,'Critical',…)` menaruh setiap prioritas buatan Admin
+        // di urutan terakhir berapa pun ketatnya SLA-nya — "Urgent" dengan
+        // target 60 menit akan muncul di bawah "Low" pada pemilih tiket baru.
         return response()->json(
-            SlaPolicy::active()->orderByRaw("field(priority,'Critical','High','Medium','Low')")->get()
+            SlaPolicy::active()->orderBy('resolution_time_minutes')->get()
         );
     }
 
@@ -166,7 +170,9 @@ class SlaPolicyController extends Controller
     {
         $data = $request->validate([
             'policy_name' => 'required|string|max:255',
-            'priority' => ['required', Rule::in(['Critical', 'High', 'Medium', 'Low'])],
+            // Teks bebas: Admin boleh membuat tingkat baru ("Urgent"). Dibatasi
+            // panjangnya saja, mengikuti kolomnya yang kini varchar(50).
+            'priority' => 'required|string|max:50',
             'response_time_minutes' => 'required|integer|min:1',
             'resolution_time_minutes' => 'required|integer|gt:response_time_minutes',
             'escalation_extension_minutes' => 'required|integer|min:0',

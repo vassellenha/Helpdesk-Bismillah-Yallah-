@@ -10,6 +10,7 @@ use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\PriorityRegistry;
 use App\Support\TicketDiscussion;
 use App\Support\TicketFlow;
 use App\Support\TicketPeople;
@@ -49,7 +50,7 @@ class ApprovalController extends Controller
         $oldestPending = $pending->min('created_at');
         $waitingLongest = $oldestPending ? $this->formatWaitDuration((int) $oldestPending->diffInMinutes($now)) : '—';
 
-        $priorityDistribution = collect(['Critical', 'High', 'Medium', 'Low'])
+        $priorityDistribution = collect(PriorityRegistry::all())
             ->map(function (string $priority) use ($pending) {
                 $count = $pending->where('priority', $priority)->count();
 
@@ -430,7 +431,6 @@ class ApprovalController extends Controller
             ] : null,
         ];
     }
-
 
     private function currentUserPayload(User $approver): array
     {

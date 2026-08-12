@@ -9,6 +9,7 @@ use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\DummyData;
+use App\Support\PriorityRegistry;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -131,7 +132,7 @@ class AdminController extends Controller
 
     private function slaTrendByPriority(Collection $tickets): array
     {
-        $priorities = ['Critical', 'High', 'Medium', 'Low'];
+        $priorities = PriorityRegistry::all();
 
         return collect($this->lastSixMonths())->map(function (Carbon $month) use ($tickets, $priorities) {
             $inMonth = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month));
@@ -193,7 +194,7 @@ class AdminController extends Controller
 
     private function slaTrendInsight(Collection $tickets): string
     {
-        $priorities = ['Critical', 'High', 'Medium', 'Low'];
+        $priorities = PriorityRegistry::all();
         $now = Carbon::now();
         $thisMonth = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($now) && $t->created_at->isSameYear($now));
 

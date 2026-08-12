@@ -13,7 +13,7 @@ function minutesToHours(minutes) {
     return minutes || minutes === 0 ? minutes / 60 : '';
 }
 
-export default function SlaPolicyModal({ policy, onClose, onSaved }) {
+export default function SlaPolicyModal({ policy, onClose, onSaved, existingPriorities = PRIORITIES }) {
     const isEdit = !!policy;
     const [form, setForm] = useState({
         policy_name: policy?.policy_name ?? '',
@@ -67,11 +67,23 @@ export default function SlaPolicyModal({ policy, onClose, onSaved }) {
                 </Field>
 
                 <Field label={trans('admin.sla.col_priority')}>
-                    <SelectMenu
+                    {/* Teks bebas, bukan dropdown: Admin boleh membuat tingkat
+                        baru seperti "Urgent". Datalist tetap menawarkan yang
+                        sudah ada — bukan sekadar kenyamanan, tapi penjaga: dua
+                        policy bertuliskan "Critical" dan "critical" adalah dua
+                        prioritas BERBEDA bagi database, dan tiket yang memakai
+                        salah satunya akan hilang dari filter yang memakai satunya. */}
+                    <input
                         value={form.priority}
-                        onChange={(v) => set('priority', v)}
-                        options={[{ value: '', label: trans('admin.common.choose') }, ...PRIORITIES.map((p) => ({ value: p, label: p }))]}
+                        onChange={(e) => set('priority', e.target.value)}
+                        list="sla-priority-options"
+                        maxLength={50}
+                        placeholder="Critical, High, atau ketik tingkat baru"
+                        className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                     />
+                    <datalist id="sla-priority-options">
+                        {existingPriorities.map((p) => <option key={p} value={p} />)}
+                    </datalist>
                 </Field>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

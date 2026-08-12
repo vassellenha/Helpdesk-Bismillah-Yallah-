@@ -149,7 +149,12 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
             </div>
 
             {(modal === 'add' || modal?.type === 'edit') && (
-                <SlaPolicyModal policy={modal?.policy} onClose={() => setModal(null)} onSaved={upsertPolicy} />
+                <SlaPolicyModal
+                    policy={modal?.policy}
+                    onClose={() => setModal(null)}
+                    onSaved={upsertPolicy}
+                    existingPriorities={Array.from(new Set(policies.map((p) => p.priority).filter(Boolean)))}
+                />
             )}
             {modal?.type === 'detail' && (
                 <PolicyDetailModal policy={modal.policy} onClose={() => setModal(null)} />
