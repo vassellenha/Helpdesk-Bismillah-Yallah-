@@ -2,8 +2,8 @@
 
 namespace App\Support\Sso;
 
-use App\Models\AuditTrail;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -125,7 +125,7 @@ class SsoAuthenticator
         }
 
         if (! $user) {
-            $label = $mapped[$primary] ?? $mapped[$fallback] ?? 'identitas tanpa username/NIP/email';
+            $label = $mapped[$primary] ?? $mapped[$fallback] ?? 'identitas tanpa username/NPP/email';
             Log::warning('[SSO] Identitas tidak punya akun helpdesk.', ['claims' => $mapped]);
 
             return [null, "Akun untuk \"{$label}\" belum ada di helpdesk. Jalankan sinkronisasi data pegawai terlebih dahulu."];
@@ -138,31 +138,32 @@ class SsoAuthenticator
         return [$user, null];
     }
 
-    /**
-     * The single moment any role — requester, approver, support IT, support
-     * BPO, team lead, admin — actually opens the helpdesk, so it's the one
-     * place a "login" audit entry belongs regardless of who logged in.
-     */
+    /** Menyatukan identitas SSO dengan guard Laravel saat login SINTA berhasil. */
     public static function login(User $user): void
     {
+        // Guard Laravel ikut diisi, bukan hanya kunci sesi milik SSO sendiri.
+        // Sejak seluruh rute dijaga middleware `auth`, sesi yang hanya tercatat
+        // di kunci SSO tidak dianggap masuk sama sekali: orang yang baru saja
+        // berhasil login lewat SINTA akan langsung dilempar balik ke halaman
+        // masuk. Satu-satunya tempat kedua identitas itu perlu disatukan adalah
+        // di sini, saat login benar-benar terjadi.
+        Auth::login($user);
+
         session([
             self::SESSION_KEY => $user->id,
             self::SESSION_NAME => $user->name,
         ]);
 
-        AuditTrail::record($user, [
-            'module' => 'auth',
-            'action' => 'login',
-            'target_type' => 'user',
-            'target_id' => $user->id,
-            'target_name' => $user->name,
-            'new_value' => ['roles' => $user->roles->pluck('name')->values()->all()],
-            'description' => "{$user->name} login ke helpdesk.",
-        ]);
+        // Baris audit "login" TIDAK ditulis di sini lagi. Auth::login() di atas
+        // memicu event Login, dan App\Listeners\RecordLoginAudit yang
+        // mencatatnya — satu tempat untuk semua pintu masuk, termasuk login
+        // pengembangan yang tidak lewat kelas ini sama sekali. Menuliskannya di
+        // sini juga akan menghasilkan dua baris untuk satu login.
     }
 
     public static function logout(): void
     {
+        Auth::logout();
         session()->forget([self::SESSION_KEY, self::SESSION_NAME]);
     }
 

@@ -47,7 +47,6 @@
                     <h1 class="text-lg font-bold text-gray-900 dark:text-ink-1">@yield('title')</h1>
                 </div>
                 <div class="flex items-center gap-4">
-                    <div data-react="LanguageSwitcher"></div>
                     <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications ?? []]) }}"></div>
                     @if(isset($currentUser) && isset($profileUrl))
                         <div
@@ -73,14 +72,6 @@
         </div>
     </div>
 
-    @php
-        $switcherRoles = collect(config('helpdesk.roles'))
-            ->map(fn ($r) => ['key' => $r['key'], 'initials' => $r['initials'], 'label' => $r['label'], 'url' => route($r['links'][0]['route'])])
-            ->values();
-    @endphp
-    <div
-        data-react="RoleSwitcher"
-        data-props="{{ json_encode(['roles' => $switcherRoles, 'current' => $role ?? null, 'portalUrl' => route('portal.index')]) }}"
-    ></div>
+    @include('partials.role-switcher')
 </body>
 </html>

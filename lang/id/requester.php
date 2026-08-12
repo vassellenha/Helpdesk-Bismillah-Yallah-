@@ -64,6 +64,8 @@ return [
         'hint_last_6_months' => '6 bulan terakhir',
         'hint_waiting_response' => 'Menunggu respons Anda',
         'hint_all_caught_up' => 'Semua sudah ditangani',
+        'greeting' => 'Selamat datang, :name 👋',
+        'subtitle' => 'Ringkasan tiket dan status SLA Anda per hari ini, :date.',
     ],
 
     'sla_table' => [
@@ -80,6 +82,12 @@ return [
         'resolved' => 'Selesai',
         'sla_distribution' => 'Distribusi SLA',
         'sla_active' => 'SLA aktif',
+        'sla_subtitle' => 'Tiket dengan hitungan SLA berjalan (tidak termasuk yang menunggu approval)',
+        'sla_empty' => 'Tidak ada tiket aktif',
+        'sla_within_target' => ':pct% tiket aktif Anda masih dalam target SLA.',
+        'sla_on_track' => 'Sesuai Target',
+        'sla_warning' => 'Peringatan SLA',
+        'sla_breach' => 'Lewat SLA',
     ],
 
     'detail' => [
@@ -102,6 +110,17 @@ return [
         'note_required' => 'Catatan untuk Tim Support *',
         'note_optional' => 'Catatan untuk Tim Support (opsional)',
         'reopened' => 'Dibuka kembali — dikirim ke Tim Support',
+        'ticket_info' => 'Informasi Tiket',
+        'no_description' => 'Tidak ada deskripsi.',
+        'discussion' => 'Forum Diskusi',
+        'forum_empty' => 'Belum ada diskusi. Tambahkan catatan bila ada detail lain yang perlu disampaikan.',
+        'forum_placeholder' => 'Tulis catatan atau balasan…',
+        'send_reply' => 'Kirim Tanggapan',
+        'sending' => 'Mengirim…',
+        'send_failed' => 'Gagal mengirim pesan.',
+        'send_to_support_failed' => 'Gagal mengirim ke Tim Support.',
+        'close_failed' => 'Gagal menutup tiket.',
+        'people' => 'Orang Terkait',
     ],
 
     'bulk' => [

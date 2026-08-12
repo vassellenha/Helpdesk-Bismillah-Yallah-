@@ -20,15 +20,20 @@
     </p>
 
     {{--
-        Akun nonaktif TIDAK diberi tombol navigasi sama sekali.
+        Akun nonaktif TIDAK diberi tombol "Pilih Role".
 
         Keduanya bermuara ke portal pemilih role, dan role mana pun yang diklik
         di sana ditolak lagi oleh gerbang yang sama. Tombol yang memutar kembali
         ke halaman ini bukan cuma tak berguna — ia membuat orang mengira
         masalahnya salah pilih role, lalu mencoba ketujuhnya satu per satu.
 
-        Yang menggantikannya adalah satu-satunya langkah yang benar-benar
-        menyelesaikan: menghubungi Administrator.
+        Dulu halaman ini menawarkan jalan keluar kedua untuk tiga role yang
+        punya mekanisme "bertindak sebagai": pindah menjadi agent/approver lain
+        yang akunnya masih aktif. Mekanisme itu sudah dicabut bersama seluruh
+        impersonasi, dan memang tidak boleh kembali — "akun saya dikunci" tidak
+        pernah pantas dijawab dengan "pakai akun orang lain". Yang tersisa
+        adalah satu-satunya jalan yang benar-benar menyelesaikan: memperbaiki
+        akun aslinya.
     --}}
     @php
         // getPrevious(), bukan $exception itu sendiri: Laravel membungkus setiap
@@ -39,7 +44,7 @@
     @endphp
 
     @if ($akunNonaktif)
-        <p class="mt-6 text-sm text-gray-400 dark:text-ink-3">
+        <p class="mt-8 text-sm text-gray-400 dark:text-ink-3">
             Hubungi Administrator Helpdesk untuk mengaktifkan kembali akun Anda.
         </p>
     @else

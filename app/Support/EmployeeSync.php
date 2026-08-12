@@ -416,7 +416,18 @@ class EmployeeSync
      */
     private static function recordAudit(array $summary): void
     {
-        $actor = CurrentActor::admin();
+        $actor = self::auditActor();
+
+        if (! $actor) {
+            // Tidak ada Administrator sama sekali di basis data — hanya mungkin
+            // pada instalasi yang belum di-seed. Baris audit dilewati, tapi
+            // TIDAK diam-diam: sinkronisasinya sendiri sudah berjalan dan
+            // hasilnya harus tetap bisa ditelusuri di log.
+            Log::warning('[EmployeeSync] Audit trail dilewati: tidak ada akun ber-role Administrator untuk diatribusikan.', $summary);
+
+            return;
+        }
+
         $skipped = count($summary['skipped']);
 
         // A run that fetched nothing must not read like a successful no-op —
@@ -444,6 +455,33 @@ class EmployeeSync
             'new_value' => $summary,
             'description' => $description,
         ]);
+    }
+
+    /**
+     * Siapa yang dicatat sebagai pelaku sinkronisasi.
+     *
+     * DUA jalur, dan itulah sebabnya ini tidak bisa sekadar
+     * `CurrentActor::admin()` seperti dulu. Sinkronisasi dijalankan lewat tombol
+     * di konsol Admin, TAPI juga oleh penjadwal (lihat routes/console.php) —
+     * dan di jalur penjadwal tidak ada siapa pun yang login. Sejak persona tetap
+     * dicabut, `CurrentActor::admin()` di sana menolak dengan 401 dan
+     * menggagalkan sinkronisasi terjadwal yang sebenarnya sudah selesai bekerja.
+     *
+     * Jadi: Admin yang menekan tombolnya kalau memang ada, selain itu
+     * Administrator pertama sebagai atribusi sistem. Diurutkan berdasarkan id
+     * supaya dua jalannya penjadwal tidak tercatat atas nama dua orang berbeda.
+     */
+    private static function auditActor(): ?User
+    {
+        $user = CurrentActor::user();
+
+        if ($user?->roles->contains('name', 'Administrator')) {
+            return $user;
+        }
+
+        return User::whereHas('roles', fn ($q) => $q->where('name', 'Administrator'))
+            ->orderBy('id')
+            ->first();
     }
 
     /**

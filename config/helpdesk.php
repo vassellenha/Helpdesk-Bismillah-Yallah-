@@ -4,12 +4,42 @@ return [
     'company' => 'Adhi Karya',
     'product' => 'Helpdesk 2.0',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login pengembangan — TANPA PASSWORD. Wajib mati di produksi.
+    |--------------------------------------------------------------------------
+    |
+    | Masuk cukup dengan email ATAU nomor telepon. Tidak ada password sama
+    | sekali: gunanya berpindah-pindah identitas dengan cepat untuk menguji hak
+    | akses tiap role, dan meminta password hanya menambah langkah tanpa
+    | menambah kepastian apa pun di mesin sendiri.
+    |
+    | KONSEKUENSINYA HARUS DIBACA UTUH: siapa pun yang tahu email seseorang bisa
+    | MENJADI orang itu. Tidak ada lapisan kedua. Karena itu saklar ini bukan
+    | sekadar pengatur kenyamanan — ia SATU-SATUNYA hal yang memisahkan alat uji
+    | ini dari pembajakan akun. Produksi masuk lewat SSO SINTA, titik.
+    |
+    | Dibaca dari APP_ENV lewat env(), BUKAN app()->isProduction(): berkas config
+    | ikut ter-cache oleh `config:cache`, dan memanggil container saat cache
+    | dibuat akan membekukan nilai lingkungan tempat cache itu dibuat.
+    |
+    | Jangan pernah menyetel HELPDESK_DEV_LOGIN=true di .env produksi.
+    */
+    'dev_login' => env('HELPDESK_DEV_LOGIN', env('APP_ENV', 'production') !== 'production'),
+
     // Centralized role metadata used by the role-select portal and the
     // sidebar navigation. Swap the dummy `route` targets for real
     // controller actions as each workspace is wired to the database.
+    //
+    // `role` adalah nama baris di tabel `roles` yang diwakili kunci ini. Itu
+    // satu-satunya jembatan antara kunci URL/tampilan ('support-bpo') dan
+    // identitas yang tersimpan di basis data ('Support BPO'); middleware
+    // `role:`, CurrentActor, dan switch role semuanya membacanya dari sini
+    // supaya peta itu tidak ditulis ulang di tiga tempat berbeda.
     'roles' => [
         'requester' => [
             'key' => 'requester',
+            'role' => 'Requester',
             'initials' => 'R',
             'label' => 'Requester',
             'description' => 'Membuat tiket baru, memantau status permintaan, dan melihat riwayat tiket sendiri.',
@@ -21,6 +51,7 @@ return [
         ],
         'approver' => [
             'key' => 'approver',
+            'role' => 'Approver',
             'initials' => 'A',
             'label' => 'Approver',
             'description' => 'Meninjau dan menyetujui atau menolak permintaan yang membutuhkan approval.',
@@ -32,6 +63,7 @@ return [
         ],
         'support' => [
             'key' => 'support',
+            'role' => 'Support IT',
             'initials' => 'SI',
             'label' => 'Support IT',
             'description' => 'Menangani tiket teknis (termasuk eskalasi dari Support BPO), mengelola progres penyelesaian.',
@@ -43,6 +75,7 @@ return [
         ],
         'support-bpo' => [
             'key' => 'support-bpo',
+            'role' => 'Support BPO',
             'initials' => 'SB',
             'label' => 'Support BPO',
             'description' => 'Menangani tiket masuk lini pertama sesuai aplikasi/PIC, eskalasi ke Support IT bila perlu penanganan lebih dalam.',
@@ -54,6 +87,7 @@ return [
         ],
         'team-lead' => [
             'key' => 'team-lead',
+            'role' => 'Team Lead',
             'initials' => 'T',
             'label' => 'Team Lead',
             'description' => 'Memantau performa tim support dan menangani eskalasi SLA.',
@@ -64,6 +98,7 @@ return [
         ],
         'admin' => [
             'key' => 'admin',
+            'role' => 'Administrator',
             'initials' => 'Ad',
             'label' => 'Admin',
             'description' => 'Konfigurasi user & role, SLA, approval matrix, katalog layanan, dan audit trail.',
@@ -74,6 +109,7 @@ return [
         ],
         'eva' => [
             'key' => 'eva',
+            'role' => 'Knowledge Administrator',
             'initials' => 'EV',
             'label' => 'EVA Knowledge',
             'description' => 'Mengelola pengetahuan yang dipakai asisten virtual EVA — artikel, FAQ, dokumen, pertanyaan tak terjawab, dan rekomendasi tipe tiket.',

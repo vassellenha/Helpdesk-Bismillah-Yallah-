@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiFetch } from '../../lib/api';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
 import { t as trans } from '../../lib/i18n';
 
 // Language-independent sentinel — compared against real module/action codes.
 const ALL = '__all';
-const PAGE_SIZE = 15;
 
 const MODULE_KEYS = {
     service_catalog: 'catalog',
@@ -48,7 +48,10 @@ const actionLabel = (code) => (code === 'update'
     ? trans('admin.audit.edit')
     : trans(`admin.audit.action.${ACTION_KEYS[code]}`, {}, code));
 
-export default function AuditTrailConsole({ logs, administrators }) {
+export default function AuditTrailConsole({ logs: initialLogs, logsMeta, listUrl, administrators }) {
+    const [logs, setLogs] = useState(initialLogs);
+    const [meta, setMeta] = useState(logsMeta);
+    const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [moduleFilter, setModuleFilter] = useState(ALL);
     const [actionFilter, setActionFilter] = useState(ALL);
@@ -62,29 +65,58 @@ export default function AuditTrailConsole({ logs, administrators }) {
     const actionOptions = useMemo(() => [{ value: ALL, label: trans('admin.audit.all_activity') }, ...Object.keys(ACTION_KEYS).map((v) => ({ value: v, label: actionLabel(v) }))], []);
     const adminOptions = useMemo(() => [{ value: ALL, label: trans('admin.audit.all_user') }, ...administrators.map((a) => ({ value: a, label: a }))], [administrators]);
 
-    const filtered = useMemo(() => {
-        const q = search.toLowerCase();
-        const fromTs = dateFrom ? new Date(dateFrom + 'T00:00:00').getTime() / 1000 : null;
-        const toTs = dateTo ? new Date(dateTo + 'T23:59:59').getTime() / 1000 : null;
+    /*
+        Penyaringan terjadi di SERVER, bukan di sini.
+        Dulu komponen ini menyaring array `logs` yang isinya 500 baris terbaru —
+        artinya log yang lebih tua tidak pernah terjangkau filter apa pun, dan
+        daftar "Pengguna" hanya memuat orang yang kebetulan ada di jendela itu.
+    */
+    const queryString = useMemo(() => {
+        const params = new URLSearchParams();
+        if (search.trim() !== '') params.set('search', search.trim());
+        if (moduleFilter !== ALL) params.set('module', moduleFilter);
+        if (actionFilter !== ALL) params.set('action', actionFilter);
+        if (adminFilter !== ALL) params.set('administrator', adminFilter);
+        if (dateFrom !== '') params.set('from', dateFrom);
+        if (dateTo !== '') params.set('to', dateTo);
+        if (page > 1) params.set('page', String(page));
+        return params.toString();
+    }, [search, moduleFilter, actionFilter, adminFilter, dateFrom, dateTo, page]);
 
-        return logs.filter((l) => {
-            const matchesSearch =
-                q === '' ||
-                l.target_name.toLowerCase().includes(q) ||
-                l.administrator.toLowerCase().includes(q) ||
-                l.description.toLowerCase().includes(q);
-            const matchesModule = moduleFilter === ALL || l.module === moduleFilter;
-            const matchesAction = actionFilter === ALL || l.action === actionFilter;
-            const matchesAdmin = adminFilter === ALL || l.administrator === adminFilter;
-            const matchesFrom = fromTs === null || l.timestamp >= fromTs;
-            const matchesTo = toTs === null || l.timestamp <= toTs;
-            return matchesSearch && matchesModule && matchesAction && matchesAdmin && matchesFrom && matchesTo;
-        });
-    }, [logs, search, moduleFilter, actionFilter, adminFilter, dateFrom, dateTo]);
+    // Muatan pertama sudah dirender server, jadi permintaan pertama dari
+    // useEffect hanya akan mengulang hal yang sama. Dilewati sekali.
+    const firstRun = useRef(true);
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    useEffect(() => {
+        if (firstRun.current) {
+            firstRun.current = false;
+            return;
+        }
+
+        let batal = false;
+        setLoading(true);
+
+        (async () => {
+            try {
+                const res = await apiFetch(`${listUrl}${queryString ? `?${queryString}` : ''}`);
+                if (batal) return;
+                setLogs(res.logs);
+                setMeta(res.meta);
+            } finally {
+                if (!batal) setLoading(false);
+            }
+        })();
+
+        // Jawaban yang datang terlambat dari filter yang sudah diganti tidak
+        // boleh menimpa hasil yang lebih baru.
+        return () => {
+            batal = true;
+        };
+    }, [queryString, listUrl]);
+
+    const totalPages = Math.max(1, meta?.last_page ?? 1);
     const page_ = Math.min(page, totalPages);
-    const paginated = filtered.slice((page_ - 1) * PAGE_SIZE, page_ * PAGE_SIZE);
+    const paginated = logs;
 
     function resetFilters() {
         setSearch('');
@@ -128,7 +160,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                         <button onClick={resetFilters} className="text-sm font-medium text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">{trans('admin.common.reset_filter')}</button>
                     </div>
                 </div>
-                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">{trans('admin.audit.showing', { from: filtered.length === 0 ? 0 : (page_ - 1) * PAGE_SIZE + 1, to: Math.min(page_ * PAGE_SIZE, filtered.length), total: filtered.length })}</p>
+                <p className="px-4 pt-3 text-sm text-gray-400 dark:text-ink-3">{trans('admin.audit.showing', { from: meta?.from ?? 0, to: meta?.to ?? 0, total: meta?.total ?? 0 })}</p>
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100 dark:divide-transparent text-sm">
@@ -170,7 +202,7 @@ export default function AuditTrailConsole({ logs, administrators }) {
                     </table>
                 </div>
 
-                {filtered.length > 0 && (
+                {(meta?.total ?? 0) > 0 && (
                     <div className="flex items-center justify-between border-t border-gray-100 dark:border-edge px-4 py-3">
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}

@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\ActsAsEvaAdmin;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 
 /**
@@ -27,9 +28,15 @@ use Tests\TestCase;
  * bukan perilaku menjawabnya (itu milik EvaResponderTest) maupun mekanika
  * percakapan (PreviewControllerTest):
  *
- *   1. Endpoint-nya TERBUKA — tamu tanpa identitas tetap dilayani. Kalau suatu
- *      saat ada yang memindahkannya ke dalam grup `eva.access`, tes ini gagal
- *      sebelum ada karyawan yang menemukannya lewat layar 401.
+ *   1. Endpoint-nya terbuka untuk SETIAP KARYAWAN, bukan hanya admin konsol —
+ *      cukup `auth`, tanpa gerbang role. Kalau suatu saat ada yang
+ *      memindahkannya ke dalam grup konsol yang ber-`role:eva`, tes ini gagal
+ *      sebelum ada karyawan yang menemukannya lewat layar 403.
+ *
+ *      Dulu widget ini benar-benar terbuka untuk TAMU. Itu berubah saat login
+ *      diwajibkan di seluruh aplikasi: portal tempat widget ini hidup sendiri
+ *      sudah menuntut sesi, jadi "tamu" bukan lagi keadaan yang bisa dialami
+ *      seorang pemakai widget.
  *   2. Catatan penilaian benar-benar mendarat di kb_answer_ratings. Kolom
  *      `reason`/`comment` sudah lama ada dan sudah lama divalidasi, tapi belum
  *      pernah ada satu pun pengirim — panel tanggapan di Rating & Feedback
@@ -39,6 +46,7 @@ use Tests\TestCase;
 final class AssistantWidgetTest extends TestCase
 {
     use ActsAsEvaAdmin;
+    use ActsAsRole;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -48,9 +56,10 @@ final class AssistantWidgetTest extends TestCase
         Cache::flush();
         SubjectMatcher::forget();
 
-        // CurrentActor mencari persona ini lewat email — tanpa barisnya, setiap
-        // endpoint widget gagal keras sebelum sampai ke logikanya.
-        User::factory()->create(['name' => 'Andi Pratama', 'email' => 'andi.pratama@adhi.co.id', 'nip' => '19950418102']);
+        // Karyawan biasa: cukup role Requester. Endpoint draf tiket memanggil
+        // CurrentActor::requester(), jadi role itu yang menentukan — bukan lagi
+        // baris persona yang dicari lewat email.
+        $this->actingAsRole('requester');
 
         $this->seedCatalog();
         $this->searchReturns();
@@ -102,17 +111,26 @@ final class AssistantWidgetTest extends TestCase
             ->assertSee('min_confidence');
     }
 
-    public function test_tamu_tanpa_identitas_tetap_dilayani(): void
+    public function test_karyawan_biasa_dilayani_tapi_konsol_admin_tetap_tertutup(): void
     {
-        // Justru INI yang membedakannya dari konsol. `eva/api/preview/ask`
-        // ditolak 401 di lingkungan testing; widget tidak boleh ikut ditolak,
-        // karena karyawan di portal memang belum punya identitas EVA.
+        // Inilah yang membedakan widget dari konsol: setUp() masuk sebagai
+        // Requester polos — tanpa role EVA sama sekali — dan widget melayaninya.
         $this->postJson(route('eva.assistant.ask'), ['question' => 'cara reset password SAP'])
             ->assertOk()
             ->assertJsonPath('type', 'answer');
 
+        // Orang yang sama, endpoint kembarnya di konsol admin: ditolak, karena
+        // di sana gerbangnya `role:eva`.
         $this->postJson(route('eva.preview.ask'), ['question' => 'cara reset password SAP'])
-            ->assertStatus(401);
+            ->assertForbidden();
+    }
+
+    public function test_tamu_tanpa_sesi_ditolak(): void
+    {
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson(route('eva.assistant.ask'), ['question' => 'cara reset password SAP'])
+            ->assertUnauthorized();
     }
 
     public function test_pertanyaan_tercatat_di_log_jawaban(): void

@@ -65,22 +65,6 @@ return [
     */
     'max_chunks' => (int) env('EVA_MAX_CHUNKS', 500),
 
-    /*
-    | Akses konsol (lihat App\Http\Middleware\EnsureEvaConsoleAccess).
-    |
-    | `local_actor` menyalakan jembatan sementara: tanpa SSO tidak ada cara
-    | login sama sekali di repo ini, jadi di mesin pengembang request tamu
-    | dilekatkan ke persona CurrentActor::admin() supaya konsol tetap bisa
-    | dipakai mengisi Knowledge Base. Default-nya mengikuti APP_ENV=local —
-    | `testing` dan `production` menolak tamu dengan 401.
-    |
-    | CABUT INI BEGITU SSO ADHI TERPASANG. Selama ia menyala, "login" di mesin
-    | lokal berarti "siapa pun yang bisa membuka port-nya".
-    */
-    'console' => [
-        'local_actor' => (bool) env('EVA_LOCAL_ACTOR', env('APP_ENV') === 'local'),
-    ],
-
     'brand' => [
         'title' => 'EVA Knowledge',
         'subtitle' => 'Admin Console',

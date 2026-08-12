@@ -136,7 +136,7 @@ class AdminController extends Controller
         return collect($this->lastSixMonths())->map(function (Carbon $month) use ($tickets, $priorities) {
             $inMonth = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month));
 
-            $row = ['month' => $month->format('M')];
+            $row = ['month' => $month->translatedFormat('M')];
             foreach ($priorities as $priority) {
                 $row[$priority] = $inMonth->where('priority', $priority)->filter(fn (Ticket $t) => $this->isBreached($t))->count();
             }
@@ -152,7 +152,7 @@ class AdminController extends Controller
         return collect($this->lastSixMonths())->map(function (Carbon $month) use ($tickets, $categories) {
             $inMonth = $tickets->filter(fn (Ticket $t) => $t->created_at->isSameMonth($month) && $t->created_at->isSameYear($month));
 
-            $row = ['month' => $month->format('M')];
+            $row = ['month' => $month->translatedFormat('M')];
             foreach ($categories as $category) {
                 $row[$category] = $inMonth->where('issue_category', $category)->count();
             }

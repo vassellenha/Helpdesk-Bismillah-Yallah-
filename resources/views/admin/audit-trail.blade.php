@@ -7,6 +7,8 @@
     data-react="AuditTrailConsole"
     data-props="{{ json_encode([
         'logs' => $logs,
+        'logsMeta' => $logsMeta,
+        'listUrl' => $listUrl,
         'administrators' => $administrators,
     ]) }}"
 ></div>

@@ -82,7 +82,7 @@ export default function MyProfileModal({ profileUrl, onClose }) {
                                     <Detail label="Nama Lengkap" value={profile.name} />
                                     <Detail label="Email Korporat" value={profile.email} />
                                     <Detail label="Username" value={profile.username} />
-                                    <Detail label="NIP" value={profile.nip} />
+                                    <Detail label="NPP" value={profile.nip} />
                                     <Detail label="Alamat" value={profile.address} span />
                                     <Detail label="Nomor Telepon" value={profile.phone} />
                                     <Detail label="Status Akun" value={profile.status} hint={profile.statusReason} />

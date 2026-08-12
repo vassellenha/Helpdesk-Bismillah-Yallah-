@@ -9,6 +9,7 @@ use App\Models\TicketAttachment;
 use App\Models\TicketComment;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\TicketDiscussion;
 use App\Support\TicketPeople;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
@@ -32,7 +33,7 @@ class TicketDetailController extends Controller
             'currentUser' => ['name' => $requester->name, 'title' => $requester->jabatan.' · '.$requester->unit, 'initials' => $this->initials($requester->name)],
             'notifications' => NotificationService::present($requester),
             'ticket' => $this->presentTicket($ticket),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('requester.tickets.data', $ticket),
@@ -61,7 +62,7 @@ class TicketDetailController extends Controller
 
         return response()->json([
             'ticket' => $this->presentTicket($ticket),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
         ]);
@@ -117,18 +118,11 @@ class TicketDetailController extends Controller
         abort_unless($ticket->requester_id === $requester->id, 403);
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
-        $data = $request->validate(['message' => 'required|string|max:3000']);
+        $data = $request->validate(TicketDiscussion::rules());
 
-        $comment = TicketComment::create([
-            'ticket_id' => $ticket->id,
-            'author_name' => $requester->name,
-            'author_role' => 'Requester',
-            'message' => $data['message'],
-        ]);
+        $comment = TicketDiscussion::store($ticket, $requester, 'Requester', 'Requester', $data, $request->file('file'));
 
-        NotificationService::notifyDiscussionParticipants($ticket, $requester, 'Requester', $data['message']);
-
-        return response()->json($this->presentComment($comment), 201);
+        return response()->json(TicketDiscussion::present($comment), 201);
     }
 
     /**
@@ -250,24 +244,24 @@ class TicketDetailController extends Controller
             'subject' => $t->subject_name,
             'description' => $t->description,
             'attachments' => $t->attachmentsPayload(),
-            'createdAt' => $t->created_at->format('M j, Y · H:i'),
+            'createdAt' => $t->created_at->translatedFormat('j M Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
             'approvalNote' => $lastApproval ? [
                 'decision' => $lastApproval->decision,
                 'note' => $lastApproval->note,
                 'approverName' => $t->approver?->name,
-                'at' => $lastApproval->created_at->format('M j, Y · H:i'),
+                'at' => $lastApproval->created_at->translatedFormat('j M Y · H:i'),
             ] : null,
             'reopenNote' => $t->reopen_note ? [
                 'note' => $t->reopen_note,
-                'at' => $t->reopen_at->format('M j, Y · H:i'),
+                'at' => $t->reopen_at->translatedFormat('j M Y · H:i'),
             ] : null,
             'resolutionNote' => $this->latestResolutionNote($t),
             'supportReturnNote' => $supportReturnAudit ? [
                 'note' => $supportReturnAudit->new_value['catatan'] ?? '',
                 'agentName' => $supportReturnAudit->actor?->name ?? 'Tim Support',
-                'at' => $supportReturnAudit->created_at->format('M j, Y · H:i'),
+                'at' => $supportReturnAudit->created_at->translatedFormat('j M Y · H:i'),
             ] : null,
             'sla' => $t->slaPayload(),
             'ratingActive' => (bool) $t->rating_active,
@@ -319,7 +313,7 @@ class TicketDetailController extends Controller
         return [
             'note' => $audit->new_value['catatan'] ?? '',
             'agentName' => $audit->actor?->name ?? 'Tim Support',
-            'at' => $audit->created_at->format('M j, Y · H:i'),
+            'at' => $audit->created_at->translatedFormat('j M Y · H:i'),
         ];
     }
 
@@ -336,17 +330,6 @@ class TicketDetailController extends Controller
             ->with('actor')
             ->latest('created_at')
             ->first();
-    }
-
-    private function presentComment(TicketComment $c): array
-    {
-        return [
-            'id' => $c->id,
-            'authorName' => $c->author_name,
-            'authorRole' => $c->author_role,
-            'message' => $c->message,
-            'at' => $c->created_at->format('M j · H:i'),
-        ];
     }
 
     private function initials(string $name): string

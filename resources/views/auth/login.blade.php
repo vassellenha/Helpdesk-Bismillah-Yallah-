@@ -14,7 +14,6 @@
     <div class="flex min-h-screen items-center justify-center px-4 py-10">
         <div class="w-full max-w-md">
             <div class="mb-6 flex items-center gap-2.5">
-                <img src="{{ asset('images/logo.png') }}" alt="Helpdesk" class="h-10 w-10 rounded-xl object-cover">
                 <p class="text-sm font-bold text-gray-900 dark:text-ink-1">Helpdesk</p>
             </div>
 

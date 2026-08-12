@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { TopProgressBar } from '../Spinner';
 import BrandLockup from '../BrandLockup';
-import LanguageSwitcher from '../LanguageSwitcher';
 import TeamLeadTopNav from './TeamLeadTopNav';
 import TicketSlideOver from './TicketSlideOver';
 import RemindModal from './RemindModal';
@@ -136,7 +135,6 @@ export default function TeamLeadWorkspace(props) {
                 </nav>
 
                 <div className="flex shrink-0 items-center gap-1">
-                    <LanguageSwitcher />
                     <TeamLeadTopNav
                         notifications={props.notifications ?? []}
                         user={props.user ?? {}}

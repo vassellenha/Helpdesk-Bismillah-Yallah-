@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\TicketManagementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\Auth\DevLoginController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
@@ -23,7 +24,6 @@ use App\Http\Controllers\Eva\SearchSettingsController as EvaSearchSettingsContro
 use App\Http\Controllers\Eva\TaxonomyController as EvaTaxonomyController;
 use App\Http\Controllers\Eva\TrainingController as EvaTrainingController;
 use App\Http\Controllers\Eva\UnansweredController as EvaUnansweredController;
-use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ProfileController;
@@ -38,12 +38,36 @@ use App\Http\Controllers\TicketDetailController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [PortalController::class, 'index'])->name('portal.index');
+Route::get('/', [PortalController::class, 'index'])->middleware('auth')->name('portal.index');
 
-Route::post('/locale', [LocaleController::class, 'update'])->name('locale.update');
+/*
+| Login pengembangan (email ATAU nomor telepon, tanpa password) — dua pintu,
+| satu tabel users.
+|
+| `login` TERDAFTAR DI SEMUA LINGKUNGAN, termasuk produksi tempat login ini
+| dimatikan. Middleware `auth` bawaan Laravel mengantar tamu ke `route('login')`;
+| nama yang tidak terdaftar melempar RouteNotFoundException, jadi mematikan
+| fitur ini dengan cara menghapus nama rutenya akan menukar halaman masuk dengan
+| error 500. Yang dimatikan adalah ISINYA — controller mengalihkan ke SSO saat
+| helpdesk.dev_login bernilai false, dan rute POST di bawah menolak dengan 404.
+|
+| throttle:20,1 di jalur POST. Tanpa password tidak ada yang bisa ditebak, jadi
+| pembatas ini bukan lagi penahan serangan tebak kredensial melainkan penahan
+| penyisiran: tanpa itu, satu skrip bisa memetakan email siapa saja yang punya
+| akun di sini lewat beda pesan "tidak ada akun". Angkanya dilonggarkan dari 5
+| ke 20 karena berpindah identitas antar-role memang pekerjaan yang berulang.
+*/
+Route::get('/login', [DevLoginController::class, 'showLogin'])->name('login');
+Route::get('/admin/login', [DevLoginController::class, 'showAdminLogin'])->name('admin.login');
+Route::post('/login', [DevLoginController::class, 'login'])
+    ->middleware('throttle:20,1')
+    ->name('login.attempt');
+Route::post('/admin/login', [DevLoginController::class, 'adminLogin'])
+    ->middleware('throttle:20,1')
+    ->name('admin.login.attempt');
+Route::post('/logout', [DevLoginController::class, 'logout'])->name('logout');
 
-// SINTA portal SSO. The helpdesk still works without signing in (see
-// CurrentActor's fixed personas); logging in narrows it to the real person.
+// SINTA portal SSO — jalur masuk yang berlaku di produksi.
 Route::prefix('auth/sso')->name('sso.')->group(function () {
     Route::get('/login', [SsoController::class, 'login'])->name('login');
     Route::get('/redirect', [SsoController::class, 'redirect'])->name('redirect');
@@ -54,18 +78,22 @@ Route::prefix('auth/sso')->name('sso.')->group(function () {
     Route::post('/logout', [SsoController::class, 'logout'])->name('logout');
 });
 
-Route::prefix('dashboard')->name('dashboard.')->group(function () {
-    Route::get('/requester', [DashboardController::class, 'requester'])->name('requester');
-    Route::get('/approver', [ApprovalController::class, 'inbox'])->name('approver');
-    Route::get('/support', [SupportController::class, 'dashboard'])->name('support');
-    Route::get('/support-bpo', [SupportBpoController::class, 'dashboard'])->name('support-bpo');
-    Route::get('/team-lead', [TeamLeadController::class, 'dashboard'])->name('team-lead');
-    Route::get('/eva', [DashboardController::class, 'eva'])->name('eva');
+// Satu dashboard per role, masing-masing dijaga role-nya sendiri — grup ini
+// dikelompokkan menurut prefix URL, bukan menurut siapa yang boleh membukanya.
+Route::prefix('dashboard')->name('dashboard.')->middleware('auth')->group(function () {
+    Route::get('/requester', [DashboardController::class, 'requester'])->middleware('role:requester')->name('requester');
+    Route::get('/approver', [ApprovalController::class, 'inbox'])->middleware('role:approver')->name('approver');
+    Route::get('/support', [SupportController::class, 'dashboard'])->middleware('role:support')->name('support');
+    Route::get('/support-bpo', [SupportBpoController::class, 'dashboard'])->middleware('role:support-bpo')->name('support-bpo');
+    Route::get('/team-lead', [TeamLeadController::class, 'dashboard'])->middleware('role:team-lead')->name('team-lead');
+    Route::get('/eva', [DashboardController::class, 'eva'])->middleware('role:eva')->name('eva');
 });
 
-Route::get('/eva/profile', [ProfileController::class, 'eva'])->name('eva.profile');
+Route::get('/eva/profile', [ProfileController::class, 'eva'])
+    ->middleware(['auth', 'role:eva'])
+    ->name('eva.profile');
 
-Route::prefix('approver')->name('approver.')->group(function () {
+Route::prefix('approver')->name('approver.')->middleware(['auth', 'role:approver'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'approver'])->name('profile');
     Route::get('/tickets', [ApprovalController::class, 'history'])->name('tickets');
     Route::get('/tickets/{ticket}', [ApprovalController::class, 'show'])->name('tickets.show');
@@ -74,10 +102,9 @@ Route::prefix('approver')->name('approver.')->group(function () {
     Route::post('/tickets/{ticket}/decide', [ApprovalController::class, 'decide'])->name('tickets.decide');
     Route::post('/notifications/{notification}/read', [ApprovalController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [ApprovalController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
-    Route::post('/switch-approver', [ApprovalController::class, 'switchApprover'])->name('switch-approver');
 });
 
-Route::prefix('support')->name('support.')->group(function () {
+Route::prefix('support')->name('support.')->middleware(['auth', 'role:support'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'support'])->name('profile');
     Route::get('/tickets', [SupportController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [SupportController::class, 'show'])->name('tickets.show');
@@ -88,10 +115,9 @@ Route::prefix('support')->name('support.')->group(function () {
     Route::post('/tickets/{ticket}/return', [SupportController::class, 'returnTicket'])->name('tickets.return');
     Route::post('/notifications/{notification}/read', [SupportController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
-    Route::post('/switch-agent', [SupportController::class, 'switchAgent'])->name('switch-agent');
 });
 
-Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
+Route::prefix('support-bpo')->name('support-bpo.')->middleware(['auth', 'role:support-bpo'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'supportBpo'])->name('profile');
     Route::get('/tickets', [SupportBpoController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [SupportBpoController::class, 'show'])->name('tickets.show');
@@ -103,10 +129,9 @@ Route::prefix('support-bpo')->name('support-bpo.')->group(function () {
     Route::post('/tickets/{ticket}/return', [SupportBpoController::class, 'returnTicket'])->name('tickets.return');
     Route::post('/notifications/{notification}/read', [SupportBpoController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportBpoController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
-    Route::post('/switch-agent', [SupportBpoController::class, 'switchAgent'])->name('switch-agent');
 });
 
-Route::prefix('team-lead')->name('team-lead.')->group(function () {
+Route::prefix('team-lead')->name('team-lead.')->middleware(['auth', 'role:team-lead'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'teamLead'])->name('profile');
     Route::get('/data', [TeamLeadController::class, 'dataFeed'])->name('data-feed');
     Route::get('/tickets/{ticket}', [TeamLeadController::class, 'showTicket'])->name('tickets.show');
@@ -122,7 +147,7 @@ Route::prefix('team-lead')->name('team-lead.')->group(function () {
     Route::post('/notifications/read-all', [TeamLeadController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
 
-Route::prefix('requester')->name('requester.')->group(function () {
+Route::prefix('requester')->name('requester.')->middleware(['auth', 'role:requester'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'requester'])->name('profile');
     Route::get('/tickets', [DashboardController::class, 'myTickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [TicketDetailController::class, 'show'])->name('tickets.show');
@@ -138,12 +163,13 @@ Route::prefix('requester')->name('requester.')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 });
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'admin'])->name('profile');
     Route::get('/users', [UserRoleController::class, 'index'])->name('users');
     Route::get('/sla', [SlaPolicyController::class, 'index'])->name('sla');
     Route::get('/audit-trail', [AuditTrailController::class, 'index'])->name('audit-trail');
+    Route::get('/audit-trail/list', [AuditTrailController::class, 'list'])->name('audit-trail.list');
 
     Route::prefix('integrations')->name('integrations.')->group(function () {
         Route::post('/test', [IntegrationController::class, 'test'])->name('test');
@@ -194,7 +220,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 | AuditTrailConsole, dst) — bukan satu SPA dengan pergantian view di klien
 | seperti mockup.
 */
-Route::prefix('eva')->name('eva.')->middleware('eva.access')->group(function () {
+Route::prefix('eva')->name('eva.')->middleware(['auth', 'role:eva'])->group(function () {
     Route::get('/', fn () => redirect()->route('eva.coverage'));
     Route::get('/coverage', [EvaCoverageController::class, 'index'])->name('coverage');
     Route::get('/articles', [EvaArticleController::class, 'index'])->name('articles');
@@ -290,10 +316,11 @@ Route::prefix('eva')->name('eva.')->middleware('eva.access')->group(function () 
 | bootstrap/app.php merender error sebagai JSON untuk pola bintang-slash-api.
 | Tanpa segmen itu, error validasi dibalas HTML dan apiFetch gagal memparsenya.
 */
-Route::prefix('assistant/api')->name('eva.assistant.')->group(function () {
+Route::prefix('assistant/api')->name('eva.assistant.')->middleware('auth')->group(function () {
     // Endpoint terberat: satu request = satu putaran Pencarian A (FULLTEXT +
-    // fallback LIKE) atas seluruh materi. Ini juga endpoint EVA pertama yang
-    // terbuka tanpa penjaga identitas, jadi throttle-nya bukan pelengkap.
+    // fallback LIKE) atas seluruh materi. `auth` saja tanpa gerbang role —
+    // widget ini memang untuk SIAPA PUN yang sudah masuk — jadi throttle-nya
+    // tetap bukan pelengkap.
     Route::post('/ask', [EvaAssistantController::class, 'ask'])
         ->middleware('throttle:20,1')
         ->name('ask');
@@ -308,8 +335,19 @@ Route::prefix('assistant/api')->name('eva.assistant.')->group(function () {
         ->name('ticket-draft');
 });
 
-// Read by any workspace that needs live SLA data (Requester new-ticket form).
-Route::get('/api/sla-policies/active', [SlaPolicyController::class, 'activeForRequester'])->name('sla-policies.active');
-Route::post('/api/tickets', [TicketController::class, 'store'])->name('tickets.store');
-Route::get('/api/catalog', [CatalogController::class, 'tree'])->name('catalog.tree');
-Route::get('/api/approvers', [CatalogController::class, 'approvers'])->name('approvers.index');
+/*
+| Permukaan pembuatan tiket — dipakai NewTicketModal di layar Requester.
+|
+| Dijaga `role:requester`, bukan `auth` saja: /api/tickets MENULIS tiket atas
+| nama pemanggilnya, dan katalog beserta daftar approver adalah bahan formulir
+| yang sama. Karena hampir semua orang di sini juga memegang role Requester,
+| gerbang ini jarang terasa — yang dijaganya adalah akun yang memang sengaja
+| dibuat tanpa role itu.
+*/
+Route::middleware(['auth', 'role:requester'])->group(function () {
+    // Read by any workspace that needs live SLA data (Requester new-ticket form).
+    Route::get('/api/sla-policies/active', [SlaPolicyController::class, 'activeForRequester'])->name('sla-policies.active');
+    Route::post('/api/tickets', [TicketController::class, 'store'])->name('tickets.store');
+    Route::get('/api/catalog', [CatalogController::class, 'tree'])->name('catalog.tree');
+    Route::get('/api/approvers', [CatalogController::class, 'approvers'])->name('approvers.index');
+});

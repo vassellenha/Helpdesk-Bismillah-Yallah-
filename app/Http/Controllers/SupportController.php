@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use App\Support\SupportGreeting;
+use App\Support\TicketDiscussion;
 use App\Support\TicketPeople;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
@@ -126,7 +127,7 @@ class SupportController extends Controller
             'currentUser' => $this->currentUserPayload($supportUser),
             'notifications' => $this->notifications($supportUser),
             'ticket' => $this->presentTicket($ticket, $agent),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
             'dataUrl' => route('support.tickets.data', $ticket),
@@ -154,7 +155,7 @@ class SupportController extends Controller
 
         return response()->json([
             'ticket' => $this->presentTicket($ticket, $agent),
-            'comments' => $ticket->comments->map(fn (TicketComment $c) => $this->presentComment($c))->values(),
+            'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
         ]);
@@ -168,21 +169,14 @@ class SupportController extends Controller
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
-        $data = $request->validate(['message' => 'required|string|max:3000']);
+        $data = $request->validate(TicketDiscussion::rules());
 
-        $comment = TicketComment::create([
-            'ticket_id' => $ticket->id,
-            'author_name' => $supportUser->name,
-            'author_role' => 'Support',
-            'message' => $data['message'],
-        ]);
+        $comment = TicketDiscussion::store($ticket, $supportUser, 'Support', 'Support IT', $data, $request->file('file'));
 
         // First reply from Support is what stops the response clock.
         $ticket->markFirstResponse($comment->created_at);
 
-        NotificationService::notifyDiscussionParticipants($ticket, $supportUser, 'Support IT', $data['message']);
-
-        return response()->json($this->presentComment($comment), 201);
+        return response()->json(TicketDiscussion::present($comment), 201);
     }
 
     /**
@@ -355,24 +349,6 @@ class SupportController extends Controller
         return response()->json(['read' => true]);
     }
 
-    /**
-     * A catalog Subject can route to any of several IT agents, not just one
-     * fixed persona, so which agent this "mockup login" acts as is
-     * switchable here — the choice is remembered in session and read back
-     * by CurrentActor::support() on every request.
-     */
-    public function switchAgent(Request $request): \Illuminate\Http\RedirectResponse
-    {
-        $data = $request->validate(['agent_id' => 'required|integer|exists:support_agents,id']);
-
-        $agent = SupportAgent::findOrFail($data['agent_id']);
-        abort_unless($agent->type === 'it' && $agent->user_id, 422, 'Agent IT tidak valid untuk beralih.');
-
-        session(['acting_support_agent_id' => $agent->id]);
-
-        return redirect()->back();
-    }
-
     private function agentFor(User $supportUser): SupportAgent
     {
         return SupportAgent::where('user_id', $supportUser->id)->firstOrFail();
@@ -461,7 +437,7 @@ class SupportController extends Controller
             'sla' => $t->sla_label,
             'slaKind' => $t->sla_kind,
             'requester' => $t->requester?->name ?? '—',
-            'created' => $t->created_at->format('M j, Y'),
+            'created' => $t->created_at->translatedFormat('j M Y'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('support.tickets.show', $t),
         ];
@@ -478,7 +454,7 @@ class SupportController extends Controller
             'priority' => $t->priority,
             'requester' => $t->requester?->name ?? '—',
             'createdAt' => $t->created_at->toIso8601String(),
-            'at' => $t->created_at->format('M j, Y · H:i'),
+            'at' => $t->created_at->translatedFormat('j M Y · H:i'),
             'href' => route('support.tickets.show', $t),
         ];
     }
@@ -496,11 +472,11 @@ class SupportController extends Controller
             'service' => trim(($t->service_name ?? '').($t->subcategory_name ? ' · '.$t->subcategory_name : '')) ?: '—',
             'description' => $t->description,
             'attachments' => $t->attachmentsPayload(),
-            'createdAt' => $t->created_at->format('M j, Y · H:i'),
+            'createdAt' => $t->created_at->translatedFormat('j M Y · H:i'),
             'satisfactionRating' => $t->satisfaction_rating,
             'feedbackNote' => $t->feedback_note,
             'ratingActive' => (bool) $t->rating_active,
-            'reopenNote' => $t->reopen_note ? ['note' => $t->reopen_note, 'at' => $t->reopen_at->format('M j, Y · H:i')] : null,
+            'reopenNote' => $t->reopen_note ? ['note' => $t->reopen_note, 'at' => $t->reopen_at->translatedFormat('j M Y · H:i')] : null,
             'requester' => $t->requester ? [
                 'name' => $t->requester->name,
                 'unit' => $t->requester->unit,
@@ -518,21 +494,11 @@ class SupportController extends Controller
             ],
             'canAct' => ! in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Waiting for Approval'], true),
             'escalated' => $t->escalated_at !== null,
-            'escalatedAt' => $t->escalated_at?->format('M j, Y · H:i'),
+            'escalatedAt' => $t->escalated_at?->translatedFormat('j M Y · H:i'),
             'escalationNote' => $t->escalation_note,
         ];
     }
 
-    private function presentComment(TicketComment $c): array
-    {
-        return [
-            'id' => $c->id,
-            'authorName' => $c->author_name,
-            'authorRole' => $c->author_role,
-            'message' => $c->message,
-            'at' => $c->created_at->format('M j · H:i'),
-        ];
-    }
 
     private function currentUserPayload(User $supportUser): array
     {

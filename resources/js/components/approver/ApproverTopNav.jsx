@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { t as trans } from '../../lib/i18n';
 import { apiFetch } from '../../lib/api';
 import MyProfileModal from '../MyProfileModal';
+import LogoutButton from '../LogoutButton';
 
 const ICON_STYLES = {
     sla_breach: { bg: 'bg-red-50 dark:bg-bad-soft', color: 'text-red-600 dark:text-bad-text' },
@@ -148,9 +149,7 @@ export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl
                             My Tickets
                         </a>
                         <div className="mt-1.5 border-t border-gray-50 dark:border-edge pt-1.5">
-                            <a href="/" className="flex items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13px] font-semibold text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
-                                Log out
-                            </a>
+                            <LogoutButton />
                         </div>
                     </div>
                 )}

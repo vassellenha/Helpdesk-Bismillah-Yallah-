@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 
 /**
@@ -24,10 +25,14 @@ use Tests\TestCase;
  */
 final class DisabledUserIsHiddenTest extends TestCase
 {
-    use RefreshDatabase;
+    use ActsAsRole, RefreshDatabase;
 
     public function test_approver_yang_dinonaktifkan_admin_hilang_dari_daftar_pilihan(): void
     {
+        // Daftar approver adalah bahan formulir tiket baru, jadi ia ikut
+        // dijaga `role:requester` bersama endpoint katalog lainnya.
+        $this->actingAsRole('requester');
+
         $aktif = $this->approver('Gofar Hilman');
         $this->approver('Karina AESPA', helpdeskAccess: 'disabled');
 
@@ -40,6 +45,8 @@ final class DisabledUserIsHiddenTest extends TestCase
     /** Nonaktif dari sisi kepegawaian juga tetap disaring, seperti sebelumnya. */
     public function test_approver_yang_nonaktif_kepegawaian_tetap_hilang(): void
     {
+        $this->actingAsRole('requester');
+
         $this->approver('Gofar Hilman');
         $this->approver('Karina AESPA', status: 'inactive');
 

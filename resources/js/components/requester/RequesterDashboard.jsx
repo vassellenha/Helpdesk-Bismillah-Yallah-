@@ -28,15 +28,15 @@ function StatCard({ label, value, hint, hintClass = 'text-gray-400 dark:text-ink
 }
 
 export default function RequesterDashboard({ user = {}, stats, chart = [], slaDonut, slaRows = [], catalogUrl, approversUrl, submitUrl, ticketsUrl, evaDraft = null }) {
-    const firstName = (user.name ?? 'there').split(' ')[0];
-    const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const firstName = (user.name ?? '').split(' ')[0];
+    const today = new Date().toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' });
 
     return (
         <div className="flex flex-col gap-7">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">Good morning, {firstName} 👋</h1>
-                    <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">Your ticket summary and SLA status as of today, {today}.</p>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">{trans('requester.dashboard.greeting', { name: firstName })}</h1>
+                    <p className="mt-1 text-[13px] text-gray-400 dark:text-ink-3">{trans('requester.dashboard.subtitle', { date: today })}</p>
                 </div>
                 <NewTicketModal catalogUrl={catalogUrl} approversUrl={approversUrl} submitUrl={submitUrl} evaDraft={evaDraft} />
             </div>

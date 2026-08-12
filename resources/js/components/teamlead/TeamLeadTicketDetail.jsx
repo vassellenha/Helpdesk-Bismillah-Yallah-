@@ -7,7 +7,6 @@ import { t as trans } from '../../lib/i18n';
 import TicketFlow from '../TicketFlow';
 import SlaPanel from '../SlaPanel';
 import BrandLockup from '../BrandLockup';
-import LanguageSwitcher from '../LanguageSwitcher';
 
 
 const STEP_STYLE = {
@@ -40,7 +39,6 @@ export default function TeamLeadTicketDetail({ flow = null, ticket: initial, tim
                     Kembali ke Dashboard
                 </a>
                 <div className="flex-1" />
-                <LanguageSwitcher />
             </header>
 
             <main className="mx-auto flex w-full max-w-[900px] flex-1 flex-col gap-6 px-7 py-7">

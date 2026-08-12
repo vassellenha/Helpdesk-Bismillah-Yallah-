@@ -23,7 +23,6 @@
                 @include('partials.admin-nav', ['navClass' => 'hidden min-w-0 items-center gap-0.5 overflow-x-auto lg:flex'])
             </div>
             <div class="flex shrink-0 items-center gap-2 sm:gap-3">
-                <div data-react="LanguageSwitcher"></div>
                 <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '', 'profileUrl' => route('admin.profile')]) }}"></div>
             </div>
         </div>
@@ -39,14 +38,6 @@
         @yield('content')
     </main>
 
-    @php
-        $switcherRoles = collect(config('helpdesk.roles'))
-            ->map(fn ($r) => ['key' => $r['key'], 'initials' => $r['initials'], 'label' => $r['label'], 'url' => route($r['links'][0]['route'])])
-            ->values();
-    @endphp
-    <div
-        data-react="RoleSwitcher"
-        data-props="{{ json_encode(['roles' => $switcherRoles, 'current' => $role ?? null, 'portalUrl' => route('portal.index')]) }}"
-    ></div>
+    @include('partials.role-switcher')
 </body>
 </html>

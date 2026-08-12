@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import LogoutButton from './LogoutButton';
 import MyProfileModal from './MyProfileModal';
 
 export default function UserMenu({ name, title, initials, profileUrl }) {
@@ -44,7 +45,10 @@ export default function UserMenu({ name, title, initials, profileUrl }) {
                     </a>
                     <a href="#" onClick={(e) => e.preventDefault()} className="block px-4 py-2.5 text-sm text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">Pengaturan</a>
                     <div className="my-1 border-t border-gray-100 dark:border-edge" />
-                    <a href="#" onClick={(e) => e.preventDefault()} className="block px-4 py-2.5 text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">Keluar</a>
+                    <LogoutButton
+                        label="Keluar"
+                        className="block w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft"
+                    />
                 </div>
             )}
 
