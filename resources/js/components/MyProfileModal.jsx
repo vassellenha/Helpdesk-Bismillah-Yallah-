@@ -87,9 +87,9 @@ export default function MyProfileModal({ profileUrl, onClose }) {
                                     <Detail label="Nomor Telepon" value={profile.phone} />
                                     <Detail label="Status Akun" value={profile.status} hint={profile.statusReason} />
                                     <Detail label="Jabatan" value={profile.jabatan} span />
-                                    <Detail label="Kode Departemen" value={profile.kodeDepartemen} />
-                                    <Detail label="Kode Divisi" value={profile.kodeDivisi} />
-                                    <Detail label="Kode Proyek" value={profile.kodeProyek} />
+                                    <Detail label="Departemen" value={profile.departemen} />
+                                    <Detail label="Divisi" value={profile.divisi} />
+                                    <Detail label="Proyek" value={profile.proyek} />
                                     <Detail label="Terakhir Login" value={profile.lastLogin} />
                                 </div>
 

@@ -37,7 +37,7 @@ use Illuminate\Notifications\Notifiable;
 #[Fillable([
     'name', 'email', 'username', 'password', 'nip', 'phone', 'address',
     'unit', 'jabatan', 'kode_departemen', 'kode_divisi', 'kode_proyek',
-    'nama_proyek', 'status', 'helpdesk_access', 'last_login_at',
+    'nama_divisi', 'nama_proyek', 'status', 'helpdesk_access', 'last_login_at',
     'admin_overridden_fields', 'synced_at',
 ])]
 #[Hidden(['password', 'remember_token'])]

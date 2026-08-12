@@ -103,6 +103,17 @@ return [
             'dept_id' => 'kode_departemen',
             'division_id' => 'kode_divisi',
             'proy_unit_id' => 'kode_proyek',
+
+            // Nama untuk dibaca manusia, berdampingan dengan kodenya di atas —
+            // bukan pengganti. Layar Profil Saya dulu menampilkan "07", "210",
+            // "2107000001" kepada pemilik akunnya sendiri; kodenya tetap
+            // disimpan karena itu yang dipakai mencocokkan antarsistem.
+            //
+            // Nama departemen tidak ada di sini karena `dept_name` sudah
+            // dipetakan ke `unit` di atas — menambahkannya lagi hanya
+            // menyalin nilai yang sama ke dua kolom.
+            'division_name' => 'nama_divisi',
+            'proy_unit_name' => 'nama_proyek',
         ],
 
         // Which mapped column identifies an employee across syncs. NIP is the

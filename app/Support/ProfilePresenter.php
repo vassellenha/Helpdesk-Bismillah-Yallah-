@@ -24,9 +24,16 @@ class ProfilePresenter
             'status' => $user->isActive() ? 'Aktif' : 'Nonaktif',
             'statusReason' => $user->inactiveReason(),
             'jabatan' => $user->jabatan ?: '-',
-            'kodeDepartemen' => $user->kode_departemen ?: '-',
-            'kodeDivisi' => $user->kode_divisi ?: '-',
-            'kodeProyek' => $user->kode_proyek ?: '-',
+            // Nama, bukan kode. Layar ini dibaca pemilik akunnya sendiri, dan
+            // "07 / 210 / 2107000001" tidak memberi tahu dia apa pun. Kodenya
+            // tetap tersimpan di kolomnya masing-masing untuk pencocokan
+            // antarsistem, hanya tidak ditampilkan di sini.
+            //
+            // Departemen dibaca dari `unit`: di direktori pegawai, `dept_name`
+            // memang dipetakan ke sana.
+            'departemen' => $user->unit ?: '-',
+            'divisi' => $user->nama_divisi ?: '-',
+            'proyek' => $user->nama_proyek ?: '-',
             'lastLogin' => $user->last_login_at?->format('d M Y, H:i') ?? '-',
             'roles' => $user->roles->pluck('name')->all(),
         ];
