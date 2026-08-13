@@ -109,6 +109,46 @@ final class SupportAgentSyncTest extends TestCase
         $this->assertSame(0, SupportAgent::where('user_id', $user->id)->count());
     }
 
+    /**
+     * Perintah penyapu untuk DATA LAMA: user yang sudah memegang role Support
+     * sejak sebelum sinkronisasi ini ada tidak akan pernah tersentuh oleh
+     * pemberian role baru, dan dashboardnya tetap 404 selamanya.
+     */
+    public function test_perintah_penyapu_memperbaiki_user_lama(): void
+    {
+        $this->actingAsRole('admin');
+
+        // Ditulis langsung ke tabel pivot, meniru keadaan sebelum sinkronisasi
+        // dipasang: rolenya ada, baris agentnya tidak.
+        $user = User::factory()->create(['name' => 'Agent Warisan']);
+        $user->roles()->attach(Role::firstOrCreate(['name' => 'Support IT'], ['type' => 'system', 'status' => 'active'])->id);
+
+        $this->assertSame(0, SupportAgent::where('user_id', $user->id)->count());
+
+        $this->artisan('support:sync-agents')->assertSuccessful();
+        $this->assertSame(0, SupportAgent::where('user_id', $user->id)->count(), 'Tanpa --apply tidak boleh ada yang berubah.');
+
+        $this->artisan('support:sync-agents', ['--apply' => true])->assertSuccessful();
+
+        $this->assertDatabaseHas('support_agents', [
+            'user_id' => $user->id,
+            'type' => 'it',
+            'is_active' => true,
+            'name' => 'Agent Warisan',
+        ]);
+    }
+
+    public function test_perintah_penyapu_diam_saat_semuanya_sudah_sesuai(): void
+    {
+        $this->actingAsRole('admin');
+        $user = User::factory()->create();
+        $this->putRoles($user, ['Support IT']);
+
+        $this->artisan('support:sync-agents')
+            ->expectsOutputToContain('sudah sesuai')
+            ->assertSuccessful();
+    }
+
     /** @param string[] $names */
     private function putRoles(User $user, array $names): TestResponse
     {

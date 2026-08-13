@@ -438,6 +438,32 @@ Pemakaian: `./deploy.sh`
 
 ---
 
+## 13a. Penyapuan data setelah deploy — **PENTING, sekali saja**
+
+Dijalankan SEKALI setelah deploy yang membawa `SupportAgentSync` (commit
+746f9e4), bukan setiap deploy. Keduanya menampilkan dulu apa yang akan berubah;
+tanpa `--apply` tidak ada satu baris pun yang tersentuh.
+
+```bash
+# 1. User lama yang punya role Support tapi belum punya baris support_agents.
+#    Tanpa ini dashboard Support mereka menjawab 404 — role-nya ada, identitas
+#    kerjanya tidak. Lihat dulu daftarnya, baru terapkan.
+php artisan support:sync-agents
+php artisan support:sync-agents --apply
+
+# 2. Sapaan lama ("Halo", "ok", "tes") yang telanjur tercatat sebagai celah
+#    materi di Unanswered Questions.
+php artisan eva:reclassify-small-talk
+php artisan eva:reclassify-small-talk --apply
+
+# 3. Role yang terkunci. `locked` hanya mematikan centang di layar Admin, dan
+#    seeder tidak pernah mengunci apa pun — kalau ada isinya, seseorang
+#    menguncinya lewat layar. Putuskan sendiri apakah itu disengaja.
+php artisan tinker --execute="echo App\Models\Role::where('locked',true)->pluck('name')->implode(', ') ?: 'tidak ada';"
+```
+
+---
+
 ## 14. Verifikasi setelah deploy
 
 Jangan anggap selesai sebelum keenamnya lolos:
