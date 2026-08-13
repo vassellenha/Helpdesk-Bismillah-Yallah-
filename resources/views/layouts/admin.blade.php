@@ -27,7 +27,7 @@
                 {{-- Layar Admin tidak punya lonceng, jadi posisinya disamakan
                      dengan layout lain: tepat di kiri avatar pengguna. --}}
                 <div data-react="ThemeToggle"></div>
-                <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '', 'profileUrl' => route('admin.profile')]) }}"></div>
+                <div data-react="UserMenu" data-props="{{ json_encode(['name' => $currentUser['name'] ?? '', 'title' => $currentUser['title'] ?? '', 'initials' => $currentUser['initials'] ?? '', 'profileUrl' => route('admin.profile'), 'dashboardUrl' => route('admin.dashboard')]) }}"></div>
             </div>
         </div>
 

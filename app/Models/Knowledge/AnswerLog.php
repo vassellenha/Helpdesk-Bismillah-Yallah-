@@ -17,13 +17,24 @@ use Illuminate\Database\Eloquent\Model;
 class AnswerLog extends Model
 {
     public const OUTCOME_ANSWERED = 'answered';
+
     public const OUTCOME_CLARIFY = 'clarify';
+
     public const OUTCOME_NO_ANSWER = 'no_answer';
+
     public const OUTCOME_TICKET_DRAFT = 'ticket_draft';
+
+    /**
+     * Sapaan/basa-basi. Bukan keberhasilan menjawab, bukan pula celah materi —
+     * tidak ada artikel yang bisa ditulis untuk menjawab "Halo". Dicatat supaya
+     * Log Percakapan utuh, tapi dikecualikan dari hitungan Analytics.
+     */
+    public const OUTCOME_SMALL_TALK = 'small_talk';
 
     public const OUTCOMES = [
         self::OUTCOME_ANSWERED, self::OUTCOME_CLARIFY,
         self::OUTCOME_NO_ANSWER, self::OUTCOME_TICKET_DRAFT,
+        self::OUTCOME_SMALL_TALK,
     ];
 
     protected $table = 'kb_answer_logs';

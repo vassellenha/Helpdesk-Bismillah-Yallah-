@@ -28,6 +28,16 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!--
+            Parafrase EVA WAJIB mati di sini. Tanpa dua baris ini, tes membaca
+            .env pengembang: setiap tes yang membuat EVA menjawab menembak API
+            OpenAI sungguhan, satu panggilan per jawaban. Sekali `php artisan
+            test` dijalankan, puluhan permintaan berbayar terkirim, kuota
+            per-menit habis, dan tesnya jadi bergantung pada jaringan.
+        -->
+        <env name="EVA_PARAPHRASE_ENABLED" value="false"/>
+        <env name="EVA_SYNTHESIS_ENABLED" value="false"/>
+        <env name="OPENAI_API_KEY" value=""/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

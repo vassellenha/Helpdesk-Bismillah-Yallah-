@@ -46,6 +46,29 @@
         @include('eva._sidebar')
 
         <main style="flex:1;min-width:0;background:var(--canvas)">
+            {{--
+                Bilah identitas, sejajar dengan role lain (lihat layouts/admin
+                dan layouts/app). Datanya dari komposer `layouts.eva` di
+                AppServiceProvider, bukan dari 13 controller satu per satu.
+
+                Padding kanannya disamakan dengan PAGE di eva/ui.jsx (30px)
+                supaya menu ini lurus dengan tepi kanan isi halaman di bawahnya.
+            --}}
+            @if ($evaUser ?? null)
+                <div style="display:flex;justify-content:flex-end;padding:16px 30px 0">
+                    <div
+                        data-react="UserMenu"
+                        data-props="{{ json_encode([
+                            'name' => $evaUser['name'],
+                            'title' => $evaUser['title'],
+                            'initials' => $evaUser['initials'],
+                            'profileUrl' => route('eva.profile'),
+                            'dashboardUrl' => route('eva.coverage'),
+                        ]) }}"
+                    ></div>
+                </div>
+            @endif
+
             @yield('content')
         </main>
     </div>

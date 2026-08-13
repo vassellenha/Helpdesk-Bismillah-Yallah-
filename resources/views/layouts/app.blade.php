@@ -53,7 +53,7 @@
                     @if(isset($currentUser) && isset($profileUrl))
                         <div
                             data-react="UserMenu"
-                            data-props="{{ json_encode(['name' => $currentUser['name'], 'title' => $currentUser['title'], 'initials' => $currentUser['initials'], 'profileUrl' => $profileUrl]) }}"
+                            data-props="{{ json_encode(['name' => $currentUser['name'], 'title' => $currentUser['title'], 'initials' => $currentUser['initials'], 'profileUrl' => $profileUrl, 'dashboardUrl' => $dashboardUrl ?? null]) }}"
                         ></div>
                     @else
                         <div class="flex items-center gap-2">

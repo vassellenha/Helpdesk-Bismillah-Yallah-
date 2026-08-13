@@ -10,6 +10,24 @@ import {
 const PER_PAGE = 15;
 
 /*
+ | Urutan daftar kerja.
+ |
+ | "Paling sering" tetap jadi bawaan dan itu disengaja: daftar ini adalah
+ | antrean menulis materi, dan pertanyaan yang diulang tiga puluh orang lebih
+ | mendesak daripada yang baru ditanya sekali lima menit lalu. Dua urutan waktu
+ | ada untuk pertanyaan yang berbeda — "apa yang baru muncul minggu ini" dan
+ | "mana yang sudah lama menganggur dan hampir kedaluwarsa".
+ */
+const SORT_NEXT = { count: 'latest', latest: 'oldest', oldest: 'count' };
+
+/** Tetap tertulis, karena panah saja tidak pernah memberi tahu urutan apa yang sedang aktif. */
+const SORT_HINT = {
+    count: 'Diurutkan: paling sering ditanya. Klik untuk yang terbaru dulu.',
+    latest: 'Diurutkan: terbaru dulu. Klik untuk yang terlama dulu.',
+    oldest: 'Diurutkan: terlama dulu. Klik untuk kembali ke paling sering.',
+};
+
+/*
  | Unanswered Questions — celah materi.
  |
  | Tidak ada tombol "tandai selesai", dan itu disengaja. Sebuah pertanyaan
@@ -25,6 +43,7 @@ export default function EvaUnansweredQuestions({
     gaps: initialGaps, closed, threshold, endpoints, links, retentionDays,
 }) {
     const [query, setQuery] = useState('');
+    const [sort, setSort] = useState('count');
     const [gaps, setGaps] = useState(initialGaps);
     const [asking, setAsking] = useState(null);
     const [busy, setBusy] = useState(false);
@@ -37,12 +56,23 @@ export default function EvaUnansweredQuestions({
 
     const visible = useMemo(() => {
         const needle = query.trim().toLowerCase();
-        if (!needle) return gaps;
+        const rows = needle
+            ? gaps.filter((gap) => gap.question.toLowerCase().includes(needle))
+            : gaps;
 
-        return gaps.filter((gap) => gap.question.toLowerCase().includes(needle));
-    }, [gaps, query]);
+        if (sort === 'count') return rows;
 
-    const pager = usePagination(visible, PER_PAGE, query);
+        // Disalin dulu: sort() mengubah array aslinya di tempat, dan `gaps`
+        // adalah state React — mengurutkannya langsung berarti mengubah state
+        // tanpa setState, dan layar bisa tidak ikut menggambar ulang.
+        return [...rows].sort((a, b) => {
+            const selisih = new Date(b.last_asked_iso) - new Date(a.last_asked_iso);
+
+            return sort === 'latest' ? selisih : -selisih;
+        });
+    }, [gaps, query, sort]);
+
+    const pager = usePagination(visible, PER_PAGE, `${query}|${sort}`);
 
     const totalAsks = gaps.reduce((sum, gap) => sum + gap.count, 0);
 
@@ -156,8 +186,13 @@ export default function EvaUnansweredQuestions({
                         <thead>
                             <tr>
                                 <th style={thStyle}>PERTANYAAN</th>
-                                <th style={thStyle}>DITANYAKAN</th>
-                                <th style={thStyle}>TERAKHIR</th>
+                                <th style={thStyle}>JUMLAH DITANYA</th>
+                                <th style={thStyle}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                                        <span>TERAKHIR DITANYA</span>
+                                        <SortArrows value={sort} onChange={setSort} />
+                                    </div>
+                                </th>
                                 <th style={thStyle}>KANDIDAT TERDEKAT</th>
                                 <th style={thStyle}>TUTUP CELAH</th>
                             </tr>
@@ -338,5 +373,46 @@ export default function EvaUnansweredQuestions({
                 </Modal>
             )}
         </div>
+    );
+}
+
+/**
+ * Panah naik-turun di kepala kolom waktu.
+ *
+ * Tiga keadaan, bukan dua: kedua panah redup berarti daftar masih memakai
+ * urutan bawaannya (paling sering ditanya), panah bawah menyala berarti
+ * terbaru dulu, panah atas berarti terlama dulu. Keadaan ketiga itu yang
+ * membuat urutan bawaan bisa dikembalikan — tanpa itu, sekali seseorang
+ * menyentuh panahnya, antrean prioritas menulis materi hilang sampai halaman
+ * dimuat ulang.
+ *
+ * Arahnya mengikuti kebiasaan tabel: panah atas = menaik (paling lama dulu),
+ * panah bawah = menurun (paling baru dulu).
+ */
+function SortArrows({ value, onChange }) {
+    const aktif = 'var(--clay-600)';
+    const redup = 'var(--slate-400, #94a3b8)';
+
+    return (
+        <button
+            type="button"
+            onClick={() => onChange(SORT_NEXT[value])}
+            title={SORT_HINT[value]}
+            aria-label={SORT_HINT[value]}
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                padding: '2px',
+                lineHeight: 0,
+            }}
+        >
+            <svg width="9" height="13" viewBox="0 0 10 14" aria-hidden="true" focusable="false">
+                <path d="M5 0.5 L9.2 5.2 L0.8 5.2 Z" fill={value === 'oldest' ? aktif : redup} />
+                <path d="M5 13.5 L9.2 8.8 L0.8 8.8 Z" fill={value === 'latest' ? aktif : redup} />
+            </svg>
+        </button>
     );
 }

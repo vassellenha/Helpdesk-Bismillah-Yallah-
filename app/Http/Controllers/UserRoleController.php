@@ -9,8 +9,10 @@ use App\Support\AuditDescriber;
 use App\Support\CurrentActor;
 use App\Support\DummyData;
 use App\Support\EmployeeSync;
+use App\Support\SupportAgentSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -86,7 +88,7 @@ class UserRoleController extends Controller
      * Query bersama untuk layar penuh dan endpoint JSON, supaya keduanya tidak
      * bisa menyaring dengan aturan berbeda.
      *
-     * @return \Illuminate\Pagination\LengthAwarePaginator<int,User>
+     * @return LengthAwarePaginator<int,User>
      */
     private function paginateUsers(Request $request)
     {
@@ -256,6 +258,7 @@ class UserRoleController extends Controller
                 $roleIds = $requesterRole ? [$requesterRole->id] : [];
             }
             $user->roles()->attach($roleIds);
+            SupportAgentSync::reconcile($user);
 
             $roleNames = Role::whereIn('id', $roleIds)->pluck('name')->implode(', ');
             AuditTrail::record($actor, [
@@ -401,6 +404,7 @@ class UserRoleController extends Controller
 
             $user->roles()->sync($data['role_ids']);
             $user->load('roles');
+            SupportAgentSync::reconcile($user);
             $newRoles = $user->roles->pluck('name')->sort()->values();
 
             if ($oldRoles->all() !== $newRoles->all()) {

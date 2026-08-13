@@ -56,6 +56,20 @@ export function EvaBubble({ message, thresholds = null, onClarifyPick, onRate, o
         return <ClarifyBubble message={message} onPick={onClarifyPick} />;
     }
 
+    // Sapaan: gelembung biasa tanpa panel sumber dan tanpa bintang. Tidak ada
+    // artikel yang perlu dikutip, dan meminta karyawan menilai jawaban atas
+    // "Halo" hanya mengotori Rating & Feedback.
+    //
+    // Cabang ini WAJIB ada sebelum AnswerBubble di bawah: balasan basa-basi
+    // tidak punya `hit`, dan AnswerBubble membaca message.hit.title.
+    if (message.type === 'small_talk') {
+        return (
+            <div className="eva-w-bubble eva-w-bubble-eva eva-pop">
+                <div>{message.text}</div>
+            </div>
+        );
+    }
+
     if (message.type === 'no_answer') {
         return (
             <div className="eva-w-bubble eva-w-bubble-eva eva-pop">
@@ -133,7 +147,7 @@ function AnswerBubble({ message, thresholds, onRate, onNote }) {
                 </div>
             )}
 
-            <div>{message.text}</div>
+            <div className="eva-w-answer">{message.text}</div>
 
             <div className="eva-w-source">
                 <span className="eva-w-source-tag">{message.hit.title}</span>
@@ -144,7 +158,25 @@ function AnswerBubble({ message, thresholds, onRate, onNote }) {
                 )}
             </div>
 
-            <RatingRow message={message} onRate={onRate} onNote={onNote} />
+            {message.previous_stars ? (
+                /*
+                 | Sudah pernah dinilai orang ini untuk MATERI ini — bukan cuma
+                 | untuk baris jawaban ini. Menyodorkan bintang lagi berarti
+                 | menagih pekerjaan yang sudah dikerjakan, dan itu terasa
+                 | seperti EVA tidak mengingat apa pun.
+                 |
+                 | Ditampilkan sebagai keterangan, bukan dihilangkan diam-diam:
+                 | bintang yang lenyap tanpa penjelasan terbaca seperti fitur
+                 | yang rusak.
+                */
+                <div className="eva-w-rating">
+                    <span className="eva-w-muted">
+                        Sudah Anda nilai {'\u2605'.repeat(message.previous_stars)} untuk materi ini
+                    </span>
+                </div>
+            ) : (
+                <RatingRow message={message} onRate={onRate} onNote={onNote} />
+            )}
         </div>
     );
 }

@@ -20,7 +20,7 @@ final class QuestionTokenizerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->tokenizer = new QuestionTokenizer();
+        $this->tokenizer = new QuestionTokenizer;
     }
 
     public function test_tokens_memecah_dan_mengecilkan_huruf(): void

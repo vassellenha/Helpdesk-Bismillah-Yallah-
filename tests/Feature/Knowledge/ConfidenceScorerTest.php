@@ -29,7 +29,7 @@ final class ConfidenceScorerTest extends TestCase
     {
         parent::setUp();
         $this->seedSynonyms([]);
-        $tokenizer = new QuestionTokenizer();
+        $tokenizer = new QuestionTokenizer;
         $this->scorer = new ConfidenceScorer($tokenizer, new SynonymExpander($tokenizer));
     }
 

@@ -254,6 +254,22 @@
     text-decoration: none;
 }
 
+/*
+   Menu profil di bilah atas adalah komponen Tailwind milik bersama (UserMenu),
+   dipakai juga oleh Admin dan role tim. Di dalam konsol EVA ia terkena aturan
+   di atas: `.eva-app a` berspesifisitas (0,1,1) dan mengalahkan kelas warna
+   Tailwind (0,1,0), sehingga "My Profile" dan "Dashboard" tampil biru — beda
+   sendiri dari role lain. Jebakan yang sama sudah pernah menimpa menu sidebar;
+   lihat catatan di bawah.
+
+   `inherit` membuat butirnya memakai warna teks konsol, sama seperti menu
+   profil di role lain. Tombol Keluar tidak ikut karena ia <button>, jadi
+   warnanya tetap merah seperti di tempat lain.
+*/
+.eva-app [data-react="UserMenu"] a {
+    color: inherit;
+}
+
 .eva-app a:hover {
     color: var(--blue-ink);
 }
@@ -748,6 +764,18 @@ html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
     padding: 10px 13px;
     font-size: 12.5px;
     line-height: 1.6;
+}
+
+/*
+ | Baris baru dipertahankan.
+ |
+ | Jawaban rangkuman dari model menulis prosedur satu langkah per baris. Tanpa
+ | ini semuanya menyatu jadi satu paragraf panjang — langkah 1 sampai 5 terbaca
+ | seperti satu kalimat, dan justru prosedur bertahap yang paling butuh dibaca
+ | per langkah.
+*/
+.eva-widget .eva-w-answer {
+    white-space: pre-wrap;
 }
 
 .eva-widget .eva-w-bubble-user {

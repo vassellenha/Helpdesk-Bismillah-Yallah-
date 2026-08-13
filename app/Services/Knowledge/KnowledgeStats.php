@@ -4,8 +4,8 @@ namespace App\Services\Knowledge;
 
 use App\Models\Knowledge\AnswerLog;
 use App\Models\Knowledge\AnswerRating;
-use Carbon\Carbon;
 use App\Support\Eva\LogRetention;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -118,6 +118,13 @@ final class KnowledgeStats
                     'count' => (int) $row->ask_count,
                     'last_asked_at' => $terakhir->diffForHumans(),
                     /*
+                     | Waktu mentahnya ikut dikirim khusus untuk pengurutan di
+                     | layar. "2 jam yang lalu" tidak bisa diurutkan — diurut
+                     | sebagai teks, "2 jam" jatuh di antara "19 menit" dan "3
+                     | hari", dan hasilnya terlihat acak tanpa ada yang error.
+                    */
+                    'last_asked_iso' => $terakhir->toIso8601String(),
+                    /*
                      | Hitung mundur dipatok ke penanyaan TERAKHIR, bukan yang
                      | pertama. Penyapu membuang baris satu per satu, jadi baris
                      | tertua hilang lebih dulu dan angka "ditanyakan Nx" ikut
@@ -200,6 +207,11 @@ final class KnowledgeStats
     public function answerSummary(): array
     {
         $byOutcome = AnswerLog::query()
+            // Sapaan tidak ikut dihitung. Ia bukan pertanyaan helpdesk, jadi
+            // memasukkannya ke penyebut akan menurunkan deflection rate tiap
+            // kali ada yang mengetik "Halo" — angka yang turun tanpa satu pun
+            // pertanyaan gagal dijawab.
+            ->where('outcome', '!=', AnswerLog::OUTCOME_SMALL_TALK)
             ->groupBy('outcome')
             ->orderBy('outcome')
             ->get(['outcome', DB::raw('count(*) as log_count')])

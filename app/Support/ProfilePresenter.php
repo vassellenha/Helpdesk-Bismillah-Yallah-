@@ -39,7 +39,13 @@ class ProfilePresenter
         ];
     }
 
-    private static function initials(string $name): string
+    /**
+     * Publik karena dipakai juga di luar kartu profil — bilah atas konsol EVA
+     * menampilkan inisial yang sama. Repo ini sudah memuat tujuh salinan
+     * private dari perhitungan ini di berbagai controller; menambah yang
+     * kedelapan hanya memperbanyak tempat yang harus ikut berubah.
+     */
+    public static function initials(string $name): string
     {
         $parts = explode(' ', trim($name));
 

@@ -25,7 +25,7 @@ final class TagRegistryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->tags = new TagRegistry();
+        $this->tags = new TagRegistry;
     }
 
     private function article(string $title, string $tags): void

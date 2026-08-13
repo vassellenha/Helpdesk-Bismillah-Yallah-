@@ -3,6 +3,7 @@
 namespace App\Services\Knowledge;
 
 use App\Models\Knowledge\AnswerLog;
+use App\Models\Knowledge\AnswerRating;
 use App\Models\Knowledge\Conversation;
 use App\Models\User;
 
@@ -19,20 +20,60 @@ final class EvaResponder
 
     private const CLARIFY_TEXT = 'Supaya saya tidak salah memberi panduan, layanan mana yang sedang bermasalah?';
 
+    /**
+     * Kandidat yang dibaca sekaligus saat merangkum.
+     *
+     * Bukan "seluruh KB": hari ini isinya 9 artikel dan muat semua, tapi target
+     * coverage-nya 140 subject. Mengirim semuanya tiap pertanyaan berarti biaya
+     * dan waktu tunggu yang naik terus sampai akhirnya melewati batas panjang
+     * prompt — kegagalan yang datangnya belakangan dan menimpa semua orang
+     * sekaligus. Delapan kandidat teratas adalah "seluruh yang relevan".
+     */
+    private const SYNTHESIS_CANDIDATES = 8;
+
+    /**
+     * Keyakinan seadanya masih boleh ikut dibaca — justru di situ gunanya
+     * merangkum: potongan yang sendirian tidak meyakinkan bisa jadi keping yang
+     * melengkapi. Di bawah ambang ini isinya sudah tidak nyambung, dan
+     * menyodorkannya hanya memancing jawaban karangan.
+     */
+    private const SYNTHESIS_FLOOR = 20;
+
     public function __construct(
         private readonly KnowledgeSearch $search,
         private readonly VagueQuestionDetector $vagueDetector,
         private readonly SubjectSearch $subjects,
+        private readonly AnswerParaphraser $paraphraser,
+        private readonly KnowledgeSynthesizer $synthesizer,
+        private readonly SmallTalkDetector $smallTalk,
     ) {}
 
     public function jawab(string $question, ?Conversation $conversation = null, ?User $asker = null): EvaReply
     {
+        // Sapaan diperiksa paling awal: "Halo" bukan pertanyaan yang gagal
+        // dijawab, jadi ia tidak boleh menempuh pencarian, tidak boleh
+        // menghasilkan tawaran tiket, dan tidak boleh masuk Unanswered
+        // Questions sebagai celah materi yang mustahil ditutup.
+        if ($balasan = $this->smallTalk->balasan($question)) {
+            return $this->smallTalkReply($balasan, $question, $conversation, $asker);
+        }
+
         if ($this->vagueDetector->isVague($question)) {
             return $this->clarify($question, $conversation, $asker);
         }
 
-        $hits = $this->search->cari($question);
+        $hits = $this->search->cari($question, self::SYNTHESIS_CANDIDATES);
         $best = $hits[0] ?? null;
+
+        // Merangkum lebih dulu, sebelum ambang keyakinan diperiksa. Jawaban
+        // yang tersebar di beberapa dokumen tidak pernah membuat satu pun di
+        // antaranya terlihat meyakinkan sendirian — persis kasus yang dulu
+        // berakhir "belum menemukan jawaban" padahal materinya ada.
+        $rangkuman = $this->synthesizer->rangkum($question, $this->passages($hits));
+
+        if ($rangkuman !== null && $best !== null) {
+            return $this->answer($best, $question, $conversation, $asker, $rangkuman);
+        }
 
         if ($best === null || $best->confidence < KnowledgeSearch::MIN_CONFIDENCE) {
             // Sebelum menyerah: apakah pertanyaannya jelas menunjuk satu masalah
@@ -50,7 +91,40 @@ final class EvaResponder
         return $this->answer($best, $question, $conversation, $asker);
     }
 
-    private function answer(SearchHit $hit, string $question, ?Conversation $conversation, ?User $asker): EvaReply
+    /**
+     * Potongan yang layak dibaca mesin rangkuman.
+     *
+     * @param  SearchHit[]  $hits
+     * @return list<array{title:string,text:string}>
+     */
+    private function passages(array $hits): array
+    {
+        return array_values(array_map(
+            fn (SearchHit $h) => ['title' => $h->title, 'text' => $h->answer],
+            array_filter($hits, fn (SearchHit $h) => $h->confidence >= self::SYNTHESIS_FLOOR),
+        ));
+    }
+
+    /**
+     * Basa-basi tetap dicatat — invarian "setiap jalur meninggalkan satu baris"
+     * berlaku di sini juga, dan Log Percakapan yang melompati sapaan akan
+     * terbaca seperti percakapan yang terpotong. Yang dijaga adalah jenisnya:
+     * outcome-nya sendiri, supaya tidak terhitung sebagai pertanyaan tak
+     * terjawab maupun sebagai keberhasilan menjawab.
+     */
+    private function smallTalkReply(string $text, string $question, ?Conversation $conversation, ?User $asker): EvaReply
+    {
+        $log = $this->log($question, AnswerLog::OUTCOME_SMALL_TALK, $conversation, $asker);
+
+        return new EvaReply(
+            type: EvaReply::TYPE_SMALL_TALK,
+            text: $text,
+            hit: null,
+            answerLogId: $log->id,
+        );
+    }
+
+    private function answer(SearchHit $hit, string $question, ?Conversation $conversation, ?User $asker, ?string $synthesized = null): EvaReply
     {
         $log = $this->log($question, AnswerLog::OUTCOME_ANSWERED, $conversation, $asker, [
             'source_type' => $hit->sourceType,
@@ -59,12 +133,23 @@ final class EvaResponder
             'confidence' => $hit->confidence,
         ]);
 
+        // Hanya jawaban KB yang diparafrase. Teks clarify dan no-answer di
+        // kelas ini kalimat tetap yang sudah dipilih kata per kata — menulis
+        // ulangnya tidak memperbaiki apa pun dan hanya menambah biaya.
+        //
+        // Yang dicatat ke kb_answer_logs tetap $hit->answer aslinya (lewat
+        // source_id di log): Analytics dan Rating menilai materi KB-nya, bukan
+        // hasil rias kalimatnya.
+        // Rangkuman sudah berupa kalimat yang disusun sendiri oleh model —
+        // memparafrasenya lagi hanya menambah satu panggilan berbayar dan satu
+        // kesempatan lagi bagi fakta untuk bergeser.
         return new EvaReply(
             type: EvaReply::TYPE_ANSWER,
-            text: $hit->answer,
+            text: $synthesized ?? $this->paraphraser->parafrase($hit->answer),
             hit: $hit,
             answerLogId: $log->id,
             isHedged: $hit->confidence < KnowledgeSearch::HEDGE_CONFIDENCE,
+            previousStars: $asker ? AnswerRating::starsGivenBy($asker, $hit->sourceType, $hit->sourceId) : null,
         );
     }
 

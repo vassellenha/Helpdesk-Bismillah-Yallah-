@@ -2,15 +2,22 @@
 
 namespace App\Providers;
 
+use App\Services\Knowledge\AnswerParaphraser;
 use App\Services\Knowledge\DocumentTextExtractor;
 use App\Services\Knowledge\FulltextKnowledgeSearch;
 use App\Services\Knowledge\KnowledgeSearch;
+use App\Services\Knowledge\KnowledgeSynthesizer;
+use App\Services\Knowledge\NoSynthesizer;
 use App\Services\Knowledge\OcrBinaries;
+use App\Services\Knowledge\OpenAiParaphraser;
+use App\Services\Knowledge\OpenAiSynthesizer;
+use App\Services\Knowledge\PassthroughParaphraser;
 use App\Services\Knowledge\PdfTextReader;
 use App\Services\Knowledge\PopplerTesseractPdfReader;
 use App\Services\Knowledge\SubjectMatcher;
 use App\Services\Knowledge\SubjectSearch;
 use App\Support\CurrentActor;
+use App\Support\ProfilePresenter;
 use App\Support\RoleRegistry;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -46,6 +53,32 @@ class AppServiceProvider extends ServiceProvider
             DocumentTextExtractor::class,
             fn ($app) => new DocumentTextExtractor($app->make(PdfTextReader::class)),
         );
+
+        // Seam keempat: cara jawaban KB ditulis ulang sebelum sampai ke
+        // karyawan. Bawaannya TIDAK mengubah apa pun.
+        //
+        // Kunci kosong ikut mematikan fitur ini. Tanpa penjagaan itu, flag yang
+        // menyala di server yang belum diisi kredensialnya membuat setiap
+        // pertanyaan menempuh satu panggilan HTTP yang pasti ditolak 401 —
+        // lambat untuk semua orang, dan gejalanya cuma "EVA terasa berat".
+        $this->app->bind(AnswerParaphraser::class, function () {
+            $config = (array) config('services.openai', []);
+
+            return ($config['paraphrase_enabled'] ?? false) && ! empty($config['key'])
+                ? new OpenAiParaphraser($config)
+                : new PassthroughParaphraser;
+        });
+
+        // Seam kelima: apakah EVA boleh merangkai jawaban dari beberapa sumber
+        // sekaligus. Mati = perilaku aslinya, menjawab dari satu sumber
+        // terbaik. Penjagaan kuncinya sama alasannya dengan di atas.
+        $this->app->bind(KnowledgeSynthesizer::class, function () {
+            $config = (array) config('services.openai', []);
+
+            return ($config['synthesis_enabled'] ?? false) && ! empty($config['key'])
+                ? new OpenAiSynthesizer($config)
+                : new NoSynthesizer;
+        });
     }
 
     /**
@@ -88,6 +121,24 @@ class AppServiceProvider extends ServiceProvider
                 'roleSwitcherEntries',
                 $user ? RoleRegistry::switcherEntriesFor($user) : collect(),
             );
+        });
+
+        /*
+        | Identitas pemakai untuk bilah atas konsol EVA.
+        |
+        | Di layout, bukan di tiap controller: konsol ini 13 layar dan tiap
+        | layar punya controllernya sendiri, jadi prop yang ditempel satu per
+        | satu pasti ada yang terlewat — dan layar yang terlewat akan kehilangan
+        | menu profilnya tanpa error apa pun.
+        */
+        View::composer('layouts.eva', function ($view) {
+            $user = CurrentActor::user();
+
+            $view->with('evaUser', $user ? [
+                'name' => $user->name,
+                'title' => trim(($user->jabatan ?: 'Knowledge Administrator').' · '.($user->unit ?: ''), " ·\t\n"),
+                'initials' => ProfilePresenter::initials($user->name),
+            ] : null);
         });
     }
 }
