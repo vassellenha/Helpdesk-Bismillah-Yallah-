@@ -60,6 +60,32 @@ final class AnswerParaphraseTest extends TestCase
         $this->assertInstanceOf(PassthroughParaphraser::class, $this->app->make(AnswerParaphraser::class));
     }
 
+    /**
+     * Kunci OpenAI ~164 karakter dan hampir selalu ditempel lewat editor
+     * terminal. Dua kecelakaan sungguhan terjadi saat memasangnya di server:
+     * baris terpotong di tepi layar nano sehingga tanda ">" ikut tersimpan,
+     * dan satu tanda kutip tertinggal di ujung. Keduanya menghasilkan 401 yang
+     * membingungkan — kuncinya "terbaca", panjangnya wajar, tapi ditolak.
+     */
+    public function test_kunci_dengan_kutip_atau_spasi_nyasar_dibersihkan(): void
+    {
+        $asli = getenv('OPENAI_API_KEY');
+
+        try {
+            foreach (['"sk-uji-123"', " sk-uji-123\n", "'sk-uji-123'"] as $kotor) {
+                putenv('OPENAI_API_KEY='.$kotor);
+                $_ENV['OPENAI_API_KEY'] = $kotor;
+
+                $config = require config_path('services.php');
+
+                $this->assertSame('sk-uji-123', $config['openai']['key'], "Gagal membersihkan: {$kotor}");
+            }
+        } finally {
+            putenv('OPENAI_API_KEY='.($asli === false ? '' : $asli));
+            $_ENV['OPENAI_API_KEY'] = $asli === false ? '' : $asli;
+        }
+    }
+
     public function test_jawaban_kb_dikirim_ke_parafrase_sebelum_sampai_ke_penanya(): void
     {
         $this->searchReturns(self::ANSWER);

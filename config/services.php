@@ -47,7 +47,19 @@ return [
     | dinyalakan secara sadar per lingkungan.
     */
     'openai' => [
-        'key' => env('OPENAI_API_KEY'),
+        /*
+        | Kutip dan spasi nyasar dibuang di sini.
+        |
+        | Kunci OpenAI panjangnya ~164 karakter dan hampir selalu ditempel
+        | lewat editor terminal. Dua kecelakaan yang sudah terjadi sungguhan:
+        | baris terpotong di tepi layar nano (tanda ">" ikut tersimpan), dan
+        | satu tanda kutip tertinggal di ujung. Keduanya menghasilkan 401 yang
+        | membingungkan — kuncinya "terbaca", panjangnya wajar, tapi ditolak.
+        |
+        | Membersihkannya di sini lebih murah daripada menghabiskan waktu
+        | membaca log tiap kali seseorang memasang kunci di server baru.
+        */
+        'key' => trim((string) env('OPENAI_API_KEY'), " \t\n\r\0\x0B\"'"),
         'paraphrase_enabled' => (bool) env('EVA_PARAPHRASE_ENABLED', false),
         'model' => env('EVA_PARAPHRASE_MODEL', 'gpt-4o-mini'),
 
