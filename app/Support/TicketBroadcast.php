@@ -18,19 +18,28 @@ use Illuminate\Support\Collection;
  * benar-benar bertindak (membalas, mulai mengerjakan, dst — lihat
  * SupportBpoController). Siapa pun yang pertama, otomatis jadi pemiliknya;
  * PIC lain diberi tahu supaya tidak dua orang mengerjakan tiket yang sama.
+ *
+ * Pola yang SAMA PERSIS dipakai lagi untuk tahap kedua: kalau tiket "Lainnya"
+ * ini dieskalasi BPO ke IT tanpa ada Subject yang menentukan satu it_agent_id
+ * spesifik, dia broadcast lagi — kali ini ke semua PIC IT Layanan itu (lihat
+ * escalateBroadcast() di bawah). `escalated_at` adalah penandanya: null berarti
+ * masih tahap BPO, terisi berarti sudah tahap IT — assigned_agent_id sendiri
+ * dipakai ulang untuk kedua tahap (null = belum diklaim SIAPA PUN di tahap
+ * yang sedang berjalan).
  */
 class TicketBroadcast
 {
     /**
-     * PIC BPO yang berhak atas tiket ini — kosong kalau bukan tiket
-     * "Lainnya" (catalog_subject_id terisi) atau Layanannya belum punya
-     * PIC BPO di Subject manapun.
+     * PIC yang berhak atas tiket ini di tahap SEKARANG — kosong kalau bukan
+     * tiket "Lainnya" (catalog_subject_id terisi) atau Layanannya belum
+     * punya PIC di Subject manapun untuk tahap itu.
      *
      * Sumbernya SENGAJA bukan daftar terpisah: PIC broadcast adalah
-     * kumpulan PIC BPO unik yang sudah tertaut ke Subject-Subject aktif
-     * Layanan ini (ServiceCatalogService::activeBpoAgents()) — data yang
-     * sama persis dengan yang Admin lihat di tabel Service Catalog, supaya
-     * tidak ada dua sumber PIC yang bisa berbeda pendapat.
+     * kumpulan PIC unik yang sudah tertaut ke Subject-Subject aktif
+     * Layanan ini (ServiceCatalogService::activeBpoAgents()/
+     * activeItAgents()) — data yang sama persis dengan yang Admin lihat di
+     * tabel Service Catalog, supaya tidak ada dua sumber PIC yang bisa
+     * berbeda pendapat.
      *
      * @return Collection<int,SupportAgent>
      */
@@ -40,11 +49,21 @@ class TicketBroadcast
             return collect();
         }
 
+        $service = $ticket->catalogService;
+
+        if (! $service) {
+            return collect();
+        }
+
+        // escalated_at menentukan tahap mana yang sedang berjalan — belum
+        // dieskalasi berarti masih giliran BPO, sudah berarti giliran IT.
+        $pool = $ticket->escalated_at !== null ? $service->activeItAgents() : $service->activeBpoAgents();
+
         // unique('user_id'), bukan cuma get(): orang dobel peran (BPO & IT,
         // lihat SupportBpoController::agentFor()) punya DUA baris SupportAgent
         // untuk akun yang sama — tanpa ini dia bisa muncul dua kali dan
         // dinotifikasi dua kali untuk tiket yang sama.
-        return $ticket->catalogService?->activeBpoAgents()->get()->unique('user_id') ?? collect();
+        return $pool->get()->unique('user_id');
     }
 
     /**
@@ -72,13 +91,14 @@ class TicketBroadcast
     /**
      * Kalau tiket ini broadcast dan belum diklaim, dan agent ini berhak —
      * jadikan miliknya, dan beri tahu PIC lain supaya tidak dua orang
-     * mengerjakan tiket yang sama.
+     * mengerjakan tiket yang sama. Dipakai di kedua tahap (BPO maupun IT
+     * setelah eskalasi) — eligiblePics() sendiri yang memilih pool-nya.
      *
      * Aman dipanggil untuk tiket yang bukan broadcast atau sudah diklaim —
      * tidak melakukan apa-apa, jadi bisa ditaruh di awal setiap aksi Support
-     * BPO tanpa perlu pengecekan tambahan di pemanggilnya.
+     * tanpa perlu pengecekan tambahan di pemanggilnya.
      */
-    public static function claimIfUnclaimed(Ticket $ticket, User $bpoUser, SupportAgent $agent): void
+    public static function claimIfUnclaimed(Ticket $ticket, User $actorUser, SupportAgent $agent): void
     {
         if ($ticket->assigned_agent_id !== null) {
             return;
@@ -92,7 +112,7 @@ class TicketBroadcast
 
         $ticket->update(['assigned_agent_id' => $agent->id]);
 
-        AuditTrail::record($bpoUser, [
+        AuditTrail::record($actorUser, [
             'module' => 'ticket_support',
             'action' => 'claim',
             'target_type' => 'ticket',
@@ -100,7 +120,7 @@ class TicketBroadcast
             'target_name' => $ticket->ticket_no,
             'old_value' => ['assigned_agent' => null],
             'new_value' => ['assigned_agent' => $agent->name],
-            'description' => "{$bpoUser->name} mengklaim tiket \"{$ticket->ticket_no}\" (broadcast) dari ".count($pics).' PIC.',
+            'description' => "{$actorUser->name} mengklaim tiket \"{$ticket->ticket_no}\" (broadcast) dari ".count($pics).' PIC.',
         ]);
 
         $others = $pics->reject(fn (SupportAgent $pic) => $pic->user_id === $agent->user_id);
@@ -116,6 +136,48 @@ class TicketBroadcast
                 'ticket_claimed_by_other',
                 'Tiket Sudah Ditangani',
                 "Tiket {$ticket->ticket_no} \"{$ticket->title}\" sudah ditangani oleh {$agent->name}."
+            );
+        });
+    }
+
+    /**
+     * BPO mengeskalasi tiket "Lainnya" yang tidak punya satu it_agent_id
+     * spesifik (tidak ada Subject yang menentukannya) — daripada menebak
+     * satu agent IT, lempar ke SEMUA PIC IT Layanan ini, persis pola yang
+     * sama dengan broadcast BPO di awal. Tiket kembali `assigned_agent_id
+     * = null` (sekarang berarti "belum diklaim IT manapun", bukan "belum
+     * diklaim BPO" lagi — dibedakan lewat escalated_at yang baru diisi).
+     */
+    public static function escalateBroadcast(Ticket $ticket, User $bpoUser, SupportAgent $bpoAgent, string $note): void
+    {
+        $ticket->update([
+            'assigned_agent_id' => null,
+            'escalated_at' => now(),
+            'escalation_note' => $note,
+        ]);
+
+        AuditTrail::record($bpoUser, [
+            'module' => 'ticket_support',
+            'action' => 'escalate',
+            'target_type' => 'ticket',
+            'target_id' => $ticket->id,
+            'target_name' => $ticket->ticket_no,
+            'old_value' => ['assigned_agent' => $bpoAgent->name],
+            'new_value' => ['assigned_agent' => 'Broadcast PIC IT', 'catatan' => $note],
+            'description' => "{$bpoUser->name} mengeskalasi tiket \"{$ticket->ticket_no}\" (broadcast) ke semua PIC IT Layanan {$ticket->service_name}: {$note}",
+        ]);
+
+        self::eligiblePics($ticket)->each(function (SupportAgent $pic) use ($ticket) {
+            if (! $pic->user_id) {
+                return;
+            }
+
+            NotificationService::notify(
+                User::find($pic->user_id),
+                $ticket,
+                'ticket_incoming_escalation',
+                'Tiket Eskalasi Menunggu PIC IT',
+                "Tiket {$ticket->ticket_no} \"{$ticket->title}\" ({$ticket->service_name}) dieskalasi dari Support BPO — belum ada yang menangani, siapa pun dari tim IT bisa mengambilnya."
             );
         });
     }

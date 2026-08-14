@@ -41,4 +41,19 @@ class SupportAgent extends Model
             ->distinct()
             ->pluck('service_id');
     }
+
+    /**
+     * Pasangan IT dari bpoServiceIds() di atas — dipakai SupportController
+     * untuk menampilkan tiket "Lainnya" hasil eskalasi yang belum diklaim
+     * PIC IT manapun (lihat ServiceCatalogService::activeItAgents()).
+     *
+     * @return \Illuminate\Support\Collection<int,int>
+     */
+    public function itServiceIds()
+    {
+        return ServiceCatalogSubject::where('it_agent_id', $this->id)
+            ->where('is_active', true)
+            ->distinct()
+            ->pluck('service_id');
+    }
 }

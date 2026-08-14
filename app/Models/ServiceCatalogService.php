@@ -48,10 +48,27 @@ class ServiceCatalogService extends Model
      */
     public function activeBpoAgents()
     {
-        $agentIds = $this->subjects()->where('is_active', true)->whereNotNull('support_agent_id')->pluck('support_agent_id');
+        return $this->activeAgentsFor('support_agent_id', 'Support BPO');
+    }
+
+    /**
+     * Pasangan IT dari activeBpoAgents() di atas — dipakai saat tiket
+     * "Lainnya" dieskalasi BPO ke IT tanpa Subject yang menentukan satu
+     * it_agent_id spesifik (App\Support\TicketBroadcast::escalateBroadcast()).
+     * Semua alasan di activeBpoAgents() berlaku sama persis di sini, cuma
+     * kolomnya it_agent_id dan role-nya "Support IT".
+     */
+    public function activeItAgents()
+    {
+        return $this->activeAgentsFor('it_agent_id', 'Support IT');
+    }
+
+    private function activeAgentsFor(string $column, string $roleName)
+    {
+        $agentIds = $this->subjects()->where('is_active', true)->whereNotNull($column)->pluck($column);
 
         return SupportAgent::where('is_active', true)
             ->whereIn('id', $agentIds)
-            ->whereHas('user.roles', fn ($q) => $q->where('name', 'Support BPO'));
+            ->whereHas('user.roles', fn ($q) => $q->where('name', $roleName));
     }
 }
