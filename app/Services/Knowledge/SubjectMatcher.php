@@ -43,8 +43,10 @@ final class SubjectMatcher implements SubjectSearch
      * mendarat di tim yang salah tanpa ada yang memeriksa. Di ambang ini
      * terbaik() menahan diri dan mengosongkan kolom; daftar calon di layar
      * tetap menampilkan keduanya.
+     *
+     * Angkanya hidup di SubjectSearch::TIE_MARGIN supaya layar Ticket
+     * Recommendation menilai dengan aturan yang persis sama.
      */
-    private const TIE_MARGIN = 5;
 
     /**
      * Bobot tiap bagian jalur katalog.
@@ -121,7 +123,7 @@ final class SubjectMatcher implements SubjectSearch
 
         $runnerUp = $top[1] ?? null;
 
-        if ($runnerUp !== null && $best->confidence - $runnerUp->confidence <= self::TIE_MARGIN) {
+        if ($runnerUp !== null && $best->confidence - $runnerUp->confidence <= SubjectSearch::TIE_MARGIN) {
             return null;
         }
 
@@ -145,7 +147,7 @@ final class SubjectMatcher implements SubjectSearch
         // itu draf tiket lebih jujur daripada pertanyaan yang membingungkan.
         $tied = array_values(array_filter(
             $top,
-            fn (SubjectMatch $m) => $best->confidence - $m->confidence <= self::TIE_MARGIN
+            fn (SubjectMatch $m) => $best->confidence - $m->confidence <= SubjectSearch::TIE_MARGIN
                 && mb_strtolower($m->subject) === mb_strtolower($best->subject),
         ));
 

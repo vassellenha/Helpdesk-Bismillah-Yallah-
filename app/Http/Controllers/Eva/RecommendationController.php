@@ -72,6 +72,7 @@ class RecommendationController extends Controller
             'unrouted' => $unrouted->all(),
             'thresholds' => [
                 'auto_fill' => SubjectSearch::MIN_CONFIDENCE,
+                'tie_margin' => SubjectSearch::TIE_MARGIN,
                 'suggest' => SubjectSearch::SUGGEST_FLOOR,
             ],
             'stats' => [
@@ -200,13 +201,43 @@ class RecommendationController extends Controller
      */
     private function candidates(string $question, Collection $covered, int $limit): array
     {
+        $matches = $this->matcher->cocokkan($question, $limit);
+        $tertinggi = $matches[0]->confidence ?? 0;
+
+        /*
+         | Seri = calon kedua menempel di ambang TIE_MARGIN. Saat itu terjadi,
+         | terbaik() menolak memilih dan kolom subject dibiarkan kosong.
+         |
+         | Sebelumnya layar ini menandai SEMUA calon di atas MIN_CONFIDENCE
+         | dengan lencana hijau "akan terisi otomatis" — termasuk saat dua di
+         | antaranya seri 56 lawan 56. Admin membaca dua janji hijau, lalu
+         | mendapati kolomnya kosong, dan tidak ada apa pun di layar yang
+         | menjelaskan kenapa. Perbedaan angkanya ada di depan mata, tapi
+         | aturannya tidak.
+        */
+        $seri = count($matches) > 1
+            && $matches[0]->confidence >= SubjectSearch::MIN_CONFIDENCE
+            && $tertinggi - $matches[1]->confidence <= SubjectSearch::TIE_MARGIN;
+
         return array_map(
-            fn (SubjectMatch $match) => [
+            fn (SubjectMatch $match, int $posisi) => [
                 ...$match->toArray(),
                 'has_material' => $covered->has($match->subjectId),
-                'is_auto_fill' => $match->confidence >= SubjectSearch::MIN_CONFIDENCE,
+
+                // Hanya calon teratas yang bisa terisi otomatis, dan hanya
+                // kalau ia menang telak. Calon kedua ke bawah tidak pernah
+                // mengisi kolom apa pun, jadi menandainya hijau menyesatkan.
+                'is_auto_fill' => $posisi === 0
+                    && ! $seri
+                    && $match->confidence >= SubjectSearch::MIN_CONFIDENCE,
+
+                // Seri dengan calon teratas — inilah yang perlu dipilih manusia.
+                'is_tied' => $seri
+                    && $match->confidence >= SubjectSearch::MIN_CONFIDENCE
+                    && $tertinggi - $match->confidence <= SubjectSearch::TIE_MARGIN,
             ],
-            $this->matcher->cocokkan($question, $limit),
+            $matches,
+            array_keys($matches),
         );
     }
 }

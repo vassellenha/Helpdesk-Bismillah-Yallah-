@@ -37,6 +37,18 @@ interface SubjectSearch
     public const SUGGEST_FLOOR = 30;
 
     /**
+     * Selisih keyakinan sekecil ini dianggap SERI, dan terbaik() menolak
+     * memilih di antaranya.
+     *
+     * Ada di interface, bukan lagi private di SubjectMatcher, karena layar
+     * Ticket Recommendation harus memakai aturan yang sama. Selama angkanya
+     * tersembunyi, layar itu memberi lencana hijau "akan terisi otomatis" pada
+     * dua calon yang seri — padahal justru tidak ada yang terisi. Layar yang
+     * menjanjikan hal yang tidak terjadi lebih buruk daripada layar yang diam.
+     */
+    public const TIE_MARGIN = 5;
+
+    /**
      * Subject yang paling mungkin dimaksud, terurut dari yang paling yakin.
      * Boleh kosong.
      *

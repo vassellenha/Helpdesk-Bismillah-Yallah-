@@ -329,14 +329,34 @@ function Bench({ endpoint, thresholds }) {
 
                                 <Badge tone={candidate.is_auto_fill ? 'green' : 'amber'}>{candidate.confidence}</Badge>
 
+                                {candidate.is_tied && <Badge tone="amber">Seri — perlu dipilih</Badge>}
+
                                 {!candidate.has_material && <Badge tone="red">Belum ada materi</Badge>}
                             </div>
                         ))}
 
-                        <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '2px 0 0', lineHeight: 1.6 }}>
-                            Calon teratas yang mencapai {thresholds.auto_fill} akan terisi otomatis pada draf
-                            tiket. Pengujian pada kartu ini tidak dicatat pada log jawaban.
-                        </p>
+                        {result.candidates.some((c) => c.is_tied) ? (
+                            /*
+                             | Penjelasan kenapa tidak ada yang terisi otomatis.
+                             |
+                             | Tanpa ini, admin melihat dua angka besar yang nyaris sama lalu
+                             | mendapati kolom subject tetap kosong — dan menyimpulkan
+                             | pencocokannya rusak, padahal ia justru menahan diri dengan
+                             | benar. Menebak satu di antara dua yang seri berarti tiket
+                             | mendarat di tim yang salah tanpa ada yang memeriksa.
+                            */
+                            <p style={{ fontSize: '11.5px', color: 'var(--amber-700, #b45309)', margin: '2px 0 0', lineHeight: 1.6 }}>
+                                Dua calon teratas berselisih ≤{thresholds.tie_margin} poin, jadi <strong>tidak ada yang
+                                terisi otomatis</strong> — pengguna memilih sendiri. Untuk membuat salah satunya
+                                menang, bedakan namanya di Category &amp; Taxonomy, atau tambahkan sinonim
+                                yang hanya dimiliki salah satu.
+                            </p>
+                        ) : (
+                            <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '2px 0 0', lineHeight: 1.6 }}>
+                                Calon teratas yang mencapai {thresholds.auto_fill} akan terisi otomatis pada draf
+                                tiket. Pengujian pada kartu ini tidak dicatat pada log jawaban.
+                            </p>
+                        )}
                     </div>
                 )
             )}
