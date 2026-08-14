@@ -466,6 +466,7 @@ export default function NewTicketModal({
                 category: issueCategoryName || null,
                 sla_policy_id: priorityPolicy?.id ?? null,
                 service_name: service?.name ?? null,
+                service_id: form.serviceId ? Number(form.serviceId) : null,
                 subcategory_name: subcategory ?? null,
                 subject_name: isOtherSubcategory ? form.subjectText : selectedSubject?.name ?? null,
                 issue_category: issueCategoryName || null,

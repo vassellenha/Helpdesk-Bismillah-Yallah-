@@ -87,6 +87,7 @@ class Ticket extends Model
         'ticket_no', 'title', 'requester_name', 'requester_id',
         'service_name', 'subcategory_name', 'subject_name', 'issue_category', 'description',
         'category', 'sla_policy_id', 'priority', 'approver_id', 'assigned_agent_id', 'catalog_subject_id',
+        'service_catalog_service_id',
         'response_time_minutes', 'resolution_time_minutes', 'warning_threshold_percent',
         'response_due_at', 'resolution_due_at', 'warning_at',
         'sla_started_at', 'first_response_at', 'sla_extension_minutes',
@@ -132,6 +133,11 @@ class Ticket extends Model
     public function assignedAgent()
     {
         return $this->belongsTo(SupportAgent::class, 'assigned_agent_id');
+    }
+
+    public function catalogService()
+    {
+        return $this->belongsTo(ServiceCatalogService::class, 'service_catalog_service_id');
     }
 
     public function catalogSubject()
@@ -493,7 +499,7 @@ class Ticket extends Model
 
             return $minutes !== null && $minutes <= 0
                 ? 'Breach +'.self::formatDuration(abs($minutes))
-                : 'Met';
+                : 'Selesai dalam SLA';
         }
 
         if ($this->status === 'Waiting for Approval') {

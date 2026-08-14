@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ServiceCatalogSubject;
 use App\Models\SlaPolicy;
+use App\Models\SupportAgent;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\CurrentActor;
+use App\Support\TicketBroadcast;
 use App\Support\TicketNumber;
 use App\Support\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +27,7 @@ class TicketController extends Controller
             'requester_name' => 'nullable|string|max:255',
             'sla_policy_id' => 'required|integer|exists:sla_policies,id',
             'service_name' => 'nullable|string|max:255',
+            'service_id' => 'nullable|integer|exists:service_catalog_services,id',
             'subcategory_name' => 'nullable|string|max:255',
             'subject_name' => 'nullable|string|max:255',
             'issue_category' => 'nullable|string|max:255',
@@ -69,6 +72,7 @@ class TicketController extends Controller
             'requester_id' => $requester->id,
             'category' => $data['category'] ?? $data['issue_category'] ?? null,
             'service_name' => $data['service_name'] ?? null,
+            'service_catalog_service_id' => $data['service_id'] ?? null,
             'subcategory_name' => $data['subcategory_name'] ?? null,
             'subject_name' => $data['subject_name'] ?? null,
             'issue_category' => $data['issue_category'] ?? null,
@@ -125,6 +129,7 @@ class TicketController extends Controller
             'category' => 'nullable|string|max:255',
             'sla_policy_id' => 'required|integer|exists:sla_policies,id',
             'service_name' => 'nullable|string|max:255',
+            'service_id' => 'nullable|integer|exists:service_catalog_services,id',
             'subcategory_name' => 'nullable|string|max:255',
             'subject_name' => 'nullable|string|max:255',
             'issue_category' => 'nullable|string|max:255',
@@ -154,12 +159,27 @@ class TicketController extends Controller
             default => 'Open',
         };
 
-        $assignedAgentId = $this->resolveAssignedAgentId($data['catalog_subject_id'] ?? null);
+        $newCatalogSubjectId = $data['catalog_subject_id'] ?? null;
+
+        /*
+         | Tiket "Returned" sudah punya PIC sungguhan — bisa BPO (rute biasa)
+         | ATAU IT (kalau sempat dieskalasi sebelum dikembalikan). Menghitung
+         | ulang lewat resolveAssignedAgentId() di sini SELALU jatuh ke slot
+         | BPO default Subject-nya, jadi tiket yang tadinya sudah di tangan IT
+         | diam-diam kembali ke BPO begitu requester mengirim ulang — padahal
+         | mestinya tetap di tangan siapa pun yang terakhir mengembalikannya.
+         | Hanya dihitung ulang kalau kategorinya benar-benar berubah, atau
+         | kalau ini submission Draft yang memang belum pernah dirutekan.
+         */
+        $assignedAgentId = ($ticket->status === 'Returned' && $newCatalogSubjectId === $ticket->catalog_subject_id)
+            ? $ticket->assigned_agent_id
+            : $this->resolveAssignedAgentId($newCatalogSubjectId);
 
         $ticket->update([
             'title' => $data['title'],
             'category' => $data['category'] ?? $data['issue_category'] ?? null,
             'service_name' => $data['service_name'] ?? null,
+            'service_catalog_service_id' => $data['service_id'] ?? null,
             'subcategory_name' => $data['subcategory_name'] ?? null,
             'subject_name' => $data['subject_name'] ?? null,
             'issue_category' => $data['issue_category'] ?? null,
@@ -168,7 +188,7 @@ class TicketController extends Controller
             'priority' => $policy->priority,
             'approver_id' => $requiresApproval ? ($data['approver_id'] ?? null) : null,
             'assigned_agent_id' => $assignedAgentId,
-            'catalog_subject_id' => $data['catalog_subject_id'] ?? null,
+            'catalog_subject_id' => $newCatalogSubjectId,
             'response_time_minutes' => $policy->response_time_minutes,
             'resolution_time_minutes' => $policy->resolution_time_minutes,
             'warning_threshold_percent' => $policy->warning_threshold_percent,
@@ -275,9 +295,35 @@ class TicketController extends Controller
      * separately by ApprovalController::decide(), since routing only
      * happens there once a decision is made.
      */
+    /**
+     * Tiket katalog biasa sudah punya satu assigned_agent_id begitu dibuat
+     * — cukup satu notifikasi. Tiket "Lainnya" untuk Layanan yang punya PIC
+     * BPO terdaftar TIDAK dapat assigned_agent_id (lihat TicketBroadcast) —
+     * semua PIC-nya perlu tahu, siapa pun boleh mengambilnya duluan.
+     */
     private function notifyAgentOfNewAssignment(Ticket $ticket, bool $requiresApproval): void
     {
         if ($requiresApproval || $ticket->status !== 'Open') {
+            return;
+        }
+
+        $pics = TicketBroadcast::eligiblePics($ticket);
+
+        if ($pics->isNotEmpty()) {
+            $pics->each(function (SupportAgent $pic) use ($ticket) {
+                if (! $pic->user_id) {
+                    return;
+                }
+
+                NotificationService::notify(
+                    User::find($pic->user_id),
+                    $ticket,
+                    'ticket_created',
+                    'Tiket Baru Menunggu PIC',
+                    "Tiket {$ticket->ticket_no} \"{$ticket->title}\" ({$ticket->service_name}) belum ada yang menangani — siapa pun dari tim BPO bisa mengambilnya."
+                );
+            });
+
             return;
         }
 

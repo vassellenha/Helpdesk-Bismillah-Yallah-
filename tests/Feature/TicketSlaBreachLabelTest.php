@@ -29,7 +29,7 @@ class TicketSlaBreachLabelTest extends TestCase
         $ticket = $this->buatTiket($start, $due, $resolved, 'Resolved');
 
         $this->assertSame('met', $ticket->sla_kind);
-        $this->assertSame('Met', $ticket->sla_label);
+        $this->assertSame('Selesai dalam SLA', $ticket->sla_label);
     }
 
     public function test_tiket_selesai_setelah_breach_menampilkan_breach_dan_durasinya(): void

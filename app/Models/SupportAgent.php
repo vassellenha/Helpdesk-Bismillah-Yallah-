@@ -25,4 +25,20 @@ class SupportAgent extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * ID Layanan tempat agent ini sudah jadi PIC BPO di salah satu Subject
+     * aktifnya — dipakai SupportBpoController untuk menampilkan tiket
+     * "Lainnya" yang belum diklaim siapa pun (lihat
+     * ServiceCatalogService::activeBpoAgents(), sisi baliknya).
+     *
+     * @return \Illuminate\Support\Collection<int,int>
+     */
+    public function bpoServiceIds()
+    {
+        return ServiceCatalogSubject::where('support_agent_id', $this->id)
+            ->where('is_active', true)
+            ->distinct()
+            ->pluck('service_id');
+    }
 }
