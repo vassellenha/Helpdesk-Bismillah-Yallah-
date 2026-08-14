@@ -55,7 +55,15 @@
                 supaya menu ini lurus dengan tepi kanan isi halaman di bawahnya.
             --}}
             @if ($evaUser ?? null)
-                <div style="display:flex;justify-content:flex-end;padding:16px 30px 0">
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 30px 0">
+                    {{-- Tepat di kiri avatar, posisi yang sama dengan layout
+                         admin dan layout tim. Palet gelap konsol EVA sudah
+                         menunggu sakelar ini sejak awal: lihat `:root.dark
+                         .eva-app` di eva.css yang menyebut "sejak topbar punya
+                         sakelar terang/gelap" — CSS-nya ada, tombolnya yang
+                         belum pernah dipasang di konsol ini. --}}
+                    <div data-react="ThemeToggle"></div>
+
                     <div
                         data-react="UserMenu"
                         data-props="{{ json_encode([

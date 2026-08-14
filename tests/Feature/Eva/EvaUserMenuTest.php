@@ -37,6 +37,23 @@ final class EvaUserMenuTest extends TestCase
         }
     }
 
+    /**
+     * Sakelar terang/gelap, di kiri avatar seperti layout lain.
+     *
+     * Palet gelap konsol EVA sudah menunggu tombol ini sejak awal —
+     * `:root.dark .eva-app` di eva.css menyebutnya secara eksplisit — tapi
+     * tombolnya tidak pernah dipasang di sini. Akibatnya konsol EVA terkunci
+     * mengikuti setelan OS, sementara seluruh layar lain bisa dipindah.
+     */
+    public function test_sakelar_tema_ada_di_seluruh_layar_konsol(): void
+    {
+        $this->actingAsEvaAdmin();
+
+        foreach (['eva.coverage', 'eva.unanswered', 'eva.preview'] as $layar) {
+            $this->get(route($layar))->assertOk()->assertSee('data-react="ThemeToggle"', false);
+        }
+    }
+
     public function test_inisial_dihitung_dari_nama(): void
     {
         $admin = $this->actingAsEvaAdmin();

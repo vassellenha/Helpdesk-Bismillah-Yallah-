@@ -6,14 +6,13 @@ namespace Tests\Feature\Eva;
 
 use App\Models\Knowledge\AnswerLog;
 use App\Models\Knowledge\AnswerRating;
-use App\Models\Knowledge\Article;
 use App\Models\Knowledge\Conversation;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Support\Eva\AssistantWidget;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SubjectMatcher;
+use App\Support\Eva\AssistantWidget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

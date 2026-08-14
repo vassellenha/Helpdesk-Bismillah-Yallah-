@@ -6,7 +6,6 @@ namespace Tests\Feature\Eva;
 
 use App\Models\Knowledge\AnswerLog;
 use App\Models\Ticket;
-use App\Models\User;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SubjectMatch;
