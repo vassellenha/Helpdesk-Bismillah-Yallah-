@@ -40,6 +40,26 @@ class ProfilePresenter
     }
 
     /**
+     * Identitas ringkas untuk bilah atas: nama, jabatan · unit, dan inisial.
+     *
+     * Satu pembuat untuk semua konsol. Sebelumnya layar Admin memakai persona
+     * tetap `DummyData::currentAdmin()` — sisa masa mockup — sehingga topbar
+     * selalu menulis "Marcell Laforteza" siapa pun yang masuk, sementara modal
+     * "My Profile" di layar yang sama menampilkan nama yang benar. Dua tempat
+     * bersebelahan menyebut dua orang berbeda.
+     *
+     * @return array{name:string,title:string,initials:string}
+     */
+    public static function topbar(User $user, string $defaultTitle): array
+    {
+        return [
+            'name' => $user->name,
+            'title' => trim(($user->jabatan ?: $defaultTitle).' · '.($user->unit ?: ''), " ·\t\n"),
+            'initials' => self::initials($user->name),
+        ];
+    }
+
+    /**
      * Publik karena dipakai juga di luar kartu profil — bilah atas konsol EVA
      * menampilkan inisial yang sama. Repo ini sudah memuat tujuh salinan
      * private dari perhitungan ini di berbagai controller; menambah yang

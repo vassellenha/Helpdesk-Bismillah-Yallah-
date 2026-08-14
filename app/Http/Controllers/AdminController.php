@@ -8,7 +8,6 @@ use App\Models\ServiceCatalogSubject;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Support\DummyData;
 use App\Support\PriorityRegistry;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -23,7 +22,6 @@ class AdminController extends Controller
 
         return view('admin.dashboard', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'auditTrail' => AuditTrail::with('actor')->latest('created_at')->take(4)->get()
                 ->map(fn ($a) => [
                     'waktu' => $a->created_at->format('d M Y, H:i'),
@@ -58,7 +56,6 @@ class AdminController extends Controller
     {
         return view('admin.placeholder', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'title' => $title,
         ]);
     }

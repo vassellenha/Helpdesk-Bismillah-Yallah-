@@ -179,11 +179,6 @@ class DummyData
         ];
     }
 
-    public static function currentAdmin(): array
-    {
-        return ['name' => 'Marcell Laforteza', 'title' => 'Administrator', 'initials' => 'ML'];
-    }
-
     public static function auditTrail(): array
     {
         return [

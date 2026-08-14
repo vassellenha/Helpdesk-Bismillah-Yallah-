@@ -134,11 +134,26 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.eva', function ($view) {
             $user = CurrentActor::user();
 
-            $view->with('evaUser', $user ? [
-                'name' => $user->name,
-                'title' => trim(($user->jabatan ?: 'Knowledge Administrator').' · '.($user->unit ?: ''), " ·\t\n"),
-                'initials' => ProfilePresenter::initials($user->name),
-            ] : null);
+            $view->with('evaUser', $user ? ProfilePresenter::topbar($user, 'Knowledge Administrator') : null);
+        });
+
+        /*
+        | Identitas pemakai untuk bilah atas konsol Admin.
+        |
+        | MENGGANTIKAN `DummyData::currentAdmin()` yang dipanggil delapan
+        | controller — persona tetap dari masa mockup yang mengembalikan
+        | "Marcell Laforteza" apa pun yang terjadi. Topbar menyebut satu nama,
+        | modal "My Profile" di layar yang sama menyebut nama lain, dan tidak
+        | ada error apa pun yang menandainya.
+        |
+        | Di layout, bukan di delapan controller: kedelapan layarnya memakai
+        | layouts.admin, jadi satu tempat cukup — dan layar admin berikutnya
+        | tidak perlu ingat menambahkannya.
+        */
+        View::composer('layouts.admin', function ($view) {
+            $user = CurrentActor::user();
+
+            $view->with('currentUser', $user ? ProfilePresenter::topbar($user, 'Administrator') : null);
         });
     }
 }

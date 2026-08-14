@@ -11,7 +11,6 @@ use App\Models\SupportAgent;
 use App\Models\Ticket;
 use App\Support\AuditDescriber;
 use App\Support\CurrentActor;
-use App\Support\DummyData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +35,6 @@ class ServiceCatalogController extends Controller
 
         return view('admin.service-catalog', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'subjects' => $subjects->map($this->presentSubject(...)),
             'issueCategories' => IssueCategory::orderBy('name')->pluck('name'),
             'services' => ServiceCatalogService::orderBy('name')->get(['id', 'name']),

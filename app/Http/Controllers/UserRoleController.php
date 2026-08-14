@@ -55,7 +55,6 @@ class UserRoleController extends Controller
 
         return view('admin.users', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'users' => collect($page->items())->map($this->presentUser(...)),
             'usersMeta' => $this->pageMeta($page),
             // Statistik dihitung dengan COUNT di database, bukan dari daftar yang

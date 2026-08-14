@@ -7,7 +7,6 @@ use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Support\AuditDescriber;
 use App\Support\CurrentActor;
-use App\Support\DummyData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +29,6 @@ class SlaPolicyController extends Controller
     {
         return view('admin.sla', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'policies' => SlaPolicy::orderBy('id')->get(),
             'ticketSlaBreakdown' => $this->ticketSlaBreakdown(),
         ]);

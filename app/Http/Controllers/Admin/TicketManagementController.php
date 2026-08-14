@@ -59,7 +59,6 @@ class TicketManagementController extends Controller
 
         return view('admin.ticket-management', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'notifications' => DummyData::notifications(),
             'tickets' => $rows,
             'stats' => $stats,

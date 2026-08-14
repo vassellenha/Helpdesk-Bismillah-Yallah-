@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditTrail;
 use App\Models\User;
-use App\Support\DummyData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -20,7 +19,6 @@ class AuditTrailController extends Controller
 
         return view('admin.audit-trail', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'logs' => collect($page->items())->map($this->presentLog(...)),
             'logsMeta' => $this->pageMeta($page),
             'listUrl' => route('admin.audit-trail.list'),

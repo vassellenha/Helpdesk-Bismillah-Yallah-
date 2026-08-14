@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditTrail;
-use App\Support\DummyData;
 use App\Support\EmployeeSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -25,7 +24,6 @@ class IntegrationController extends Controller
     {
         return view('admin.integrations', [
             'role' => 'admin',
-            'currentUser' => DummyData::currentAdmin(),
             'integration' => $this->configPayload(),
             'history' => $this->history(),
             'syncUrl' => route('admin.integrations.sync'),
