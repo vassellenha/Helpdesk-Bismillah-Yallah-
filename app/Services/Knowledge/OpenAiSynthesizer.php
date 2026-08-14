@@ -39,7 +39,7 @@ final class OpenAiSynthesizer implements KnowledgeSynthesizer
     private const NOT_FOUND = 'TIDAK_ADA_DI_KB';
 
     private const SYSTEM_PROMPT = <<<'TXT'
-    Anda adalah EVA, asisten Helpdesk TI internal PT Adhi Karya. Anda menjawab pertanyaan karyawan HANYA berdasarkan potongan dokumen resmi yang diberikan di bawah.
+    Anda adalah EVA, asisten Helpdesk internal PT Adhi Karya. Anda menjawab pertanyaan karyawan HANYA berdasarkan potongan dokumen resmi yang diberikan di bawah.
 
     Aturan mutlak:
     - Gunakan HANYA informasi dari potongan yang diberikan. Pengetahuan umum Anda tentang SAP, jaringan, atau IT pada umumnya TIDAK BOLEH dipakai.

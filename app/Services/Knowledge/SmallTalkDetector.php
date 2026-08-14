@@ -19,6 +19,12 @@ namespace App\Services\Knowledge;
  * balasan sapaan tidak perlu dikarang ulang setiap kali, tidak boleh berbeda
  * tiap orang, dan harus tetap muncul saat kunci OpenAI kosong atau kuota habis.
  *
+ * Kalimatnya SENGAJA tidak menyebut "TI". Helpdesk ini juga menerima keluhan
+ * di luar teknologi — kursi kantor rusak, permohonan layanan umum — dan
+ * sapaan yang menyebut "layanan TI" diam-diam memberi tahu penanya bahwa
+ * keluhannya salah alamat, padahal tidak. Contoh yang disebut tetap contoh,
+ * bukan batas.
+ *
  * Yang TIDAK masuk sini: pertanyaan faktual apa pun. "Apa itu VPN" bukan
  * basa-basi — itu pertanyaan yang jawabannya harus datang dari KB, atau tidak
  * sama sekali.
@@ -90,14 +96,14 @@ final class SmallTalkDetector
 
     /** @var array<string, string> */
     private const REPLIES = [
-        'greeting' => 'Halo! Saya EVA, asisten Helpdesk ADHI. Ada yang bisa saya bantu seputar layanan TI — misalnya akses aplikasi, kendala SAP, atau perangkat kerja?',
-        'howareyou' => 'Baik, terima kasih sudah bertanya! Saya siap membantu. Ada kendala layanan TI yang sedang Anda hadapi?',
-        'identity' => 'Saya EVA, asisten virtual Helpdesk ADHI. Saya menjawab dari SOP dan panduan resmi yang sudah terkumpul di Knowledge Base, dan kalau jawabannya belum ada, saya bantu siapkan draf tiket untuk tim TI.',
-        'capability' => 'Saya bisa membantu soal layanan TI ADHI: prosedur akses aplikasi (SAP, ADELE, ARISE), reset kata sandi, kendala perangkat dan jaringan, sampai cara mengajukan permohonan. Kalau jawabannya belum ada di panduan, saya siapkan draf tiketnya. Silakan tanyakan saja.',
-        'thanks' => 'Sama-sama! Kalau ada kendala lain seputar layanan TI, silakan tanyakan lagi.',
-        'bye' => 'Baik, terima kasih. Kalau nanti ada kendala layanan TI, saya siap membantu lagi.',
-        'test' => 'Halo! Saya menerima pesan Anda dengan baik. Silakan tanyakan kendala layanan TI yang sedang Anda hadapi.',
-        'ack' => 'Baik. Kalau ada yang ingin ditanyakan seputar layanan TI, silakan sampaikan.',
+        'greeting' => 'Halo! Saya EVA, asisten Helpdesk ADHI. Ada yang bisa saya bantu — misalnya akses aplikasi, kendala perangkat kerja, atau permohonan layanan?',
+        'howareyou' => 'Baik, terima kasih sudah bertanya! Saya siap membantu. Ada kendala layanan yang sedang Anda hadapi?',
+        'identity' => 'Saya EVA, asisten virtual Helpdesk ADHI. Saya menjawab dari SOP dan panduan resmi yang sudah terkumpul di Knowledge Base, dan kalau jawabannya belum ada, saya bantu siapkan draf tiket untuk tim yang menangani.',
+        'capability' => 'Saya bisa membantu soal layanan Helpdesk ADHI: prosedur akses aplikasi (SAP, ADELE, ARISE), reset kata sandi, kendala perangkat dan jaringan, sampai cara mengajukan permohonan. Di luar contoh itu pun silakan tanyakan — kalau jawabannya belum ada di panduan, saya siapkan draf tiketnya.',
+        'thanks' => 'Sama-sama! Kalau ada kendala lain, silakan tanyakan lagi.',
+        'bye' => 'Baik, terima kasih. Kalau nanti ada kendala layanan, saya siap membantu lagi.',
+        'test' => 'Halo! Saya menerima pesan Anda dengan baik. Silakan tanyakan kendala layanan yang sedang Anda hadapi.',
+        'ack' => 'Baik. Kalau ada yang ingin ditanyakan, silakan sampaikan.',
         'noise' => 'Maaf, saya belum menangkap maksudnya. Bisa dituliskan lebih lengkap? Misalnya "cara reset password SAP" atau "printer tidak bisa mencetak".',
     ];
 

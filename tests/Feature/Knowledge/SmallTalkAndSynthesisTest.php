@@ -152,6 +152,28 @@ final class SmallTalkAndSynthesisTest extends TestCase
         $this->assertSame(['cara pakai vpn untuk wfh'], $tersisa);
     }
 
+    /**
+     * Balasan sapaan tidak boleh menyempitkan cakupan helpdesk.
+     *
+     * Helpdesk ini juga menerima keluhan di luar teknologi — "kursi kantor saya
+     * rusak rodanya" ada sungguhan di Unanswered Questions. Sapaan yang
+     * berbunyi "silakan tanyakan kendala layanan TI" diam-diam memberi tahu
+     * penanya bahwa keluhannya salah alamat, padahal tidak, dan orang yang
+     * percaya kalimat itu tidak akan pernah bertanya.
+     */
+    #[DataProvider('sapaan')]
+    public function test_balasan_sapaan_tidak_menyempitkan_cakupan(string $sapaan): void
+    {
+        $balasan = (new SmallTalkDetector)->balasan($sapaan);
+
+        $this->assertNotNull($balasan);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\bTI\b/u',
+            $balasan,
+            "Balasan untuk \"{$sapaan}\" menyebut TI, sehingga keluhan non-TI terasa salah alamat.",
+        );
+    }
+
     public function test_pertanyaan_sungguhan_tidak_tertangkap_sebagai_sapaan(): void
     {
         $detector = new SmallTalkDetector;
