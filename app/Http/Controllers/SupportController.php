@@ -352,9 +352,15 @@ class SupportController extends Controller
         return response()->json(['read' => true]);
     }
 
+    /**
+     * Sama seperti SupportBpoController::agentFor() — orang yang dobel
+     * peran (BPO & IT) punya dua baris SupportAgent untuk user_id yang
+     * sama, jadi harus difilter type='it' di sini supaya tidak kebetulan
+     * mengambil baris BPO-nya.
+     */
     private function agentFor(User $supportUser): SupportAgent
     {
-        return SupportAgent::where('user_id', $supportUser->id)->firstOrFail();
+        return SupportAgent::where('user_id', $supportUser->id)->where('type', 'it')->firstOrFail();
     }
 
     /**

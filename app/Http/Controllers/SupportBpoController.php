@@ -12,6 +12,7 @@ use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use App\Support\PriorityRegistry;
 use App\Support\SupportGreeting;
+use App\Support\TicketBroadcast;
 use App\Support\TicketDiscussion;
 use App\Support\TicketFlow;
 use App\Support\TicketPeople;
@@ -41,7 +42,7 @@ class SupportBpoController extends Controller
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
 
-        $myTickets = Ticket::where('assigned_agent_id', $agent->id)->with('requester')->get();
+        $myTickets = $this->visibleTicketsQuery($agent)->with('requester')->get();
 
         $active = $myTickets->whereIn('status', Ticket::ACTIVE_STATUSES);
         $inProgress = $myTickets->whereIn('status', ['Assigned', 'In Progress', 'Waiting for Response']);
@@ -89,7 +90,7 @@ class SupportBpoController extends Controller
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
 
-        $tickets = Ticket::where('assigned_agent_id', $agent->id)
+        $tickets = $this->visibleTicketsQuery($agent)
             ->whereNotIn('status', Ticket::NOT_YET_RELEASED_STATUSES)
             ->with('requester')->latest('created_at')->get();
 
@@ -114,7 +115,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
 
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
@@ -146,7 +147,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
 
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
@@ -163,9 +164,11 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
 
         $data = $request->validate(TicketDiscussion::rules());
 
@@ -188,8 +191,10 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_unless($ticket->status === 'Open', 422, 'Tiket ini tidak bisa dimulai dari status saat ini.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
 
         // Sama persis dengan SupportController::start() — satu transaksi untuk
         // status, sapaan otomatis, dan jejak audit. Requester tidak boleh
@@ -224,8 +229,10 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
@@ -274,8 +281,10 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
 
@@ -354,8 +363,10 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
@@ -410,9 +421,41 @@ class SupportBpoController extends Controller
         return response()->json(['read' => true]);
     }
 
+    /**
+     * Sebagian orang (mis. Arief Kurniawan) punya DUA baris SupportAgent
+     * tertaut ke user_id yang sama — satu type=bpo, satu type=it — karena
+     * dia dobel peran. Tanpa filter type di sini, firstOrFail() bisa
+     * mengambil baris IT-nya secara acak (tergantung urutan baris), dan
+     * tiket yang sudah dieskalasi ke IT ikut kelihatan di portal BPO cuma
+     * karena assigned_agent_id-nya kebetulan cocok dengan baris yang salah
+     * ini kembalikan.
+     */
     private function agentFor(User $bpoUser): SupportAgent
     {
-        return SupportAgent::where('user_id', $bpoUser->id)->firstOrFail();
+        return SupportAgent::where('user_id', $bpoUser->id)->where('type', 'bpo')->firstOrFail();
+    }
+
+    /**
+     * Tiket yang sudah jadi milikku, DITAMBAH tiket broadcast "Lainnya"
+     * yang belum diklaim siapa pun tapi aku salah satu PIC BPO Layanannya
+     * (lihat TicketBroadcast) — supaya tiket itu kelihatan di dashboard/My
+     * Tickets sebelum ada yang membalasnya, bukan cuma setelah diklaim.
+     */
+    private function visibleTicketsQuery(SupportAgent $agent)
+    {
+        $broadcastServiceIds = $agent->bpoServiceIds();
+
+        return Ticket::where(function ($q) use ($agent, $broadcastServiceIds) {
+            $q->where('assigned_agent_id', $agent->id);
+
+            if ($broadcastServiceIds->isNotEmpty()) {
+                $q->orWhere(function ($q2) use ($broadcastServiceIds) {
+                    $q2->whereNull('assigned_agent_id')
+                        ->whereNull('catalog_subject_id')
+                        ->whereIn('service_catalog_service_id', $broadcastServiceIds);
+                });
+            }
+        });
     }
 
     /**
