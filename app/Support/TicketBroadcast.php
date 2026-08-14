@@ -40,7 +40,11 @@ class TicketBroadcast
             return collect();
         }
 
-        return $ticket->catalogService?->activeBpoAgents()->get() ?? collect();
+        // unique('user_id'), bukan cuma get(): orang dobel peran (BPO & IT,
+        // lihat SupportBpoController::agentFor()) punya DUA baris SupportAgent
+        // untuk akun yang sama — tanpa ini dia bisa muncul dua kali dan
+        // dinotifikasi dua kali untuk tiket yang sama.
+        return $ticket->catalogService?->activeBpoAgents()->get()->unique('user_id') ?? collect();
     }
 
     /**
@@ -58,7 +62,11 @@ class TicketBroadcast
             return false;
         }
 
-        return self::eligiblePics($ticket)->contains('id', $agent->id);
+        // user_id, bukan id baris SupportAgent — lihat catatan di
+        // eligiblePics(): orang dobel peran punya dua baris, dan yang
+        // dipakai claim/akses bisa jadi baris lain dari yang muncul di
+        // daftar PIC (unique() cuma menyimpan salah satu).
+        return self::eligiblePics($ticket)->contains('user_id', $agent->user_id);
     }
 
     /**
@@ -78,7 +86,7 @@ class TicketBroadcast
 
         $pics = self::eligiblePics($ticket);
 
-        if (! $pics->contains('id', $agent->id)) {
+        if (! $pics->contains('user_id', $agent->user_id)) {
             return;
         }
 
@@ -95,7 +103,7 @@ class TicketBroadcast
             'description' => "{$bpoUser->name} mengklaim tiket \"{$ticket->ticket_no}\" (broadcast) dari ".count($pics).' PIC.',
         ]);
 
-        $others = $pics->reject(fn (SupportAgent $pic) => $pic->id === $agent->id);
+        $others = $pics->reject(fn (SupportAgent $pic) => $pic->user_id === $agent->user_id);
 
         $others->each(function (SupportAgent $pic) use ($ticket, $agent) {
             if (! $pic->user_id) {

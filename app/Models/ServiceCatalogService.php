@@ -36,10 +36,22 @@ class ServiceCatalogService extends Model
      * ditentukan oleh KOLOM MANA yang dipakai (support_agent_id, beda dari
      * it_agent_id), bukan oleh nilai `type` baris SupportAgent yang
      * ditautkan. Data yang ada membuktikan keduanya bisa tidak sinkron.
+     *
+     * TAPI difilter berdasarkan role "Support BPO" di akun user-nya —
+     * terbukti di data nyata (SAP): dari 8 nama di slot support_agent_id,
+     * cuma 3 yang benar-benar punya role itu. Sisanya cuma pegawai IT yang
+     * kebetulan namanya ada di kolom itu — kalau tetap diikutkan, mereka
+     * dapat notifikasi lalu ditolak (403) begitu coba membukanya, karena
+     * setiap layar /support-bpo/* dijaga middleware role:support-bpo.
+     * Tanpa role itu, orangnya memang tidak akan pernah bisa menangani
+     * tiket apa pun di portal BPO — broadcast maupun rute biasa.
      */
     public function activeBpoAgents()
     {
+        $agentIds = $this->subjects()->where('is_active', true)->whereNotNull('support_agent_id')->pluck('support_agent_id');
+
         return SupportAgent::where('is_active', true)
-            ->whereIn('id', $this->subjects()->where('is_active', true)->whereNotNull('support_agent_id')->pluck('support_agent_id'));
+            ->whereIn('id', $agentIds)
+            ->whereHas('user.roles', fn ($q) => $q->where('name', 'Support BPO'));
     }
 }

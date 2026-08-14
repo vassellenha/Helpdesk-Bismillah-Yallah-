@@ -291,8 +291,31 @@ class SupportBpoController extends Controller
         // Same reasoning as resolve(): deciding this needs IT is a response too.
         $ticket->markFirstResponse();
 
+        /*
+         | $this->agentFor() TIDAK dipakai di sini — itu method BPO milik
+         | controller ini sendiri (sejak filter type='bpo' ditambahkan),
+         | jadi kalau dipanggil di sini malah mengembalikan baris SupportAgent
+         | ber-type BPO milik orangnya, bukan IT. Untuk agent dobel peran
+         | (BPO & IT sekaligus, mis. Arief Kurniawan) itu artinya tiket
+         | "dieskalasi ke IT" tapi assigned_agent_id-nya tetap baris BPO-nya
+         | — begitu dibuka lewat portal IT, ditolak, karena baris itu bukan
+         | dia menurut portal IT.
+         |
+         | CurrentActor::support() juga tidak dipakai — sejak persona tetap
+         | dicabut, itu cuma mengembalikan USER YANG SEDANG LOGIN kalau dia
+         | kebetulan punya role Support IT, dan menolak (403) kalau tidak.
+         | Itu tidak masuk akal buat fallback "agent IT default": BPO yang
+         | mengeskalasi tiket ini tidak harus punya role Support IT sama
+         | sekali.
+         |
+         | Jadi cukup ambil agent IT aktif mana pun, diurutkan oleh id
+         | supaya deterministik — sama seperti CurrentActor dulu jatuh ke
+         | "agent aktif pertama timnya" sebelum persona dicabut.
+         */
         $itAgent = SupportAgent::find($ticket->catalogSubject?->it_agent_id)
-            ?? $this->agentFor(CurrentActor::support());
+            ?? SupportAgent::where('type', 'it')->where('is_active', true)->orderBy('id')->first();
+
+        abort_if($itAgent === null, 422, 'Tidak ada agent IT aktif untuk menerima eskalasi ini.');
 
         $ticket->update([
             'assigned_agent_id' => $itAgent->id,
