@@ -316,10 +316,18 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                         </div>
                         <div className="mt-3 flex items-center justify-between text-[13px]">
                             <span className="text-gray-400 dark:text-ink-3">{trans('support.detail.pic')}</span>
-                            <span className="text-right font-semibold text-blue-600 dark:text-accent-text">
-                                {ticket.people?.pic?.name}
-                                <span className="block text-[11px] font-normal text-gray-400 dark:text-ink-3">{ticket.people?.pic?.role}</span>
-                            </span>
+                            {/* Tiket broadcast belum punya pemilik sampai ada yang bertindak — ditulis
+                                apa adanya, bukan dikosongkan (terbaca seperti bug tampilan) dan bukan
+                                diisi nama pembacanya (dulu begitu: semua orang melihat dirinya sendiri
+                                tercantum sebagai PIC tiket yang masih bebas). */}
+                            {ticket.people?.pic ? (
+                                <span className="text-right font-semibold text-blue-600 dark:text-accent-text">
+                                    {ticket.people.pic.name}
+                                    <span className="block text-[11px] font-normal text-gray-400 dark:text-ink-3">{ticket.people.pic.role}</span>
+                                </span>
+                            ) : (
+                                <span className="text-right font-medium italic text-gray-400 dark:text-ink-3">{trans('support.detail.no_pic')}</span>
+                            )}
                         </div>
 
                         {ticket.escalated && escalateUrl && (

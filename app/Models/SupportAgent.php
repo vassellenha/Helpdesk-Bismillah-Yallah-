@@ -36,10 +36,7 @@ class SupportAgent extends Model
      */
     public function bpoServiceIds()
     {
-        return ServiceCatalogSubject::where('support_agent_id', $this->id)
-            ->where('is_active', true)
-            ->distinct()
-            ->pluck('service_id');
+        return $this->serviceIdsFor('support_agent_id');
     }
 
     /**
@@ -51,7 +48,35 @@ class SupportAgent extends Model
      */
     public function itServiceIds()
     {
-        return ServiceCatalogSubject::where('it_agent_id', $this->id)
+        return $this->serviceIdsFor('it_agent_id');
+    }
+
+    /**
+     * Dicocokkan ke SEMUA baris SupportAgent milik ORANG yang sama, bukan
+     * cuma baris $this — sebagian orang punya lebih dari satu baris untuk
+     * satu user_id (dobel peran BPO & IT, atau baris lama yang tidak
+     * dibereskan waktu namanya diperbarui). Kalau Subject menunjuk baris
+     * yang berbeda dari baris yang dikembalikan agentFor() saat login,
+     * tiket broadcast-nya jadi tidak pernah muncul di daftar orang itu —
+     * padahal loncengnya tetap bunyi, karena TicketBroadcast::eligiblePics()
+     * dan canAct() mencocokkan lewat user_id. Itu ketimpangan yang bikin
+     * tiket hasil eskalasi "hilang": kelihatan di notifikasi, tidak ada di
+     * My Tickets.
+     *
+     * Yang TIDAK ikut dilebarkan: pencocokan assigned_agent_id di
+     * visibleTicketsQuery — di sana filter per baris justru yang menjaga
+     * tiket yang sudah dieskalasi ke baris IT seseorang tidak ikut nongol
+     * di portal BPO-nya.
+     *
+     * @return \Illuminate\Support\Collection<int,int>
+     */
+    private function serviceIdsFor(string $column)
+    {
+        $myRowIds = $this->user_id
+            ? static::where('user_id', $this->user_id)->pluck('id')
+            : collect([$this->id]);
+
+        return ServiceCatalogSubject::whereIn($column, $myRowIds)
             ->where('is_active', true)
             ->distinct()
             ->pluck('service_id');

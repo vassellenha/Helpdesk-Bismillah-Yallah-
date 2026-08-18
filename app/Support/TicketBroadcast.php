@@ -45,6 +45,36 @@ class TicketBroadcast
      */
     public static function eligiblePics(Ticket $ticket): Collection
     {
+        // escalated_at menentukan tahap mana yang sedang berjalan — belum
+        // dieskalasi berarti masih giliran BPO, sudah berarti giliran IT.
+        return $ticket->escalated_at !== null ? self::itPics($ticket) : self::bpoPics($ticket);
+    }
+
+    /**
+     * PIC IT Layanan tiket ini, TANPA melihat escalated_at — dipakai
+     * SupportBpoController::escalate() untuk memastikan ada tujuan SEBELUM
+     * memutuskan broadcast. Tanpa pengecekan itu, tiket "Lainnya" di Layanan
+     * yang semua Subject aktifnya tidak punya it_agent_id (Level 1,
+     * BPO-only) akan hilang total begitu dieskalasi: assigned_agent_id null,
+     * escalated_at terisi, tidak ada satu pun PIC IT yang bisa melihat atau
+     * membukanya.
+     *
+     * @return Collection<int,SupportAgent>
+     */
+    public static function itPics(Ticket $ticket): Collection
+    {
+        return self::picsFrom($ticket, fn ($service) => $service->activeItAgents());
+    }
+
+    /** @return Collection<int,SupportAgent> */
+    private static function bpoPics(Ticket $ticket): Collection
+    {
+        return self::picsFrom($ticket, fn ($service) => $service->activeBpoAgents());
+    }
+
+    /** @return Collection<int,SupportAgent> */
+    private static function picsFrom(Ticket $ticket, callable $pool): Collection
+    {
         if ($ticket->catalog_subject_id !== null || $ticket->service_catalog_service_id === null) {
             return collect();
         }
@@ -55,15 +85,11 @@ class TicketBroadcast
             return collect();
         }
 
-        // escalated_at menentukan tahap mana yang sedang berjalan — belum
-        // dieskalasi berarti masih giliran BPO, sudah berarti giliran IT.
-        $pool = $ticket->escalated_at !== null ? $service->activeItAgents() : $service->activeBpoAgents();
-
         // unique('user_id'), bukan cuma get(): orang dobel peran (BPO & IT,
         // lihat SupportBpoController::agentFor()) punya DUA baris SupportAgent
         // untuk akun yang sama — tanpa ini dia bisa muncul dua kali dan
         // dinotifikasi dua kali untuk tiket yang sama.
-        return $pool->get()->unique('user_id');
+        return $pool($service)->get()->unique('user_id');
     }
 
     /**
@@ -147,11 +173,22 @@ class TicketBroadcast
      * sama dengan broadcast BPO di awal. Tiket kembali `assigned_agent_id
      * = null` (sekarang berarti "belum diklaim IT manapun", bukan "belum
      * diklaim BPO" lagi — dibedakan lewat escalated_at yang baru diisi).
+     *
+     * STATUS IKUT KEMBALI KE "Open": tahap IT baru dimulai, belum ada satu
+     * pun orang IT yang mengerjakannya. Status warisan tahap BPO ("In
+     * Progress" kalau BPO sempat menekan Kerjakan Sekarang) berbohong di
+     * layar PIC IT — tiketnya tampak sedang dikerjakan padahal tidak ada
+     * pemiliknya, tepat di sebelah tulisan "belum ada PIC". Akibatnya lebih
+     * dari sekadar label: popup "Mulai kerjakan tiket ini?" cuma muncul
+     * untuk tiket Open, dan SupportController::start() menolak status selain
+     * Open dengan 422 — tanpa baris ini PIC IT tidak punya jalan untuk
+     * mengklaim tiketnya lewat tombolnya sendiri.
      */
     public static function escalateBroadcast(Ticket $ticket, User $bpoUser, SupportAgent $bpoAgent, string $note): void
     {
         $ticket->update([
             'assigned_agent_id' => null,
+            'status' => 'Open',
             'escalated_at' => now(),
             'escalation_note' => $note,
         ]);

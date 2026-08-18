@@ -67,10 +67,27 @@ class TeamLeadController extends Controller
         return SupportAgent::where('is_active', true)->where('type', self::TEAM_SCOPE);
     }
 
-    /** Constrains a Ticket query to tickets whose current PIC is in the team. */
+    /**
+     * Constrains a Ticket query to tickets whose current PIC is in the team,
+     * PLUS tickets currently broadcast to the whole IT team and not yet
+     * claimed by anyone (assigned_agent_id null, escalated_at set — see
+     * App\Support\TicketBroadcast::escalateBroadcast()). Without the second
+     * clause, a "Lainnya" ticket BPO just escalated sits with no PIC at all
+     * until some IT agent claims it, and whereHas('assignedAgent', ...)
+     * silently drops it from every Team Lead view (dashboard, ticket list,
+     * SLA monitoring, exports, audit feed) for that whole window — even
+     * though it IS already this team's ticket to answer.
+     */
     private function scopeTickets($query)
     {
-        return $query->whereHas('assignedAgent', fn ($q) => $q->where('type', self::TEAM_SCOPE));
+        return $query->where(function ($q) {
+            $q->whereHas('assignedAgent', fn ($q2) => $q2->where('type', self::TEAM_SCOPE))
+                ->orWhere(function ($q2) {
+                    $q2->whereNull('assigned_agent_id')
+                        ->whereNull('catalog_subject_id')
+                        ->whereNotNull('escalated_at');
+                });
+        });
     }
 
     public function dashboard(Request $request): View
@@ -213,11 +230,21 @@ class TeamLeadController extends Controller
         return response()->json($this->ticketDetailPayload($ticket));
     }
 
-    /** 403 when a ticket is handled by another team (direct-URL access). */
+    /**
+     * 403 when a ticket is handled by another team, or isn't (yet) this
+     * team's to see (direct-URL access) — same definition as scopeTickets()
+     * so a broadcast-to-IT ticket that's still unclaimed is viewable here
+     * too, not just excluded-then-permitted-by-accident.
+     */
     private function assertInScope(Ticket $ticket): void
     {
-        abort_if(
-            $ticket->assignedAgent && $ticket->assignedAgent->type !== self::TEAM_SCOPE,
+        $isTeamAgent = $ticket->assignedAgent && $ticket->assignedAgent->type === self::TEAM_SCOPE;
+        $isUnclaimedItBroadcast = $ticket->assigned_agent_id === null
+            && $ticket->catalog_subject_id === null
+            && $ticket->escalated_at !== null;
+
+        abort_unless(
+            $isTeamAgent || $isUnclaimedItBroadcast,
             403,
             'Tiket ini ditangani tim lain, di luar cakupan Team Lead.',
         );

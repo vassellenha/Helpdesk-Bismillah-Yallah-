@@ -112,6 +112,7 @@ return [
         'actions_footnote' => 'Actions are recorded in the status history & audit trail. The requester is notified.',
         'current_status' => 'Current status',
         'pic' => 'PIC',
+        'no_pic' => 'No PIC yet',
         'note_label' => 'Note (required)',
         'note_placeholder' => 'Write a handling note…',
         'note_hint' => 'Fill in the note to enable the buttons below.',

@@ -124,7 +124,7 @@ class SupportBpoController extends Controller
             'role' => 'support-bpo',
             'currentUser' => $this->currentUserPayload($bpoUser),
             'notifications' => $this->notifications($bpoUser),
-            'ticket' => $this->presentTicket($ticket, $agent),
+            'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
@@ -153,7 +153,7 @@ class SupportBpoController extends Controller
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return response()->json([
-            'ticket' => $this->presentTicket($ticket, $agent),
+            'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
@@ -297,7 +297,11 @@ class SupportBpoController extends Controller
 
         $subjectItAgent = SupportAgent::find($ticket->catalogSubject?->it_agent_id);
 
-        if (! $subjectItAgent && $ticket->catalog_subject_id === null) {
+        // Layanan yang belum punya PIC IT sama sekali TIDAK boleh masuk jalur
+        // broadcast: tiketnya akan berakhir tanpa pemilik dan tanpa satu pun
+        // orang yang bisa melihatnya. Biarkan jatuh ke jalur tunggal di bawah
+        // supaya tetap ada yang menerima.
+        if (! $subjectItAgent && $ticket->catalog_subject_id === null && TicketBroadcast::itPics($ticket)->isNotEmpty()) {
             TicketBroadcast::escalateBroadcast($ticket, $bpoUser, $agent, $data['note']);
 
             // Support IT mulai dari nol, jadi jam SLA diperpanjang sama
@@ -482,6 +486,14 @@ class SupportBpoController extends Controller
      * yang belum diklaim siapa pun tapi aku salah satu PIC BPO Layanannya
      * (lihat TicketBroadcast) — supaya tiket itu kelihatan di dashboard/My
      * Tickets sebelum ada yang membalasnya, bukan cuma setelah diklaim.
+     *
+     * escalated_at HARUS kosong di cabang broadcast — cerminan syarat
+     * sebaliknya di SupportController::visibleTicketsQuery(). Tiket
+     * "Lainnya" yang sudah dieskalasi juga `assigned_agent_id = null`
+     * (sekarang artinya "belum diklaim IT manapun"), jadi tanpa syarat ini
+     * dia balik lagi ke daftar semua PIC BPO Layanan itu seolah masih
+     * giliran mereka — padahal giliran BPO sudah selesai, dan tiket yang
+     * sama muncul di dua portal sekaligus.
      */
     private function visibleTicketsQuery(SupportAgent $agent)
     {
@@ -494,6 +506,7 @@ class SupportBpoController extends Controller
                 $q->orWhere(function ($q2) use ($broadcastServiceIds) {
                     $q2->whereNull('assigned_agent_id')
                         ->whereNull('catalog_subject_id')
+                        ->whereNull('escalated_at')
                         ->whereIn('service_catalog_service_id', $broadcastServiceIds);
                 });
             }
@@ -605,7 +618,16 @@ class SupportBpoController extends Controller
         ];
     }
 
-    private function presentTicket(Ticket $t, SupportAgent $agent): array
+    /**
+     * SENGAJA tidak menerima agent yang sedang melihat: 'pic' di bawah dulu
+     * diisi dari situ, jadi panel PIC selalu menampilkan NAMA DIRI SENDIRI —
+     * siapa pun yang membuka tiket melihat namanya tercantum sebagai PIC,
+     * termasuk untuk tiket broadcast yang belum diklaim siapa pun. Di layar
+     * yang sama TicketFlow menulis "belum ada PIC", jadi satu halaman
+     * menyatakan dua hal yang bertentangan, dan PIC BPO mengira tiket yang
+     * masih bebas sudah menjadi miliknya.
+     */
+    private function presentTicket(Ticket $t): array
     {
 
         $isDone = in_array($t->status, Ticket::DONE_STATUSES, true);
@@ -636,7 +658,9 @@ class SupportBpoController extends Controller
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
                 'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
-                'pic' => ['name' => $agent->name, 'role' => 'Support '.strtoupper($agent->type), 'email' => $agent->email],
+                'pic' => $t->assignedAgent
+                    ? ['name' => $t->assignedAgent->name, 'role' => 'Support '.strtoupper($t->assignedAgent->type), 'email' => $t->assignedAgent->email]
+                    : null,
                 'support' => TicketPeople::supportAgents($t),
             ],
             'canAct' => ! in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Waiting for Approval'], true),

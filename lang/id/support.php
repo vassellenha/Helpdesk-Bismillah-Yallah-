@@ -115,6 +115,7 @@ return [
         'actions_footnote' => 'Tindakan tercatat di riwayat status & audit trail. Requester menerima notifikasi.',
         'current_status' => 'Status saat ini',
         'pic' => 'PIC',
+        'no_pic' => 'Belum ada PIC',
         'note_label' => 'Catatan (wajib)',
         'note_placeholder' => 'Tulis catatan penanganan…',
         'note_hint' => 'Isi catatan untuk mengaktifkan tombol di bawah.',

@@ -130,7 +130,7 @@ class SupportController extends Controller
             'role' => 'support',
             'currentUser' => $this->currentUserPayload($supportUser),
             'notifications' => $this->notifications($supportUser),
-            'ticket' => $this->presentTicket($ticket, $agent),
+            'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
@@ -158,7 +158,7 @@ class SupportController extends Controller
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return response()->json([
-            'ticket' => $this->presentTicket($ticket, $agent),
+            'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
@@ -503,7 +503,12 @@ class SupportController extends Controller
         ];
     }
 
-    private function presentTicket(Ticket $t, SupportAgent $agent): array
+    /**
+     * Tidak menerima agent yang sedang melihat — lihat alasan lengkapnya di
+     * SupportBpoController::presentTicket(): 'pic' harus pemilik tiketnya,
+     * bukan orang yang kebetulan membuka halamannya.
+     */
+    private function presentTicket(Ticket $t): array
     {
         $isDone = in_array($t->status, Ticket::DONE_STATUSES, true);
 
@@ -533,7 +538,9 @@ class SupportController extends Controller
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
                 'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
-                'pic' => ['name' => $agent->name, 'role' => 'Support '.strtoupper($agent->type), 'email' => $agent->email],
+                'pic' => $t->assignedAgent
+                    ? ['name' => $t->assignedAgent->name, 'role' => 'Support '.strtoupper($t->assignedAgent->type), 'email' => $t->assignedAgent->email]
+                    : null,
                 'support' => TicketPeople::supportAgents($t),
             ],
             'canAct' => ! in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Waiting for Approval'], true),
