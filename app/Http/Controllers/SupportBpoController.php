@@ -271,11 +271,15 @@ class SupportBpoController extends Controller
     }
 
     /**
-     * "Eskalasi IT" — the real BPO → IT hand-off: reassigns the ticket's
-     * assigned_agent_id to the catalog subject's it_agent_id (the same live
-     * Level-2 routing ApprovalController/TicketDetailController already read),
-     * falling back to the default Support IT agent when the subject has none.
-     * The ticket disappears from this BPO queue and appears in Support IT's.
+     * "Eskalasi IT" — the real BPO → IT hand-off.
+     *
+     * Tiket katalog biasa (Subject-nya jelas) tetap ke SATU it_agent_id
+     * spesifik, sama seperti sebelumnya. Tiket "Lainnya" (catalog_subject_id
+     * null — tidak ada Subject yang menentukan satu it_agent_id) TIDAK lagi
+     * menebak satu agent IT — dia broadcast ke SEMUA PIC IT Layanan ini,
+     * pola yang sama persis dengan broadcast BPO di awal tiket ini dibuat
+     * (lihat TicketBroadcast::escalateBroadcast()). Siapa pun IT yang
+     * pertama bertindak otomatis mengklaimnya; PIC IT lain diberi tahu.
      */
     public function escalate(Request $request, Ticket $ticket): JsonResponse
     {
@@ -291,28 +295,43 @@ class SupportBpoController extends Controller
         // Same reasoning as resolve(): deciding this needs IT is a response too.
         $ticket->markFirstResponse();
 
+        $subjectItAgent = SupportAgent::find($ticket->catalogSubject?->it_agent_id);
+
+        if (! $subjectItAgent && $ticket->catalog_subject_id === null) {
+            TicketBroadcast::escalateBroadcast($ticket, $bpoUser, $agent, $data['note']);
+
+            // Support IT mulai dari nol, jadi jam SLA diperpanjang sama
+            // seperti jalur single-target di bawah — tim IT tidak boleh
+            // mewarisi waktu yang sudah habis dipakai BPO.
+            $ticket->grantEscalationExtension();
+
+            if ($ticket->requester) {
+                NotificationService::notify(
+                    $ticket->requester,
+                    $ticket,
+                    'ticket_escalated',
+                    'Tiket Dieskalasi',
+                    "Tiket {$ticket->ticket_no} telah dieskalasi ke Tim IT Lanjutan."
+                );
+            }
+
+            $fresh = $ticket->fresh();
+
+            return response()->json([
+                'escalated' => true,
+                'escalatedAt' => $fresh->escalated_at?->translatedFormat('j M Y · H:i'),
+                'escalationNote' => $fresh->escalation_note,
+            ]);
+        }
+
         /*
-         | $this->agentFor() TIDAK dipakai di sini — itu method BPO milik
-         | controller ini sendiri (sejak filter type='bpo' ditambahkan),
-         | jadi kalau dipanggil di sini malah mengembalikan baris SupportAgent
-         | ber-type BPO milik orangnya, bukan IT. Untuk agent dobel peran
-         | (BPO & IT sekaligus, mis. Arief Kurniawan) itu artinya tiket
-         | "dieskalasi ke IT" tapi assigned_agent_id-nya tetap baris BPO-nya
-         | — begitu dibuka lewat portal IT, ditolak, karena baris itu bukan
-         | dia menurut portal IT.
-         |
-         | CurrentActor::support() juga tidak dipakai — sejak persona tetap
-         | dicabut, itu cuma mengembalikan USER YANG SEDANG LOGIN kalau dia
-         | kebetulan punya role Support IT, dan menolak (403) kalau tidak.
-         | Itu tidak masuk akal buat fallback "agent IT default": BPO yang
-         | mengeskalasi tiket ini tidak harus punya role Support IT sama
-         | sekali.
-         |
-         | Jadi cukup ambil agent IT aktif mana pun, diurutkan oleh id
-         | supaya deterministik — sama seperti CurrentActor dulu jatuh ke
-         | "agent aktif pertama timnya" sebelum persona dicabut.
+         | Subject-nya ada tapi Level 1 (BPO-only, tidak punya it_agent_id) —
+         | kasus tepi yang jarang: bukan "Lainnya" jadi tidak ikut broadcast
+         | (TicketBroadcast::eligiblePics() mensyaratkan catalog_subject_id
+         | null), tapi juga tidak ada satu IT tujuan yang jelas. Jatuh ke
+         | agent IT aktif mana pun, diurutkan oleh id supaya deterministik.
          */
-        $itAgent = SupportAgent::find($ticket->catalogSubject?->it_agent_id)
+        $itAgent = $subjectItAgent
             ?? SupportAgent::where('type', 'it')->where('is_active', true)->orderBy('id')->first();
 
         abort_if($itAgent === null, 422, 'Tidak ada agent IT aktif untuk menerima eskalasi ini.');

@@ -12,6 +12,7 @@ use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use App\Support\PriorityRegistry;
 use App\Support\SupportGreeting;
+use App\Support\TicketBroadcast;
 use App\Support\TicketDiscussion;
 use App\Support\TicketFlow;
 use App\Support\TicketPeople;
@@ -40,7 +41,7 @@ class SupportController extends Controller
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
 
-        $myTickets = Ticket::where('assigned_agent_id', $agent->id)->with('requester')->get();
+        $myTickets = $this->visibleTicketsQuery($agent)->with('requester')->get();
 
         $active = $myTickets->whereIn('status', Ticket::ACTIVE_STATUSES);
         $inProgress = $myTickets->whereIn('status', ['Assigned', 'In Progress', 'Waiting for Response']);
@@ -95,7 +96,7 @@ class SupportController extends Controller
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
 
-        $tickets = Ticket::where('assigned_agent_id', $agent->id)
+        $tickets = $this->visibleTicketsQuery($agent)
             ->whereNotIn('status', Ticket::NOT_YET_RELEASED_STATUSES)
             ->with('requester')->latest('created_at')->get();
 
@@ -120,7 +121,7 @@ class SupportController extends Controller
     {
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
 
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
@@ -151,7 +152,7 @@ class SupportController extends Controller
     {
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
 
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
@@ -168,9 +169,11 @@ class SupportController extends Controller
     {
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $supportUser, $agent);
 
         $data = $request->validate(TicketDiscussion::rules());
 
@@ -193,8 +196,10 @@ class SupportController extends Controller
     {
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_unless($ticket->status === 'Open', 422, 'Tiket ini tidak bisa dimulai dari status saat ini.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $supportUser, $agent);
 
         /*
          | Satu transaksi untuk tiga tulisan: status, sapaan otomatis, dan jejak
@@ -243,8 +248,10 @@ class SupportController extends Controller
     {
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $supportUser, $agent);
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
@@ -296,8 +303,10 @@ class SupportController extends Controller
     {
         $supportUser = CurrentActor::support();
         $agent = $this->agentFor($supportUser);
-        abort_unless($ticket->assigned_agent_id === $agent->id, 403);
+        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
+
+        TicketBroadcast::claimIfUnclaimed($ticket, $supportUser, $agent);
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
         $oldStatus = $ticket->status;
@@ -361,6 +370,32 @@ class SupportController extends Controller
     private function agentFor(User $supportUser): SupportAgent
     {
         return SupportAgent::where('user_id', $supportUser->id)->where('type', 'it')->firstOrFail();
+    }
+
+    /**
+     * Tiket yang sudah jadi milikku, DITAMBAH tiket "Lainnya" hasil eskalasi
+     * BPO yang belum diklaim PIC IT manapun tapi aku salah satu PIC IT
+     * Layanannya (lihat TicketBroadcast) — supaya tiket itu kelihatan di
+     * dashboard/My Tickets sebelum ada yang membalasnya, bukan cuma setelah
+     * diklaim. escalated_at wajib terisi: tiket "Lainnya" yang BELUM
+     * dieskalasi masih giliran BPO, bukan IT.
+     */
+    private function visibleTicketsQuery(SupportAgent $agent)
+    {
+        $broadcastServiceIds = $agent->itServiceIds();
+
+        return Ticket::where(function ($q) use ($agent, $broadcastServiceIds) {
+            $q->where('assigned_agent_id', $agent->id);
+
+            if ($broadcastServiceIds->isNotEmpty()) {
+                $q->orWhere(function ($q2) use ($broadcastServiceIds) {
+                    $q2->whereNull('assigned_agent_id')
+                        ->whereNull('catalog_subject_id')
+                        ->whereNotNull('escalated_at')
+                        ->whereIn('service_catalog_service_id', $broadcastServiceIds);
+                });
+            }
+        });
     }
 
     /**
