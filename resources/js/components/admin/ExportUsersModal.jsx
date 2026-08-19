@@ -10,26 +10,31 @@ const ALL_JABATAN = '__all_jabatan';
 const ALL_ROLE = '__all_role';
 
 /**
- * Popup Ekspor Pengguna — gaya visual sengaja beda dari modal lain di app ini
- * (lihat komentar `.liquid-glass` di app.css untuk alasannya). Filternya
- * (unit/jabatan/role) memakai query param YANG SAMA dengan yang dibaca
- * `UserRoleController::baseUsersQuery()`, jadi hitungan pratinjau di sini dan
- * isi berkas yang diunduh dijamin tidak pernah berbeda.
+ * Popup Ekspor Pengguna (CSV) — gaya visual sengaja beda dari modal lain di
+ * app ini (lihat komentar `.liquid-glass` di app.css untuk alasannya).
+ *
+ * Unit Kerja dan Jabatan SALING menyaring pilihan satu sama lain lewat
+ * `filterOptionsUrl` — pilih satu, dan pilihan yang lain hanya menawarkan
+ * nilai yang benar-benar berpasangan dengannya. Angka pratinjau memakai
+ * query param yang SAMA dengan yang dibaca `UserRoleController::
+ * baseUsersQuery()`, jadi hitungan di sini dan isi berkas yang diunduh
+ * dijamin tidak pernah berbeda.
  */
-export default function ExportUsersModal({ onClose, listUrl, exportUrl, roles, unitOrganisasi, jabatanOptions }) {
+export default function ExportUsersModal({ onClose, listUrl, exportUrl, filterOptionsUrl, roles, unitOrganisasi, jabatanOptions }) {
     useLockBodyScroll();
 
-    const [format, setFormat] = useState('csv');
     const [unit, setUnit] = useState(ALL_UNIT);
     const [jabatan, setJabatan] = useState(ALL_JABATAN);
     const [role, setRole] = useState(ALL_ROLE);
+    const [unitOpts, setUnitOpts] = useState(unitOrganisasi);
+    const [jabatanOpts, setJabatanOpts] = useState(jabatanOptions);
     const [count, setCount] = useState(null);
     const [counting, setCounting] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [error, setError] = useState('');
 
-    const unitOptions = [{ value: ALL_UNIT, label: trans('admin.users.all_unit') }, ...unitOrganisasi.map((u) => ({ value: u, label: u }))];
-    const jabatanOpts = [{ value: ALL_JABATAN, label: trans('admin.users.export_all_jabatan') }, ...jabatanOptions.map((j) => ({ value: j, label: j }))];
+    const unitOptions = [{ value: ALL_UNIT, label: trans('admin.users.all_unit') }, ...unitOpts.map((u) => ({ value: u, label: u }))];
+    const jabatanSelectOptions = [{ value: ALL_JABATAN, label: trans('admin.users.export_all_jabatan') }, ...jabatanOpts.map((j) => ({ value: j, label: j }))];
     const roleOptions = [{ value: ALL_ROLE, label: trans('admin.users.all_role') }, ...roles.map((r) => ({ value: r.name, label: r.name }))];
 
     function filterParams() {
@@ -40,19 +45,41 @@ export default function ExportUsersModal({ onClose, listUrl, exportUrl, roles, u
         return params;
     }
 
-    // Pratinjau jumlah baris yang AKAN diunduh, dihitung server lewat endpoint
-    // listing yang sudah ada — bukan ditaksir di klien. Ditunda 300ms supaya
-    // mengganti tiga dropdown berturut-turut tidak memicu tiga permintaan.
+    // Satu putaran, dua permintaan: jumlah pratinjau (bergantung ketiga
+    // filter) dan pilihan Unit Kerja/Jabatan yang saling menyaring (hanya
+    // bergantung dua di antaranya). Ditunda 300ms supaya mengubah tiga
+    // dropdown berturut-turut tidak memicu enam permintaan. Hanya respons
+    // dari putaran TERBARU yang boleh menulis ke state, sama seperti
+    // UserManagementConsole — respons lambat dari filter lama yang datang
+    // belakangan tidak boleh menimpa hasil filter yang sudah benar.
     const requestSeq = useRef(0);
     useEffect(() => {
         const seq = ++requestSeq.current;
         setCounting(true);
         const timer = setTimeout(async () => {
+            const unitParam = unit === ALL_UNIT ? '' : unit;
+            const jabatanParam = jabatan === ALL_JABATAN ? '' : jabatan;
+
             try {
-                const params = filterParams();
-                params.set('page', '1');
-                const res = await apiFetch(`${listUrl}?${params.toString()}`);
-                if (seq === requestSeq.current) setCount(res.meta.total);
+                const countParams = filterParams();
+                countParams.set('page', '1');
+
+                const [listRes, optsRes] = await Promise.all([
+                    apiFetch(`${listUrl}?${countParams.toString()}`),
+                    apiFetch(`${filterOptionsUrl}?unit=${encodeURIComponent(unitParam)}&jabatan=${encodeURIComponent(jabatanParam)}`),
+                ]);
+                if (seq !== requestSeq.current) return;
+
+                setCount(listRes.meta.total);
+                setUnitOpts(optsRes.units);
+                setJabatanOpts(optsRes.jabatans);
+                // Kombinasi yang baru saja jadi mustahil (mis. unit dipilih lalu
+                // jabatan yang sedang aktif ternyata tidak pernah ada di unit
+                // itu) dikembalikan ke "Semua…" — dibiarkan tersangkut di
+                // pilihan yang sudah tidak valid akan diam-diam menghasilkan
+                // nol baris selamanya tanpa penjelasan.
+                if (unit !== ALL_UNIT && !optsRes.units.includes(unit)) setUnit(ALL_UNIT);
+                if (jabatan !== ALL_JABATAN && !optsRes.jabatans.includes(jabatan)) setJabatan(ALL_JABATAN);
             } catch {
                 if (seq === requestSeq.current) setCount(null);
             } finally {
@@ -75,9 +102,7 @@ export default function ExportUsersModal({ onClose, listUrl, exportUrl, roles, u
         setError('');
         setDownloading(true);
         try {
-            const params = filterParams();
-            params.set('format', format);
-            await downloadFile(`${exportUrl}?${params.toString()}`);
+            await downloadFile(`${exportUrl}?${filterParams().toString()}`);
             onClose();
         } catch (e) {
             setError(e.message || trans('admin.users.export_failed'));
@@ -88,19 +113,7 @@ export default function ExportUsersModal({ onClose, listUrl, exportUrl, roles, u
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            {/* Latar diredupkan + diburamkan, ditambah dua noda gradien merek yang
-                sangat lembut — sumber "cahaya" yang dibiaskan panel kaca di
-                depannya. Ini satu-satunya tempat gradien merek dipakai sepenuhnya
-                dekoratif, jadi opasitasnya sengaja sangat rendah. */}
             <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
-            <div
-                className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-                style={{ background: 'linear-gradient(135deg, var(--color-brand-from), var(--color-brand-via))' }}
-            />
-            <div
-                className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-                style={{ background: 'linear-gradient(135deg, var(--color-brand-via), var(--color-brand-to))' }}
-            />
 
             <div
                 className="liquid-glass relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl shadow-2xl"
@@ -125,28 +138,6 @@ export default function ExportUsersModal({ onClose, listUrl, exportUrl, roles, u
 
                     <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
-                            {trans('admin.users.export_format')}
-                        </label>
-                        <div className="liquid-glass-well flex gap-1 rounded-xl p-1">
-                            {[['csv', trans('admin.users.export_format_csv')], ['pdf', trans('admin.users.export_format_pdf')]].map(([value, label]) => (
-                                <button
-                                    key={value}
-                                    type="button"
-                                    onClick={() => setFormat(value)}
-                                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                                        format === value
-                                            ? 'bg-blue-600 text-white shadow-sm'
-                                            : 'text-gray-600 dark:text-ink-2 hover:bg-white/40 dark:hover:bg-white/5'
-                                    }`}
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
                             {trans('admin.users.col_unit')}
                         </label>
                         <SelectMenu value={unit} onChange={setUnit} options={unitOptions} searchable />
@@ -156,7 +147,7 @@ export default function ExportUsersModal({ onClose, listUrl, exportUrl, roles, u
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
                             {trans('admin.users.col_jabatan')}
                         </label>
-                        <SelectMenu value={jabatan} onChange={setJabatan} options={jabatanOpts} searchable />
+                        <SelectMenu value={jabatan} onChange={setJabatan} options={jabatanSelectOptions} searchable />
                     </div>
 
                     <div>

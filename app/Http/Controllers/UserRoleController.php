@@ -10,7 +10,6 @@ use App\Support\CurrentActor;
 use App\Support\DummyData;
 use App\Support\EmployeeSync;
 use App\Support\SupportAgentSync;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserRoleController extends Controller
 {
@@ -69,6 +69,7 @@ class UserRoleController extends Controller
             'unitOrganisasi' => $this->unitOptions(),
             'jabatanOptions' => $this->jabatanOptions(),
             'exportUrl' => route('admin.users.export'),
+            'filterOptionsUrl' => route('admin.users.filter-options'),
         ]);
     }
 
@@ -88,64 +89,83 @@ class UserRoleController extends Controller
     }
 
     /**
-     * Ekspor daftar pengguna sebagai CSV atau PDF, tersaring unit
-     * kerja/jabatan/role dari popup — tidak pernah seluruh tabel tanpa
-     * syarat kalau salah satu filter diisi.
+     * Ekspor daftar pengguna sebagai CSV, tersaring unit kerja/jabatan/role
+     * dari popup — tidak pernah seluruh tabel tanpa syarat kalau salah satu
+     * filter diisi.
      *
-     * CSV diberi BOM UTF-8 di awal berkas: tanpa itu Excel di Windows
-     * membaca nama beraksen sebagai karakter rusak (masalah yang sama yang
-     * membuat XlsxWriter lahir untuk laporan Team Lead — di sini formatnya
-     * memang diminta CSV, jadi perbaikannya cukup BOM, bukan workbook asli).
+     * Diberi BOM UTF-8 di awal berkas: tanpa itu Excel di Windows membaca
+     * nama beraksen sebagai karakter rusak (masalah yang sama yang membuat
+     * XlsxWriter lahir untuk laporan Team Lead — di sini formatnya memang
+     * diminta CSV, jadi perbaikannya cukup BOM, bukan workbook asli).
      */
-    public function export(Request $request)
+    public function export(Request $request): StreamedResponse
     {
-        $data = $request->validate([
-            'format' => ['required', Rule::in(['csv', 'pdf'])],
+        $request->validate([
             'unit' => 'nullable|string|max:255',
             'jabatan' => 'nullable|string|max:255',
             'role' => 'nullable|string|max:255',
         ]);
 
         $users = $this->baseUsersQuery($request)->orderBy('name')->get();
-        $filterLabel = collect([
-            $data['unit'] ?? null,
-            $data['jabatan'] ?? null,
-            $data['role'] ?? null,
-        ])->filter()->implode(' · ') ?: 'Semua pengguna';
+        $filename = 'user-export-'.now()->format('Ymd-Hi').'.csv';
 
-        $filename = 'user-export-'.now()->format('Ymd-Hi');
+        return response()->streamDownload(function () use ($users) {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['Nama', 'NPP', 'Email', 'Telepon', 'Unit Kerja', 'Jabatan', 'Role', 'Status', 'Terakhir Login']);
 
-        if ($data['format'] === 'csv') {
-            return response()->streamDownload(function () use ($users) {
-                $handle = fopen('php://output', 'w');
-                fwrite($handle, "\xEF\xBB\xBF");
-                fputcsv($handle, ['Nama', 'NPP', 'Email', 'Telepon', 'Unit Kerja', 'Jabatan', 'Role', 'Status', 'Terakhir Login']);
+            foreach ($users as $u) {
+                fputcsv($handle, [
+                    $u->name,
+                    $u->nip ?: '-',
+                    $u->email ?: '-',
+                    $u->phone ?: '-',
+                    $u->unit ?: '-',
+                    $u->jabatan ?: '-',
+                    $u->roles->pluck('name')->implode(', ') ?: '-',
+                    $u->isActive() ? 'Aktif' : 'Nonaktif',
+                    $u->last_login_at?->format('Y-m-d H:i') ?? '-',
+                ]);
+            }
 
-                foreach ($users as $u) {
-                    fputcsv($handle, [
-                        $u->name,
-                        $u->nip ?: '-',
-                        $u->email ?: '-',
-                        $u->phone ?: '-',
-                        $u->unit ?: '-',
-                        $u->jabatan ?: '-',
-                        $u->roles->pluck('name')->implode(', ') ?: '-',
-                        $u->isActive() ? 'Aktif' : 'Nonaktif',
-                        $u->last_login_at?->format('Y-m-d H:i') ?? '-',
-                    ]);
-                }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
 
-                fclose($handle);
-            }, $filename.'.csv', ['Content-Type' => 'text/csv']);
-        }
+    /**
+     * Pilihan Unit Kerja/Jabatan untuk popup ekspor, SALING menyaring satu
+     * sama lain: unit yang ditawarkan hanya yang benar-benar punya baris pada
+     * jabatan yang sedang dipilih, dan sebaliknya. Tanpa ini kedua dropdown
+     * independen dan memilih kombinasi yang tidak pernah ada bersama (mis.
+     * unit A + jabatan yang cuma ada di unit B) diam-diam menghasilkan nol
+     * baris tanpa penjelasan.
+     *
+     * `role` sengaja tidak ikut menyaring di sini — permintaannya cuma
+     * resiprositas unit⇄jabatan, dan me-refresh pilihan role setiap pengguna
+     * mengetik di kotak cari role akan lebih mengganggu daripada membantu.
+     */
+    public function filterOptions(Request $request): JsonResponse
+    {
+        $unit = (string) $request->query('unit', '');
+        $jabatan = (string) $request->query('jabatan', '');
 
-        // Sebelas kolom di A4 tegak akan terpotong; daftar pengguna selalu
-        // dicetak mendatar seperti laporan Team Lead yang lebar.
-        return Pdf::loadView('reports.users-export', [
-            'users' => $users,
-            'filterLabel' => $filterLabel,
-            'generatedAt' => now()->format('d M Y · H:i'),
-        ])->setPaper('a4', 'landscape')->download($filename.'.pdf');
+        $units = User::query()
+            ->whereNotNull('unit')
+            ->where('unit', '!=', '')
+            ->when($jabatan !== '', fn ($q) => $q->where('jabatan', $jabatan))
+            ->distinct()
+            ->orderBy('unit')
+            ->pluck('unit');
+
+        $jabatans = User::query()
+            ->whereNotNull('jabatan')
+            ->where('jabatan', '!=', '')
+            ->when($unit !== '', fn ($q) => $q->where('unit', $unit))
+            ->distinct()
+            ->orderBy('jabatan')
+            ->pluck('jabatan');
+
+        return response()->json(['units' => $units, 'jabatans' => $jabatans]);
     }
 
     /**

@@ -16,6 +16,7 @@
         'unitOrganisasi' => $unitOrganisasi,
         'jabatanOptions' => $jabatanOptions,
         'exportUrl' => $exportUrl,
+        'filterOptionsUrl' => $filterOptionsUrl,
     ]) }}"
 ></div>
 @endsection

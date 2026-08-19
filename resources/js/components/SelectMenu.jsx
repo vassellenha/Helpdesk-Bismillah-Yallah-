@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import Portal from './Portal';
 
 /**
  * Custom-styled replacement for a plain `<select>` — native option lists
@@ -19,19 +20,56 @@ import { useEffect, useRef, useState } from 'react';
  * data: filter pelaku di Audit Trail kini berisi ribuan pegawai dari direktori
  * perusahaan, dan menemukan satu nama di sana berarti menggulir ribuan baris.
  */
+/**
+ * Panel dropdown-nya di-portal ke <body> dan diposisikan `fixed` lewat
+ * getBoundingClientRect() — bukan `absolute` relatif ke wrapper sendiri
+ * seperti sebelumnya.
+ *
+ * Dua alasan sekaligus, sama seperti Portal.jsx: (1) wrapper ini bisa duduk di
+ * dalam kontainer yang men-scroll sendiri (mis. isi popup Ekspor Pengguna) —
+ * `absolute` biasa terpotong begitu panelnya melebihi area yang sedang
+ * terlihat, persis bug yang terlihat waktu dropdown "Jabatan" dibuka dekat
+ * dasar popup itu. (2) Panel yang memakai backdrop-blur (gaya "liquid glass")
+ * menjadi containing block untuk descendant `position: fixed`, jadi tanpa
+ * Portal ke <body>, `fixed` di sini akan relatif ke panel kaca itu, bukan ke
+ * viewport — dan posisinya meleset.
+ */
 export default function SelectMenu({ value, onChange, options, searchable = false, searchPlaceholder = 'Cari…' }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const ref = useRef(null);
+    const [rect, setRect] = useState(null);
+    const triggerRef = useRef(null);
+    const panelRef = useRef(null);
     const searchRef = useRef(null);
 
     useEffect(() => {
         function onClickOutside(e) {
-            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+            if (triggerRef.current?.contains(e.target)) return;
+            if (panelRef.current?.contains(e.target)) return;
+            setOpen(false);
         }
         document.addEventListener('mousedown', onClickOutside);
         return () => document.removeEventListener('mousedown', onClickOutside);
     }, []);
+
+    // Posisi dihitung ulang tiap dibuka, plus saat halaman digulir/diubah
+    // ukuran selama menu terbuka — kalau tidak, menu yang sudah terbuka akan
+    // tertinggal di posisi lama begitu leluhurnya (mis. body modal) digulir.
+    useEffect(() => {
+        if (! open) return;
+
+        function updateRect() {
+            if (triggerRef.current) setRect(triggerRef.current.getBoundingClientRect());
+        }
+
+        updateRect();
+        window.addEventListener('resize', updateRect);
+        window.addEventListener('scroll', updateRect, true);
+        return () => {
+            window.removeEventListener('resize', updateRect);
+            window.removeEventListener('scroll', updateRect, true);
+        };
+    }, [open]);
 
     // Kata kunci lama dibuang setiap menu ditutup. Kalau tidak, membuka menu
     // berikutnya menampilkan daftar yang sudah tersaring tanpa alasan yang
@@ -49,9 +87,13 @@ export default function SelectMenu({ value, onChange, options, searchable = fals
         ? options.filter((o) => String(o.label).toLowerCase().includes(query.trim().toLowerCase()))
         : options;
 
+    const PANEL_MAX_HEIGHT = 280;
+    const openUpward = rect ? rect.bottom + PANEL_MAX_HEIGHT + 8 > window.innerHeight : false;
+
     return (
-        <div ref={ref} className="relative">
+        <div className="relative">
             <button
+                ref={triggerRef}
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 className={`flex w-full min-w-[160px] items-center justify-between gap-2 rounded-[10px] border bg-white dark:bg-panel-2 px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 hover:border-gray-300 dark:hover:border-ink-3 focus:outline-none ${open ? 'border-blue-400' : 'border-gray-200 dark:border-edge-strong'}`}
@@ -62,39 +104,52 @@ export default function SelectMenu({ value, onChange, options, searchable = fals
                 </svg>
             </button>
 
-            {open && (
-                <div className="absolute right-0 top-[calc(100%+4px)] z-30 max-h-[280px] w-full min-w-[180px] overflow-y-auto rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-1 shadow-lg">
-                    {searchable && (
-                        // Menempel di atas saat daftar digulir — pada ribuan
-                        // baris, kotak cari yang ikut menggulir hilang setelah
-                        // beberapa putaran dan tidak bisa ditemukan lagi.
-                        <div className="sticky top-0 z-10 border-b border-gray-100 dark:border-edge bg-white dark:bg-panel-2 p-2">
-                            <input
-                                ref={searchRef}
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder={searchPlaceholder}
-                                className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-2.5 py-1.5 text-[13px] text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none"
-                            />
-                        </div>
-                    )}
-                    {visible.length === 0 && (
-                        <p className="px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">Tidak ada yang cocok.</p>
-                    )}
-                    {visible.map((o) => (
-                        <button
-                            key={o.value}
-                            type="button"
-                            onClick={() => { onChange(o.value); setOpen(false); }}
-                            className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] ${o.value === value ? 'bg-blue-50 dark:bg-accent-soft font-semibold text-blue-700 dark:text-accent-text' : 'text-gray-700 dark:text-ink-2'}`}
-                        >
-                            {o.label}
-                            {o.value === value && (
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M20 6 9 17l-5-5" /></svg>
-                            )}
-                        </button>
-                    ))}
-                </div>
+            {open && rect && (
+                <Portal>
+                    <div
+                        ref={panelRef}
+                        style={{
+                            position: 'fixed',
+                            ...(openUpward
+                                ? { bottom: window.innerHeight - rect.top + 4, maxHeight: Math.max(120, rect.top - 12) }
+                                : { top: rect.bottom + 4, maxHeight: Math.min(PANEL_MAX_HEIGHT, window.innerHeight - rect.bottom - 12) }),
+                            right: Math.max(8, window.innerWidth - rect.right),
+                            width: Math.max(rect.width, 180),
+                        }}
+                        className="z-50 overflow-y-auto rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-1 shadow-lg"
+                    >
+                        {searchable && (
+                            // Menempel di atas saat daftar digulir — pada ribuan
+                            // baris, kotak cari yang ikut menggulir hilang setelah
+                            // beberapa putaran dan tidak bisa ditemukan lagi.
+                            <div className="sticky top-0 z-10 border-b border-gray-100 dark:border-edge bg-white dark:bg-panel-2 p-2">
+                                <input
+                                    ref={searchRef}
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder={searchPlaceholder}
+                                    className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-2.5 py-1.5 text-[13px] text-gray-700 dark:text-ink-2 focus:border-blue-400 focus:outline-none"
+                                />
+                            </div>
+                        )}
+                        {visible.length === 0 && (
+                            <p className="px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">Tidak ada yang cocok.</p>
+                        )}
+                        {visible.map((o) => (
+                            <button
+                                key={o.value}
+                                type="button"
+                                onClick={() => { onChange(o.value); setOpen(false); }}
+                                className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] ${o.value === value ? 'bg-blue-50 dark:bg-accent-soft font-semibold text-blue-700 dark:text-accent-text' : 'text-gray-700 dark:text-ink-2'}`}
+                            >
+                                {o.label}
+                                {o.value === value && (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M20 6 9 17l-5-5" /></svg>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </Portal>
             )}
         </div>
     );

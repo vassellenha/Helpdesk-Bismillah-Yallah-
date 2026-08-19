@@ -19,7 +19,7 @@ const ALL_STATUS = '__all_status';
 const ALL_ROLE = '__all_role';
 const ALL_UNIT = '__all_unit';
 
-export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi, jabatanOptions, exportUrl }) {
+export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi, jabatanOptions, exportUrl, filterOptionsUrl }) {
     const [users, setUsers] = useState(initialUsers);
     const [meta, setMeta] = useState(usersMeta);
     const [stats, setStats] = useState(userStats);
@@ -507,6 +507,7 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                     onClose={() => setModal(null)}
                     listUrl={listUrl}
                     exportUrl={exportUrl}
+                    filterOptionsUrl={filterOptionsUrl}
                     roles={roles}
                     unitOrganisasi={unitOrganisasi}
                     jabatanOptions={jabatanOptions}

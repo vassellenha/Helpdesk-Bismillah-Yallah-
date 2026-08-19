@@ -202,6 +202,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::post('/sync', [UserRoleController::class, 'syncEmployees'])->name('sync');
         Route::get('/list', [UserRoleController::class, 'list'])->name('list');
         Route::get('/export', [UserRoleController::class, 'export'])->name('export');
+        Route::get('/filter-options', [UserRoleController::class, 'filterOptions'])->name('filter-options');
         Route::post('/', [UserRoleController::class, 'storeUser'])->name('store');
         Route::put('/{user}', [UserRoleController::class, 'updateUser'])->name('update');
         Route::post('/{user}/toggle', [UserRoleController::class, 'toggleUserStatus'])->name('toggle');
