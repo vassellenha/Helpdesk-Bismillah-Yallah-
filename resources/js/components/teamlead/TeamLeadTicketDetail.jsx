@@ -112,9 +112,12 @@ export default function TeamLeadTicketDetail({ flow = null, ticket: initial, tim
                         </div>
 
                         <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
-                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.sla_timeline')}</h2>
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.status_history')}</h2>
                             <TicketFlow flow={flow} />
-                            <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
+                        </div>
+
+                        <div className="mt-6 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-6 shadow-sm">
+                            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.sla_timeline')}</h2>
                             <div className="flex flex-col">
                                 {timeline.map((s, i) => {
                                     const st = STEP_STYLE[s.state] ?? STEP_STYLE.pending;

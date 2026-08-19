@@ -262,9 +262,14 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
                             {finished && <RatingBlock ticket={t} />}
 
                             <div className="mt-6">
+                                <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.status_history')}</p>
+                                <div className="rounded-2xl bg-white dark:bg-panel-2 p-4 shadow-sm">
+                                    <TicketFlow flow={data.flow} />
+                                </div>
+                            </div>
+
+                            <div className="mt-6">
                                 <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-warn-text">{trans('teamlead.ticket.sla_timeline')}</p>
-                                <TicketFlow flow={data.flow} />
-                                <div className="mt-4 border-t border-gray-100 dark:border-edge pt-4" />
                                 <div className="flex flex-col">
                                     {data.timeline.map((s, i) => (
                                         <div key={i} className="flex gap-3">
