@@ -760,6 +760,7 @@ class TeamLeadController extends Controller
         if ($newAgent->user) {
             NotificationService::notify(
                 $newAgent->user,
+                NotificationService::roleForAgent($newAgent),
                 $ticket,
                 'ticket_created',
                 'Tiket Dialihkan ke Anda',
@@ -835,7 +836,7 @@ class TeamLeadController extends Controller
     public function markAllNotificationsRead(): JsonResponse
     {
         $lead = CurrentActor::teamLead();
-        TicketNotification::where('user_id', $lead->id)->whereNull('read_at')->update(['read_at' => Carbon::now()]);
+        TicketNotification::where('user_id', $lead->id)->where('role', 'team-lead')->whereNull('read_at')->update(['read_at' => Carbon::now()]);
 
         return response()->json(['read' => true]);
     }
@@ -1527,7 +1528,7 @@ class TeamLeadController extends Controller
 
     private function notifications(User $lead): array
     {
-        return NotificationService::present($lead, 20, 'dashboard.team-lead', 'team-lead.notifications.read');
+        return NotificationService::present($lead, 'team-lead', 20, 'dashboard.team-lead', 'team-lead.notifications.read');
     }
 
     /**

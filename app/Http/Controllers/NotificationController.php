@@ -26,6 +26,7 @@ class NotificationController extends Controller
         $requester = CurrentActor::requester();
 
         TicketNotification::where('user_id', $requester->id)
+            ->where('role', 'requester')
             ->whereNull('read_at')
             ->update(['read_at' => Carbon::now()]);
 

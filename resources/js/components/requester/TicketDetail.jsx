@@ -8,6 +8,7 @@ import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import CommentAttachmentChip from '../CommentAttachmentChip';
 import CommentComposer from '../CommentComposer';
+import AutoCloseCountdown from '../AutoCloseCountdown';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 
@@ -311,6 +312,14 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
                     {support ? `${support.name} (${support.role})` : 'Tim Support'} telah menyelesaikan tiket{' '}
                     <span className="font-semibold text-gray-700 dark:text-ink-2">{ticket.id}</span> — {ticket.title}. Mohon konfirmasi apakah masalah Anda sudah teratasi agar tiket dapat ditutup.
                 </p>
+                {/* Tenggatnya disebut justru di sini: "Nanti Saja" adalah pilihan
+                    yang membawa konsekuensi, dan requester berhak tahu apa
+                    konsekuensinya sebelum menekannya. */}
+                {ticket.autoClose && (
+                    <div className="mt-4">
+                        <AutoCloseCountdown autoClose={ticket.autoClose} />
+                    </div>
+                )}
                 <div className="mt-5 flex gap-3">
                     <button onClick={onDismiss} className="flex-1 rounded-full border border-gray-200 dark:border-edge-strong px-4 py-2.5 text-[13px] font-bold text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         Nanti Saja
@@ -386,6 +395,7 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                         <span className="text-[14px] font-bold text-blue-600 dark:text-accent-text">{ticket.id}</span>
                         <StatusBadge status={status} />
                         <PriorityBadge priority={ticket.priority} />
+                        <AutoCloseCountdown autoClose={ticket.autoClose} compact />
                     </div>
                     {canConfirmClose && (
                         <button

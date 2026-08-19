@@ -21,6 +21,12 @@ return [
     ],
 
     'inbox' => [
+        'summary' => 'Ringkasan :period',
+        'periods' => [
+            'week' => 'Minggu',
+            'month' => 'Bulan',
+            'year' => 'Tahun',
+        ],
         'title' => 'Kotak Masuk Approval',
         'pending' => 'Menunggu Persetujuan Anda',
         'search' => 'Cari',
@@ -28,7 +34,8 @@ return [
         'category' => 'Kategori',
         'priority' => 'Prioritas',
         'trend' => 'Tren Keputusan Approval',
-        'priority_distribution' => 'Distribusi Prioritas · Bulan Ini',
+        'priority_distribution' => 'Distribusi Prioritas · :period Ini',
+        'trend_sub' => 'Sepanjang :period ini',
         'approved' => 'Disetujui',
         'rejected_revision' => 'Ditolak & Revisi',
         'stat_pending' => 'Menunggu Persetujuan',

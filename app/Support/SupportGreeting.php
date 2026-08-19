@@ -86,6 +86,7 @@ class SupportGreeting
 
         NotificationService::notify(
             $requester,
+            'requester',
             $ticket,
             'discussion_message',
             'Tiket Anda Mulai Diperiksa',

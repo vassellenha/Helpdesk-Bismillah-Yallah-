@@ -11,6 +11,7 @@
         'priorityTotal' => $priorityTotal,
         'priorityHighlight' => $priorityHighlight,
         'decisionTrend' => $decisionTrend,
+        'periods' => $periods,
         'pending' => $pending,
     ]) }}"
 ></div>

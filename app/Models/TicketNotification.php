@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TicketNotification extends Model
 {
-    protected $fillable = ['user_id', 'ticket_id', 'type', 'title', 'message', 'read_at'];
+    protected $fillable = ['user_id', 'role', 'ticket_id', 'type', 'title', 'message', 'read_at'];
 
     protected $casts = ['read_at' => 'datetime'];
 

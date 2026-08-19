@@ -280,6 +280,7 @@ class SupportController extends Controller
         if ($ticket->requester) {
             NotificationService::notify(
                 $ticket->requester,
+                'requester',
                 $ticket,
                 'ticket_resolved',
                 'Tiket Diselesaikan',
@@ -330,6 +331,7 @@ class SupportController extends Controller
         if ($ticket->requester) {
             NotificationService::notify(
                 $ticket->requester,
+                'requester',
                 $ticket,
                 'ticket_reopened',
                 'Tiket Dikembalikan',
@@ -356,7 +358,7 @@ class SupportController extends Controller
     {
         $supportUser = CurrentActor::support();
 
-        TicketNotification::where('user_id', $supportUser->id)->whereNull('read_at')->update(['read_at' => Carbon::now()]);
+        TicketNotification::where('user_id', $supportUser->id)->where('role', 'support')->whereNull('read_at')->update(['read_at' => Carbon::now()]);
 
         return response()->json(['read' => true]);
     }
@@ -568,6 +570,6 @@ class SupportController extends Controller
 
     private function notifications(User $supportUser): array
     {
-        return NotificationService::present($supportUser, 20, 'support.tickets.show', 'support.notifications.read');
+        return NotificationService::present($supportUser, 'support', 20, 'support.tickets.show', 'support.notifications.read');
     }
 }

@@ -78,3 +78,23 @@ if ($autoSync['enabled'] ?? false) {
         ->dailyAt($autoSync['at'] ?? '03:00')
         ->withoutOverlapping();
 }
+
+/*
+ | Penutup otomatis tiket yang sudah Resolved tapi tidak dikonfirmasi requester
+ | (tenggang di config `helpdesk.auto_close_resolved_after_days`, bawaan 3 hari).
+ |
+ | TIAP JAM, bukan harian. Yang dijanjikan ke requester adalah sebuah countdown
+ | di layar tiketnya; begitu hitungannya menyentuh nol, tiket harus benar-benar
+ | tertutup dalam waktu dekat. Penyapu harian membuat countdown menampilkan
+ | "habis" sampai belasan jam sebelum statusnya berubah — hitungan yang terlihat
+ | bohong lebih buruk daripada tidak ada hitungan sama sekali.
+ |
+ | Tiap jam juga cukup murah: saringannya sudah dilakukan di basis data, dan
+ | jalan yang tidak menemukan apa-apa tidak menyentuh satu baris pun.
+ |
+ | Aman diulang: tiket yang sudah Closed keluar dari saringan, jadi tidak ada
+ | penutupan ganda maupun notifikasi kembar.
+ */
+Schedule::command('tickets:auto-close')
+    ->hourly()
+    ->withoutOverlapping();

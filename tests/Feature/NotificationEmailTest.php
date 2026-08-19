@@ -45,7 +45,7 @@ class NotificationEmailTest extends TestCase
         $user = $this->activeUser('penerima@adhi.co.id');
         $ticket = $this->ticket();
 
-        NotificationService::notify($user, $ticket, 'ticket_resolved', 'Tiket Diselesaikan', 'Tiket sudah selesai.');
+        NotificationService::notify($user, 'requester', $ticket, 'ticket_resolved', 'Tiket Diselesaikan', 'Tiket sudah selesai.');
 
         Mail::assertSent(TicketNotificationMail::class, fn (TicketNotificationMail $mail) => $mail->hasTo('penerima@adhi.co.id')
             && $mail->ticket->is($ticket)
@@ -56,7 +56,7 @@ class NotificationEmailTest extends TestCase
     {
         $user = $this->activeUser();
 
-        NotificationService::notify($user, $this->ticket(), 'discussion_message', 'Pesan Baru', 'Ada balasan.');
+        NotificationService::notify($user, 'requester', $this->ticket(), 'discussion_message', 'Pesan Baru', 'Ada balasan.');
 
         Mail::assertNothingSent();
         $this->assertDatabaseCount('ticket_notifications', 1);
@@ -67,7 +67,7 @@ class NotificationEmailTest extends TestCase
         config(['notifications.email.enabled' => false]);
         $user = $this->activeUser();
 
-        NotificationService::notify($user, $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
+        NotificationService::notify($user, 'requester', $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
 
         Mail::assertNothingSent();
         $this->assertDatabaseCount('ticket_notifications', 1);
@@ -83,7 +83,7 @@ class NotificationEmailTest extends TestCase
         $user = $this->activeUser('keluar@adhi.co.id');
         $user->update(['status' => 'inactive']);
 
-        NotificationService::notify($user, $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
+        NotificationService::notify($user, 'requester', $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
 
         Mail::assertNothingSent();
         $this->assertDatabaseCount('ticket_notifications', 1);
@@ -99,7 +99,7 @@ class NotificationEmailTest extends TestCase
         $user = $this->activeUser();
         $user->forceFill(['email' => ''])->save();
 
-        $notification = NotificationService::notify($user, $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
+        $notification = NotificationService::notify($user, 'requester', $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
 
         Mail::assertNothingSent();
         $this->assertInstanceOf(TicketNotification::class, $notification->fresh());
@@ -115,8 +115,8 @@ class NotificationEmailTest extends TestCase
         config(['notifications.email.types' => ['sla_teguran', 'rating_teguran']]);
         $user = $this->activeUser();
 
-        NotificationService::notify($user, $this->ticket(), 'sla_teguran', 'Teguran SLA', 'Mohon segera diselesaikan.');
-        NotificationService::notify($user, null, 'rating_teguran', 'Teguran Rating', 'Rating Anda menurun.');
+        NotificationService::notify($user, 'requester', $this->ticket(), 'sla_teguran', 'Teguran SLA', 'Mohon segera diselesaikan.');
+        NotificationService::notify($user, 'requester', null, 'rating_teguran', 'Teguran Rating', 'Rating Anda menurun.');
 
         Mail::assertNothingSent();
         $this->assertDatabaseCount('ticket_notifications', 2);
@@ -142,7 +142,7 @@ class NotificationEmailTest extends TestCase
             [$approver, route('approver.tickets.show', $ticket)],
             [$agentUser, route('support-bpo.tickets.show', $ticket)],
         ] as [$user, $expected]) {
-            NotificationService::notify($user, $ticket, 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
+            NotificationService::notify($user, 'requester', $ticket, 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
 
             Mail::assertSent(TicketNotificationMail::class, fn (TicketNotificationMail $mail) => $mail->hasTo($user->email) && $mail->actionUrl === $expected);
         }
@@ -157,7 +157,7 @@ class NotificationEmailTest extends TestCase
     {
         $outsider = $this->activeUser('orang-lain@adhi.co.id');
 
-        NotificationService::notify($outsider, $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
+        NotificationService::notify($outsider, 'requester', $this->ticket(), 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
 
         Mail::assertSent(TicketNotificationMail::class, fn (TicketNotificationMail $mail) => $mail->actionUrl === route('portal.index'));
     }
@@ -167,7 +167,7 @@ class NotificationEmailTest extends TestCase
         $user = $this->activeUser();
         $ticket = $this->ticket();
 
-        NotificationService::notify($user, $ticket, 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
+        NotificationService::notify($user, 'requester', $ticket, 'ticket_resolved', 'Tiket Diselesaikan', 'Selesai.');
 
         Mail::assertSent(TicketNotificationMail::class, fn (TicketNotificationMail $mail) => $mail->envelope()->subject === "Tiket Diselesaikan · Tiket {$ticket->ticket_no}");
     }

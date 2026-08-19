@@ -9,6 +9,7 @@
         'user' => $currentUser,
         'stats' => $stats,
         'chart' => $chart,
+        'periods' => $periods,
         'slaDonut' => $slaDonut,
         'slaRows' => $slaRows,
         'catalogUrl' => route('catalog.tree'),

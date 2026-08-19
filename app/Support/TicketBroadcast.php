@@ -158,6 +158,7 @@ class TicketBroadcast
 
             NotificationService::notify(
                 User::find($pic->user_id),
+                NotificationService::roleForAgent($pic),
                 $ticket,
                 'ticket_claimed_by_other',
                 'Tiket Sudah Ditangani',
@@ -211,6 +212,7 @@ class TicketBroadcast
 
             NotificationService::notify(
                 User::find($pic->user_id),
+                NotificationService::roleForAgent($pic),
                 $ticket,
                 'ticket_incoming_escalation',
                 'Tiket Eskalasi Menunggu PIC IT',

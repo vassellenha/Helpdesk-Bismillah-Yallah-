@@ -3,6 +3,7 @@ import { t as trans } from '../../lib/i18n';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { PriorityBadge } from '../StatusBadge';
 import SelectMenu from '../SelectMenu';
+import PeriodTabs from '../PeriodTabs';
 
 const PRIORITY_COLOR = { Critical: '#dc2626', High: '#d97706', Medium: '#2563eb', Low: '#9ca3af' };
 
@@ -32,11 +33,11 @@ function MetricCard({ label, value, icon, iconBg, iconColor }) {
     );
 }
 
-function PriorityDistribution({ rows = [], total = 0, highlight = '' }) {
+function PriorityDistribution({ rows = [], total = 0, highlight = '', period = 'month' }) {
     return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex items-start justify-between">
-                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('approver.inbox.priority_distribution')}</h2>
+                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('approver.inbox.priority_distribution', { period: trans(`approver.inbox.periods.${period}`) })}</h2>
                 <span className="text-xs text-gray-400 dark:text-ink-3">Total {total} menunggu</span>
             </div>
             <div className="flex flex-col gap-3.5">
@@ -57,13 +58,13 @@ function PriorityDistribution({ rows = [], total = 0, highlight = '' }) {
     );
 }
 
-function DecisionTrendChart({ data = [] }) {
+function DecisionTrendChart({ data = [], period = 'month' }) {
     return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex items-start justify-between">
                 <div>
                     <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('approver.inbox.trend')}</h2>
-                    <p className="text-xs text-gray-400 dark:text-ink-3">6 minggu terakhir</p>
+                    <p className="text-xs text-gray-400 dark:text-ink-3">{trans('approver.inbox.trend_sub', { period: trans(`approver.inbox.periods.${period}`) })}</p>
                 </div>
                 <div className="flex gap-3.5 text-[11px] font-medium text-gray-400 dark:text-ink-3">
                     <span className="flex items-center gap-1.5"><span className="h-0.5 w-3.5 rounded bg-blue-600 dark:bg-blue-500" />{trans('approver.inbox.approved')}</span>
@@ -86,7 +87,10 @@ function DecisionTrendChart({ data = [] }) {
     );
 }
 
-export default function ApprovalInbox({ metrics, priorityDistribution = [], priorityTotal = 0, priorityHighlight = '', decisionTrend = [], pending = [] }) {
+export default function ApprovalInbox({ metrics, priorityDistribution = [], priorityTotal = 0, priorityHighlight = '', decisionTrend = [], periods = {}, pending = [] }) {
+    const [period, setPeriod] = useState('month');
+    // Cadangan ke prop lama bila `periods` belum terkirim.
+    const current = periods[period] ?? { priorityDistribution, priorityTotal, priorityHighlight, decisionTrend };
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('Semua');
     const [priority, setPriority] = useState('Semua');
@@ -160,12 +164,22 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
                 />
             </div>
 
+            {/* Kartu metrik di atas tidak ikut tersaring — antrean yang
+                menunggu tetap menunggu, berapa pun rentang yang dipilih.
+                Periode hanya menyaring blok ringkasan ini. */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">
+                    {trans('approver.inbox.summary', { period: trans(`approver.inbox.periods.${period}`) })}
+                </h2>
+                <PeriodTabs value={period} onChange={setPeriod} labelPath="approver.inbox.periods" />
+            </div>
+
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-                    <PriorityDistribution rows={priorityDistribution} total={priorityTotal} highlight={priorityHighlight} />
+                    <PriorityDistribution rows={current.priorityDistribution} total={current.priorityTotal} highlight={current.priorityHighlight} period={period} />
                 </div>
                 <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-                    <DecisionTrendChart data={decisionTrend} />
+                    <DecisionTrendChart data={current.decisionTrend} period={period} />
                 </div>
             </div>
 

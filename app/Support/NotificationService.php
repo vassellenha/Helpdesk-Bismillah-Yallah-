@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\SupportAgent;
 use App\Models\Ticket;
 use App\Models\TicketNotification;
 use App\Models\User;
@@ -20,10 +21,22 @@ use Illuminate\Support\Str;
  */
 class NotificationService
 {
-    public static function notify(User $user, ?Ticket $ticket, string $type, string $title, string $message): TicketNotification
+    /**
+     * $role — untuk PERAN APA notifikasi ini dibuat ('requester', 'approver',
+     * 'support', 'support-bpo', 'team-lead'). Wajib, dan sengaja diletakkan
+     * tepat setelah $user: pemanggil lama yang belum diperbarui mengirim
+     * Ticket ke posisi ini dan langsung gagal dengan TypeError, alih-alih
+     * diam-diam menulis baris tanpa peran yang baru ketahuan salah di layar.
+     *
+     * Satu orang bisa memegang beberapa peran. Notifikasi yang ia terima
+     * SEBAGAI approver tidak boleh muncul saat ia sedang membuka layar
+     * requester — lihat present().
+     */
+    public static function notify(User $user, string $role, ?Ticket $ticket, string $type, string $title, string $message): TicketNotification
     {
         $notification = TicketNotification::create([
             'user_id' => $user->id,
+            'role' => $role,
             'ticket_id' => $ticket?->id,
             'type' => $type,
             'title' => $title,
@@ -83,7 +96,17 @@ class NotificationService
             return null;
         }
 
-        return self::notify($user, $ticket, $type, $title, $message);
+        return self::notify($user, self::roleForAgent($agent), $ticket, $type, $title, $message);
+    }
+
+    /**
+     * Peran lonceng untuk seorang PIC. Support IT dan Support BPO punya layar,
+     * antrean, dan lonceng masing-masing, jadi keduanya tidak boleh berbagi
+     * satu kunci peran — dibedakan oleh kolom `type` di support_agents.
+     */
+    public static function roleForAgent(SupportAgent $agent): string
+    {
+        return $agent->type === 'bpo' ? 'support-bpo' : 'support';
     }
 
     /**
@@ -104,12 +127,23 @@ class NotificationService
         // and the (already frozen) agent must not be pulled into it.
         $agentUserId = self::releasedToSupport($ticket) ? $ticket->assignedAgent?->user_id : null;
 
-        collect([$ticket->requester, $ticket->approver, $agentUserId ? User::find($agentUserId) : null])
-            ->filter()
-            ->reject(fn (User $u) => $u->id === $author->id)
-            ->unique('id')
-            ->each(fn (User $u) => self::notify(
-                $u,
+        // Tiap peserta diberi tahu SEBAGAI perannya sendiri di tiket ini —
+        // requester menerimanya di lonceng Requester, approver di lonceng
+        // Approver, PIC di lonceng Support-nya. Satu pesan diskusi yang sama
+        // karena itu bisa menghasilkan baris dengan peran berbeda-beda.
+        $agent = self::releasedToSupport($ticket) ? $ticket->assignedAgent : null;
+
+        collect([
+            ['user' => $ticket->requester, 'role' => 'requester'],
+            ['user' => $ticket->approver, 'role' => 'approver'],
+            ['user' => $agentUserId ? User::find($agentUserId) : null, 'role' => $agent ? self::roleForAgent($agent) : 'support'],
+        ])
+            ->filter(fn (array $p) => $p['user'] instanceof User)
+            ->reject(fn (array $p) => $p['user']->id === $author->id)
+            ->unique(fn (array $p) => $p['user']->id.'|'.$p['role'])
+            ->each(fn (array $p) => self::notify(
+                $p['user'],
+                $p['role'],
                 $ticket,
                 'discussion_message',
                 'Pesan Baru di Diskusi Tiket',
@@ -117,7 +151,14 @@ class NotificationService
             ));
     }
 
-    public static function syncSlaAlerts(Collection $tickets, User $user): void
+    /**
+     * $role ikut menentukan DUA hal, bukan satu: peran yang dicatat pada baris
+     * baru, dan cakupan penyaring duplikatnya di bawah. Tanpa yang kedua,
+     * peringatan SLA yang sudah terkirim ke lonceng Requester akan membungkam
+     * peringatan untuk tiket yang sama di lonceng Support — dua orang berbeda
+     * yang sama-sama perlu tahu.
+     */
+    public static function syncSlaAlerts(Collection $tickets, User $user, string $role): void
     {
         $active = $tickets->whereIn('status', Ticket::ACTIVE_STATUSES);
 
@@ -130,6 +171,7 @@ class NotificationService
             }
 
             $alreadyNotified = TicketNotification::where('user_id', $user->id)
+                ->where('role', $role)
                 ->where('type', $type)
                 ->whereIn('ticket_id', $matching->pluck('id'))
                 ->pluck('ticket_id')
@@ -144,6 +186,7 @@ class NotificationService
 
                 self::notify(
                     $user,
+                    $role,
                     $ticket,
                     $type,
                     $kind === 'breach' ? 'SLA Breach' : 'SLA Warning',
@@ -179,11 +222,15 @@ class NotificationService
      */
     public static function present(
         User $user,
+        string $role,
         int $limit = 20,
         string $ticketRoute = 'requester.tickets.show',
         string $readRoute = 'requester.notifications.read'
     ): array {
         return TicketNotification::where('user_id', $user->id)
+            // Inti perbaikannya. Tanpa baris ini, pemegang dua peran melihat
+            // notifikasi approval-nya di lonceng Requester dan sebaliknya.
+            ->where('role', $role)
             ->with('ticket:id,ticket_no')
             ->latest('created_at')
             ->take($limit)

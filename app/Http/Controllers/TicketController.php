@@ -98,7 +98,7 @@ class TicketController extends Controller
                 ? "Tiket {$ticket->ticket_no} berhasil dibuat dan menunggu persetujuan."
                 : "Tiket {$ticket->ticket_no} berhasil dibuat dan dikirim ke Tim Support.";
 
-            NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dibuat', $message);
+            NotificationService::notify($requester, 'requester', $ticket, 'ticket_created', 'Tiket Dibuat', $message);
             $this->notifyApproverOfNewRequest($ticket, $requester);
             $this->notifyAgentOfNewAssignment($ticket, $requiresApproval);
         }
@@ -209,7 +209,7 @@ class TicketController extends Controller
                 ? "Tiket {$ticket->ticket_no} berhasil dikirim dan menunggu persetujuan."
                 : "Tiket {$ticket->ticket_no} berhasil dikirim ke Tim Support.";
 
-            NotificationService::notify($requester, $ticket, 'ticket_created', 'Tiket Dikirim', $message);
+            NotificationService::notify($requester, 'requester', $ticket, 'ticket_created', 'Tiket Dikirim', $message);
             $this->notifyApproverOfNewRequest($ticket->fresh(), $requester);
             $this->notifyAgentOfNewAssignment($ticket->fresh(), $requiresApproval);
         }
@@ -281,6 +281,7 @@ class TicketController extends Controller
 
         NotificationService::notify(
             $ticket->approver,
+            'approver',
             $ticket,
             'waiting_decision',
             'Menunggu Keputusan Anda',
@@ -317,6 +318,7 @@ class TicketController extends Controller
 
                 NotificationService::notify(
                     User::find($pic->user_id),
+                    NotificationService::roleForAgent($pic),
                     $ticket,
                     'ticket_created',
                     'Tiket Baru Menunggu PIC',

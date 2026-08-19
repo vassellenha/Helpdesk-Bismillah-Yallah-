@@ -17,6 +17,12 @@ return [
     ],
 
     'inbox' => [
+        'summary' => ':period Summary',
+        'periods' => [
+            'week' => 'Week',
+            'month' => 'Month',
+            'year' => 'Year',
+        ],
         'title' => 'Approval Inbox',
         'pending' => 'Awaiting Your Approval',
         'search' => 'Search',
@@ -24,7 +30,8 @@ return [
         'category' => 'Category',
         'priority' => 'Priority',
         'trend' => 'Approval Decision Trend',
-        'priority_distribution' => 'Priority Distribution · This Month',
+        'priority_distribution' => 'Priority Distribution · This :period',
+        'trend_sub' => 'Across this :period',
         'approved' => 'Approved',
         'rejected_revision' => 'Rejected & Revision',
         'stat_pending' => 'Awaiting Approval',

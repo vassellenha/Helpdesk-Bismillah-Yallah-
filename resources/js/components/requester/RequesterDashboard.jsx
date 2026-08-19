@@ -3,6 +3,8 @@ import { t as trans } from '../../lib/i18n';
 import SlaDistributionDonut from './SlaDistributionDonut';
 import SlaLimitTable from './SlaLimitTable';
 import NewTicketModal from '../NewTicketModal';
+import PeriodTabs from '../PeriodTabs';
+import { useState } from 'react';
 
 const CARD_ICONS = {
     active: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 3',
@@ -27,7 +29,11 @@ function StatCard({ label, value, hint, hintClass = 'text-gray-400 dark:text-ink
     );
 }
 
-export default function RequesterDashboard({ user = {}, stats, chart = [], slaDonut, slaRows = [], catalogUrl, approversUrl, submitUrl, ticketsUrl, evaDraft = null }) {
+export default function RequesterDashboard({ user = {}, stats, chart = [], periods = {}, slaDonut, slaRows = [], catalogUrl, approversUrl, submitUrl, ticketsUrl, evaDraft = null }) {
+    const [period, setPeriod] = useState('month');
+    // Cadangan ke prop lama `chart`/`slaDonut` bila `periods` belum terkirim —
+    // layar tetap menggambar sesuatu yang benar alih-alih kosong.
+    const current = periods[period] ?? { chart, slaDonut };
     const firstName = (user.name ?? '').split(' ')[0];
     const today = new Date().toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -75,12 +81,24 @@ export default function RequesterDashboard({ user = {}, stats, chart = [], slaDo
                 />
             </div>
 
+            {/* Kartu statistik di atas sengaja TIDAK ikut tersaring — sama
+                seperti dashboard Support. Tiket aktif yang dibuat bulan lalu
+                tetap tiket aktif hari ini; menyembunyikannya karena tab
+                "Minggu" sedang dipilih akan membuat angka di layar berbeda
+                dengan kenyataan antrean. Periode hanya menyaring ringkasan. */}
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">
+                    {trans('requester.dashboard.summary', { period: trans(`requester.dashboard.periods.${period}`) })}
+                </h2>
+                <PeriodTabs value={period} onChange={setPeriod} labelPath="requester.dashboard.periods" />
+            </div>
+
             <div className="mt-3 grid grid-cols-1 gap-5 lg:grid-cols-[1.6fr_1fr]">
                 <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-                    <CreatedVsResolvedChart data={chart} />
+                    <CreatedVsResolvedChart data={current.chart} granularity={period} />
                 </div>
                 <div className="rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
-                    <SlaDistributionDonut donut={slaDonut} />
+                    <SlaDistributionDonut donut={current.slaDonut} />
                 </div>
             </div>
 

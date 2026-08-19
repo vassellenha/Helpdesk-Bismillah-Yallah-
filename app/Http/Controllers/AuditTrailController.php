@@ -180,6 +180,8 @@ class AuditTrailController extends Controller
             'return' => 'returned',
             'sync' => 'sync',
             'login' => 'login',
+            'logout' => 'logout',
+            'auto_close' => 'auto_close',
             'start' => 'start',
             default => null,
         };

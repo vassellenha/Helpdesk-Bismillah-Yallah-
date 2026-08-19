@@ -40,6 +40,7 @@ class TeguranNotifier
         if (in_array('inapp', $channels, true) && $recipientUser) {
             NotificationService::notify(
                 $recipientUser,
+                NotificationService::roleForAgent($agent),
                 $ticket,
                 'sla_teguran',
                 'Teguran SLA',
@@ -81,6 +82,7 @@ class TeguranNotifier
         if (in_array('inapp', $channels, true) && $recipientUser) {
             NotificationService::notify(
                 $recipientUser,
+                NotificationService::roleForAgent($agent),
                 null,
                 'rating_teguran',
                 'Teguran Rating',

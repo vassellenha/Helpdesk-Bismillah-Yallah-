@@ -349,6 +349,63 @@ class Ticket extends Model
         return in_array($this->status, self::DONE_STATUSES, true) ? $this->resolved_at : null;
     }
 
+    /**
+     * Kapan tiket ini akan menutup sendiri kalau requester tidak
+     * mengonfirmasi — atau null kalau hitungannya memang tidak berjalan.
+     *
+     * Hanya hidup pada status Resolved. Itu bukan sekadar penyaring: reopen
+     * mengosongkan resolved_at, jadi begitu tiket dibuka kembali hitungannya
+     * ikut hilang dengan sendirinya, bukan meneruskan sisa hitungan lama.
+     *
+     * Tinggal di model, bukan di penyapunya, karena dua pihak membaca angka
+     * yang sama — perintah terjadwal memakainya untuk memutuskan, dan layar
+     * requester memakainya untuk menampilkan countdown. Kalau keduanya
+     * menghitung sendiri-sendiri, yang terlihat di layar dan yang terjadi di
+     * basis data bisa berbeda sehari tanpa ada yang sadar.
+     */
+    public function getAutoCloseAtAttribute(): ?Carbon
+    {
+        $days = self::autoCloseAfterDays();
+
+        if ($days <= 0 || $this->status !== 'Resolved' || ! $this->resolved_at) {
+            return null;
+        }
+
+        return $this->resolved_at->clone()->addDays($days);
+    }
+
+    /** Tenggang aktif dalam hari; 0 atau kurang berarti fitur dimatikan. */
+    public static function autoCloseAfterDays(): int
+    {
+        return (int) config('helpdesk.auto_close_resolved_after_days', 3);
+    }
+
+    /**
+     * Bahan countdown untuk layar requester. Mengirim tenggat dalam ISO-8601
+     * supaya sisa waktunya dihitung ulang di browser tiap detik — angka yang
+     * dirender di server akan langsung basi begitu halaman dibiarkan terbuka.
+     *
+     * `minutesRemaining` tetap ikut agar sisi server punya satu sumber angka
+     * yang sama untuk diuji, dan boleh negatif: tiket yang tenggatnya sudah
+     * lewat tapi belum tersapu (penyapu berjalan tiap jam) harus terbaca
+     * "sedang ditutup", bukan melompat ke angka positif.
+     */
+    public function autoClosePayload(): ?array
+    {
+        $at = $this->auto_close_at;
+
+        if (! $at) {
+            return null;
+        }
+
+        return [
+            'at' => $at->toIso8601String(),
+            'atLabel' => $at->translatedFormat('j M Y · H:i'),
+            'minutesRemaining' => (int) round(Carbon::now()->diffInMinutes($at, false)),
+            'days' => self::autoCloseAfterDays(),
+        ];
+    }
+
     /** "90 minutes" / "4 hours" / "2 days" — one wording for every role's SLA panel. */
     private static function humanMinutes(int $minutes): string
     {

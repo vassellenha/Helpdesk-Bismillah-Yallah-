@@ -22,6 +22,18 @@ return [
     'showing' => 'Menampilkan :shown dari :total tiket',
     'empty' => 'Tidak ada tiket yang cocok dengan filter ini.',
 
+    'auto_close' => [
+        'label' => 'Tutup otomatis dalam :time',
+        'tooltip' => 'Bila tidak dikonfirmasi, tiket ini tertutup sendiri pada :at.',
+        'closing' => 'Segera ditutup',
+        'closing_long' => 'Tenggang konfirmasi habis — tiket ini segera ditutup otomatis.',
+        'column' => 'Tutup Otomatis',
+        'unit_day' => 'h',
+        'unit_hour' => 'j',
+        'unit_minute' => 'm',
+        'unit_second' => 'd',
+    ],
+
     'columns' => [
         'id' => 'No. Tiket',
         'title' => 'Subjek',
@@ -55,6 +67,12 @@ return [
     ],
 
     'dashboard' => [
+        'summary' => 'Ringkasan :period',
+        'periods' => [
+            'week' => 'Minggu',
+            'month' => 'Bulan',
+            'year' => 'Tahun',
+        ],
         'active_tickets' => 'Tiket Aktif',
         'awaiting_approval' => 'Menunggu Approval',
         'needs_response' => 'Butuh Respons Saya',
@@ -77,6 +95,11 @@ return [
     ],
 
     'charts' => [
+        'granularity' => [
+            'week' => 'Harian',
+            'month' => 'Mingguan',
+            'year' => 'Bulanan',
+        ],
         'created_vs_resolved' => 'Tiket Dibuat vs Selesai',
         'created' => 'Dibuat',
         'resolved' => 'Selesai',

@@ -27,6 +27,27 @@ return [
     */
     'dev_login' => env('HELPDESK_DEV_LOGIN', env('APP_ENV', 'production') !== 'production'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tenggang penutupan otomatis tiket yang sudah Resolved
+    |--------------------------------------------------------------------------
+    |
+    | Berapa HARI tiket berstatus Resolved menunggu konfirmasi requester sebelum
+    | ditutup sendiri oleh `tickets:auto-close`. Dihitung dari `resolved_at`,
+    | bukan dari tanggal dibuat — dan reopen mengosongkan resolved_at, jadi
+    | tiket yang dibuka kembali otomatis keluar dari hitungan.
+    |
+    | Angka 0 (atau negatif) MEMATIKAN fitur ini sepenuhnya; ia tidak berarti
+    | "tutup seketika". Ini disengaja: nilai yang salah ketik lebih baik membuat
+    | penyapu diam daripada menutup seluruh antrean tiket dalam satu jalan.
+    |
+    | Tiket yang tertutup lewat jalur ini TIDAK punya satisfaction_rating —
+    | tidak ada yang memberi nilai — sehingga ia tidak ikut terhitung di CSAT
+    | Team Lead. Itu memang yang diinginkan: rating karangan lebih buruk
+    | daripada rating yang kosong.
+    */
+    'auto_close_resolved_after_days' => (int) env('HELPDESK_AUTO_CLOSE_DAYS', 3),
+
     // Centralized role metadata used by the role-select portal and the
     // sidebar navigation. Swap the dummy `route` targets for real
     // controller actions as each workspace is wired to the database.

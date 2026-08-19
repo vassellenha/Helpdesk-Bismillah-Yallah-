@@ -31,7 +31,7 @@ class TicketDetailController extends Controller
         return view('requester.ticket-detail', [
             'role' => 'requester',
             'currentUser' => ['name' => $requester->name, 'title' => $requester->jabatan.' · '.$requester->unit, 'initials' => $this->initials($requester->name)],
-            'notifications' => NotificationService::present($requester),
+            'notifications' => NotificationService::present($requester, 'requester'),
             'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
@@ -204,6 +204,7 @@ class TicketDetailController extends Controller
 
         NotificationService::notify(
             $requester,
+            'requester',
             $ticket,
             'ticket_closed',
             'Tiket Ditutup',
@@ -275,6 +276,7 @@ class TicketDetailController extends Controller
                 'support' => TicketPeople::supportAgents($t),
             ],
             'canConfirmClose' => $t->status === 'Resolved',
+            'autoClose' => $t->autoClosePayload(),
             // Raw (non-combined) fields, only needed to prefill the Edit
             // Draft form — the display fields above stay as they were.
             'serviceName' => $t->service_name,

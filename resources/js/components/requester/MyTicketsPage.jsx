@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import NewTicketModal from '../NewTicketModal';
 import SelectMenu from '../SelectMenu';
+import AutoCloseCountdown from '../AutoCloseCountdown';
 import { apiFetch } from '../../lib/api';
 // Imported as `trans`, not `t`: this file already uses `t` for a ticket in half
 // a dozen callbacks, and the shadowing would be silent — the translation call
@@ -353,7 +354,17 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                                     </td>
                                     <td className="px-4 py-4 text-gray-700 dark:text-ink-2">{row.category}</td>
                                     <td className="px-4 py-4"><PriorityBadge priority={row.priority} /></td>
-                                    <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
+                                    {/* Countdown menempel di bawah status, bukan
+                                        jadi kolom sendiri: ia hanya hidup pada
+                                        tiket Resolved, dan kolom yang kosong di
+                                        hampir semua baris cuma menyempitkan
+                                        kolom lain yang selalu terisi. */}
+                                    <td className="px-4 py-4">
+                                        <div className="flex flex-col items-start gap-1.5">
+                                            <StatusBadge status={row.status} />
+                                            <AutoCloseCountdown autoClose={row.autoClose} compact />
+                                        </div>
+                                    </td>
                                     <td className="px-4 py-4 font-semibold" style={{ color: SLA_COLOR[row.slaKind] }}>{row.sla}</td>
                                     <td className="px-4 py-4 pr-6 text-gray-400 dark:text-ink-3">{row.created}</td>
                                 </tr>

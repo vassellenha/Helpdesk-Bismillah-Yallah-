@@ -9,6 +9,7 @@ use App\Models\TicketComment;
 use App\Models\TicketNotification;
 use App\Models\User;
 use App\Support\CurrentActor;
+use App\Support\DashboardPeriod;
 use App\Support\NotificationService;
 use App\Support\PriorityRegistry;
 use App\Support\TicketDiscussion;
@@ -80,6 +81,18 @@ class ApprovalController extends Controller
                 ? "{$dominant['priority']} mendominasi antrean bulan ini ({$dominant['pct']}%) — prioritaskan tiket kategori ini saat meninjau inbox."
                 : 'Belum ada tiket menunggu bulan ini.',
             'decisionTrend' => $this->decisionTrendByWeek($approver),
+            /*
+             | Ringkasan per periode — Minggu / Bulan / Tahun, mengikuti
+             | dashboard Support, Support BPO, dan Requester.
+             |
+             | Antrean dibatasi menurut created_at tiket, sedangkan tren
+             | dibatasi menurut kapan KEPUTUSANNYA diambil. Dua sumbu waktu yang
+             | berbeda, dan memang harus berbeda: "berapa yang masuk minggu ini"
+             | dan "berapa yang saya putuskan minggu ini" adalah dua pertanyaan
+             | terpisah, dan menyamakannya akan membuat keputusan atas tiket
+             | lama hilang dari grafik.
+             */
+            'periods' => $this->periodSummaries($approver, $pending),
             'pending' => $pending->map(fn (Ticket $t) => $this->presentPendingRow($t))->values(),
         ]);
     }
@@ -305,7 +318,9 @@ class ApprovalController extends Controller
     {
         $approver = CurrentActor::approver();
 
-        TicketNotification::where('user_id', $approver->id)->whereNull('read_at')->update(['read_at' => Carbon::now()]);
+        // Hanya peran ini. Tanpa penyaring role, "tandai semua terbaca" di satu
+        // layar ikut membersihkan lonceng peran lain milik orang yang sama.
+        TicketNotification::where('user_id', $approver->id)->where('role', 'approver')->whereNull('read_at')->update(['read_at' => Carbon::now()]);
 
         return response()->json(['read' => true]);
     }
@@ -322,7 +337,7 @@ class ApprovalController extends Controller
             'rejected' => ['ticket_rejected', 'Tiket Ditolak', "Tiket {$ticket->ticket_no} ditolak: {$note}"],
         };
 
-        NotificationService::notify($ticket->requester, $ticket, $type, $title, $message);
+        NotificationService::notify($ticket->requester, 'requester', $ticket, $type, $title, $message);
     }
 
     /**
@@ -355,6 +370,75 @@ class ApprovalController extends Controller
             'new_value' => ['status' => $ticket->status, 'catatan' => $note],
             'description' => $description,
         ]);
+    }
+
+    /**
+     * Distribusi prioritas antrean dan tren keputusan untuk tiap rentang.
+     *
+     * @param  Collection<int,Ticket>  $pending
+     * @return array<string,array<string,mixed>>
+     */
+    private function periodSummaries(User $approver, Collection $pending): array
+    {
+        $decisions = TicketApproval::where('approver_id', $approver->id)
+            ->where('created_at', '>=', DashboardPeriod::cutoff('year'))
+            ->get();
+
+        return collect(DashboardPeriod::KEYS)
+            ->mapWithKeys(function (string $period) use ($pending, $decisions) {
+                $windowed = $pending->filter(
+                    fn (Ticket $t) => $t->created_at->greaterThanOrEqualTo(DashboardPeriod::cutoff($period)),
+                );
+
+                $distribution = $this->priorityDistributionFor($windowed);
+                $dominant = $distribution->sortByDesc('pct')->first();
+
+                return [$period => [
+                    'priorityDistribution' => $distribution->values()->all(),
+                    'priorityTotal' => $windowed->count(),
+                    'priorityHighlight' => $dominant && $dominant['count'] > 0
+                        ? "{$dominant['priority']} mendominasi antrean periode ini ({$dominant['pct']}%) — prioritaskan tiket kategori ini saat meninjau inbox."
+                        : 'Belum ada tiket menunggu pada periode ini.',
+                    'decisionTrend' => $this->decisionTrendFor($decisions, $period),
+                ]];
+            })
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int,Ticket>  $tickets
+     * @return Collection<int,array{priority:string,count:int,pct:int}>
+     */
+    private function priorityDistributionFor(Collection $tickets): Collection
+    {
+        return collect(PriorityRegistry::all())->map(function (string $priority) use ($tickets) {
+            $count = $tickets->where('priority', $priority)->count();
+
+            return [
+                'priority' => $priority,
+                'count' => $count,
+                'pct' => $tickets->count() > 0 ? (int) round($count / $tickets->count() * 100) : 0,
+            ];
+        });
+    }
+
+    /**
+     * @param  Collection<int,TicketApproval>  $decisions
+     * @return array<int,array{label:string,approved:int,rejected:int}>
+     */
+    private function decisionTrendFor(Collection $decisions, string $period): array
+    {
+        return DashboardPeriod::buckets($period)->map(function (array $bucket) use ($decisions) {
+            $inBucket = $decisions->filter(
+                fn (TicketApproval $d) => $d->created_at->between($bucket['start'], $bucket['end']),
+            );
+
+            return [
+                'label' => $bucket['label'],
+                'approved' => $inBucket->where('decision', 'approved')->count(),
+                'rejected' => $inBucket->whereIn('decision', ['rejected', 'revision_requested'])->count(),
+            ];
+        })->values()->all();
     }
 
     private function decisionTrendByWeek(User $approver): array
@@ -450,7 +534,7 @@ class ApprovalController extends Controller
 
     private function notifications(User $approver): array
     {
-        return NotificationService::present($approver, 20, 'approver.tickets.show', 'approver.notifications.read');
+        return NotificationService::present($approver, 'approver', 20, 'approver.tickets.show', 'approver.notifications.read');
     }
 
     private function formatWaitDuration(int $minutes): string

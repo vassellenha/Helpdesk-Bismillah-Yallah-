@@ -986,6 +986,13 @@ html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
 
 .eva-widget .eva-w-input {
     flex: 1;
+    /* Wajib. Flex item punya min-width: auto secara bawaan, dan untuk <input>
+       nilai itu adalah lebar intrinsiknya (~20 karakter) — bukan nol. Tanpa
+       baris ini input menolak menyusut di bawah lebar bawaannya, mendorong
+       tombol kirim keluar dari baris, dan tiap mesin browser memutuskan
+       sisanya sendiri-sendiri: Chrome menyusutkan input, Safari tidak sama
+       sekali sehingga tombolnya terhimpit sampai hilang. */
+    min-width: 0;
     font-size: 12.5px;
     padding: 9px 12px;
     border-radius: var(--r-md);
@@ -997,13 +1004,20 @@ html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
 .eva-widget .eva-w-input:focus { outline: none; border-color: var(--blue-400); }
 
 .eva-widget .eva-w-send {
+    /* `flex: none`, bukan sekadar `width` — mengikuti pola .eva-brand-mark di
+       berkas ini. Lebar pada flex item hanyalah titik awal perhitungan; tanpa
+       mengunci penyusutannya, 38px bukan janji apa-apa. */
+    flex: none;
     width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     cursor: pointer;
     border-radius: var(--r-md);
     background: var(--blue-500);
     color: var(--white);
-    font-size: 13px;
 }
 
 .eva-widget .eva-w-send:disabled { opacity: 0.45; cursor: not-allowed; }

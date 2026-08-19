@@ -308,6 +308,8 @@ return [
 
         'action' => [
             'login' => 'Login',
+            'logout' => 'Logout',
+            'auto_close' => 'Tutup Otomatis',
             'start' => 'Mulai Kerjakan',
             'create' => 'Tambah',
             'update_role' => 'Ubah Role',

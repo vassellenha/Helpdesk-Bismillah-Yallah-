@@ -260,6 +260,7 @@ class SupportBpoController extends Controller
         if ($ticket->requester) {
             NotificationService::notify(
                 $ticket->requester,
+                'requester',
                 $ticket,
                 'ticket_resolved',
                 'Tiket Diselesaikan',
@@ -312,6 +313,7 @@ class SupportBpoController extends Controller
             if ($ticket->requester) {
                 NotificationService::notify(
                     $ticket->requester,
+                    'requester',
                     $ticket,
                     'ticket_escalated',
                     'Tiket Dieskalasi',
@@ -371,6 +373,7 @@ class SupportBpoController extends Controller
         if ($ticket->requester) {
             NotificationService::notify(
                 $ticket->requester,
+                'requester',
                 $ticket,
                 'ticket_escalated',
                 'Tiket Dieskalasi',
@@ -381,6 +384,7 @@ class SupportBpoController extends Controller
         if ($itAgent->user_id) {
             NotificationService::notify(
                 User::find($itAgent->user_id),
+                NotificationService::roleForAgent($itAgent),
                 $ticket,
                 'ticket_incoming_escalation',
                 'Tiket Eskalasi Masuk',
@@ -436,6 +440,7 @@ class SupportBpoController extends Controller
         if ($ticket->requester) {
             NotificationService::notify(
                 $ticket->requester,
+                'requester',
                 $ticket,
                 'ticket_reopened',
                 'Tiket Dikembalikan',
@@ -462,7 +467,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
 
-        TicketNotification::where('user_id', $bpoUser->id)->whereNull('read_at')->update(['read_at' => Carbon::now()]);
+        TicketNotification::where('user_id', $bpoUser->id)->where('role', 'support-bpo')->whereNull('read_at')->update(['read_at' => Carbon::now()]);
 
         return response()->json(['read' => true]);
     }
@@ -688,6 +693,6 @@ class SupportBpoController extends Controller
 
     private function notifications(User $bpoUser): array
     {
-        return NotificationService::present($bpoUser, 20, 'support-bpo.tickets.show', 'support-bpo.notifications.read');
+        return NotificationService::present($bpoUser, 'support-bpo', 20, 'support-bpo.tickets.show', 'support-bpo.notifications.read');
     }
 }

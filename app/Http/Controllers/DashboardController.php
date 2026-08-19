@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\CurrentActor;
+use App\Support\DashboardPeriod;
 use App\Support\DummyData;
 use App\Support\NotificationService;
 use Illuminate\Support\Carbon;
@@ -57,6 +58,17 @@ class DashboardController extends Controller
                 'closed' => ['count' => $closedLast6Months->count()],
             ],
             'chart' => $this->createdVsResolvedByMonth($tickets),
+            /*
+             | Ringkasan per periode — Minggu / Bulan / Tahun, sama seperti
+             | dashboard Support dan Support BPO.
+             |
+             | Ketiganya dihitung SEKALIGUS di sini, bukan diambil ulang lewat
+             | AJAX tiap kali tab ditekan. Datanya sudah ada di memori (tiket
+             | requester ini sudah dimuat di atas), jadi menghitung tiga rentang
+             | lebih murah daripada satu permintaan HTTP tambahan — dan tabnya
+             | berpindah tanpa jeda.
+             */
+            'periods' => $this->periodSummaries($tickets),
             'slaDonut' => [
                 'total' => $onTrack + $warning + $breach,
                 'onTrack' => $onTrack,
@@ -139,6 +151,7 @@ class DashboardController extends Controller
             'slaKind' => $t->sla_kind,
             'slaMinutes' => $t->sla_minutes_remaining,
             'slaPct' => $t->sla_elapsed_percent,
+            'autoClose' => $t->autoClosePayload(),
             'created' => $t->created_at->translatedFormat('j M Y'),
             'createdAt' => $t->created_at->toIso8601String(),
             'href' => route('requester.tickets.show', $t),
@@ -152,6 +165,65 @@ class DashboardController extends Controller
             ->map(fn (int $count, string $status) => "{$count} {$status}")
             ->values()
             ->implode(' · ');
+    }
+
+    /**
+     * Grafik "Dibuat vs Selesai" dan donat SLA untuk tiap rentang ringkasan.
+     *
+     * @return array<string,array{chart:array<int,array<string,mixed>>,slaDonut:array<string,int>}>
+     */
+    private function periodSummaries(Collection $tickets): array
+    {
+        return collect(DashboardPeriod::KEYS)
+            ->mapWithKeys(fn (string $period) => [$period => [
+                'chart' => $this->createdVsResolvedForPeriod($tickets, $period),
+                'slaDonut' => $this->slaDonutFor(
+                    $tickets->filter(fn (Ticket $t) => $t->created_at->greaterThanOrEqualTo(DashboardPeriod::cutoff($period))),
+                ),
+            ]])
+            ->all();
+    }
+
+    /** @return array<int,array{month:string,created:int,resolved:int}> */
+    private function createdVsResolvedForPeriod(Collection $tickets, string $period): array
+    {
+        return DashboardPeriod::buckets($period)->map(function (array $bucket) use ($tickets) {
+            $created = $tickets->filter(fn (Ticket $t) => $t->created_at->between($bucket['start'], $bucket['end']));
+            $resolved = $tickets->filter(fn (Ticket $t) => $t->resolved_at && $t->resolved_at->between($bucket['start'], $bucket['end']));
+
+            return [
+                // Kuncinya tetap 'month' walau isinya bisa hari atau minggu —
+                // CreatedVsResolvedChart membaca kunci itu untuk sumbu X, dan
+                // menggantinya berarti menyentuh grafik yang sudah bekerja.
+                'month' => $bucket['label'],
+                'created' => $created->count(),
+                'resolved' => $resolved->count(),
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Donat SLA dari sekumpulan tiket. Dipisahkan dari aksi requester() supaya
+     * angka global dan angka per-periode dihitung oleh kode yang sama persis.
+     *
+     * @return array<string,int>
+     */
+    private function slaDonutFor(Collection $tickets): array
+    {
+        $active = $tickets->whereIn('status', Ticket::ACTIVE_STATUSES)
+            ->filter(fn (Ticket $t) => $t->sla_minutes_remaining !== null);
+
+        $onTrack = $active->filter(fn (Ticket $t) => $t->sla_kind === 'ontrack')->count();
+        $warning = $active->filter(fn (Ticket $t) => $t->sla_kind === 'warning')->count();
+        $breach = $active->filter(fn (Ticket $t) => $t->sla_kind === 'breach')->count();
+
+        return [
+            'total' => $onTrack + $warning + $breach,
+            'onTrack' => $onTrack,
+            'warning' => $warning,
+            'breach' => $breach,
+            'pctWithinSla' => (int) round($onTrack / max($onTrack + $warning + $breach, 1) * 100),
+        ];
     }
 
     private function createdVsResolvedByMonth(Collection $tickets): array
@@ -189,8 +261,8 @@ class DashboardController extends Controller
      */
     private function notifications(User $requester, Collection $tickets): array
     {
-        NotificationService::syncSlaAlerts($tickets, $requester);
+        NotificationService::syncSlaAlerts($tickets, $requester, 'requester');
 
-        return NotificationService::present($requester);
+        return NotificationService::present($requester, 'requester');
     }
 }

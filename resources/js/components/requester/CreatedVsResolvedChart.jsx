@@ -1,13 +1,19 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { t as trans } from '../../lib/i18n';
 
-export default function CreatedVsResolvedChart({ data = [] }) {
+/**
+ * `granularity` menyusul tab periode di dashboard — subjudulnya dulu menulis
+ * "Bulanan" tanpa syarat, dan begitu tab "Minggu"/"Bulan" memecah datanya per
+ * hari/minggu, kalimat itu jadi keterangan yang salah di atas grafik yang benar.
+ */
+export default function CreatedVsResolvedChart({ data = [], granularity = 'month' }) {
+    const granularityLabel = trans(`requester.charts.granularity.${granularity}`);
     return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex items-start justify-between">
                 <div>
                     <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.charts.created_vs_resolved')}</h2>
-                    <p className="text-xs text-gray-400 dark:text-ink-3">Bulanan · {data[0]?.month} – {data[data.length - 1]?.month} 2026</p>
+                    <p className="text-xs text-gray-400 dark:text-ink-3">{granularityLabel} · {data[0]?.month} – {data[data.length - 1]?.month} {new Date().getFullYear()}</p>
                 </div>
                 <div className="flex gap-3.5 text-[11px] font-medium text-gray-400 dark:text-ink-3">
                     <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-blue-600 dark:bg-blue-500" />{trans('requester.charts.created')}</span>

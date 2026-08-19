@@ -19,6 +19,18 @@ return [
     'showing' => 'Showing :shown of :total tickets',
     'empty' => 'No tickets match these filters.',
 
+    'auto_close' => [
+        'label' => 'Auto-closes in :time',
+        'tooltip' => 'If left unconfirmed, this ticket closes itself on :at.',
+        'closing' => 'Closing shortly',
+        'closing_long' => 'The confirmation window has run out — this ticket will be closed automatically.',
+        'column' => 'Auto-Close',
+        'unit_day' => 'd',
+        'unit_hour' => 'h',
+        'unit_minute' => 'm',
+        'unit_second' => 's',
+    ],
+
     'columns' => [
         'id' => 'Ticket No.',
         'title' => 'Subject',
@@ -52,6 +64,12 @@ return [
     ],
 
     'dashboard' => [
+        'summary' => ':period Summary',
+        'periods' => [
+            'week' => 'Week',
+            'month' => 'Month',
+            'year' => 'Year',
+        ],
         'active_tickets' => 'Active Tickets',
         'awaiting_approval' => 'Awaiting Approval',
         'needs_response' => 'Needs My Response',
@@ -74,6 +92,11 @@ return [
     ],
 
     'charts' => [
+        'granularity' => [
+            'week' => 'Daily',
+            'month' => 'Weekly',
+            'year' => 'Monthly',
+        ],
         'created_vs_resolved' => 'Tickets Created vs Resolved',
         'created' => 'Created',
         'resolved' => 'Resolved',

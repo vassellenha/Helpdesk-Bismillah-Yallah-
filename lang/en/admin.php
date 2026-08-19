@@ -303,6 +303,8 @@ return [
 
         'action' => [
             'login' => 'Login',
+            'logout' => 'Logout',
+            'auto_close' => 'Auto-Closed',
             'start' => 'Started Work',
             'create' => 'Create',
             'update_role' => 'Change Role',
