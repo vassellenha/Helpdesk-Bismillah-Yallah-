@@ -10,6 +10,8 @@ use App\Support\CurrentActor;
 use App\Support\DummyData;
 use App\Support\EmployeeSync;
 use App\Support\SupportAgentSync;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -65,6 +67,8 @@ class UserRoleController extends Controller
             'permissionModules' => DummyData::permissionModules(),
             'permissionActions' => DummyData::permissionActions(),
             'unitOrganisasi' => $this->unitOptions(),
+            'jabatanOptions' => $this->jabatanOptions(),
+            'exportUrl' => route('admin.users.export'),
         ]);
     }
 
@@ -84,17 +88,82 @@ class UserRoleController extends Controller
     }
 
     /**
-     * Query bersama untuk layar penuh dan endpoint JSON, supaya keduanya tidak
-     * bisa menyaring dengan aturan berbeda.
+     * Ekspor daftar pengguna sebagai CSV atau PDF, tersaring unit
+     * kerja/jabatan/role dari popup — tidak pernah seluruh tabel tanpa
+     * syarat kalau salah satu filter diisi.
      *
-     * @return LengthAwarePaginator<int,User>
+     * CSV diberi BOM UTF-8 di awal berkas: tanpa itu Excel di Windows
+     * membaca nama beraksen sebagai karakter rusak (masalah yang sama yang
+     * membuat XlsxWriter lahir untuk laporan Team Lead — di sini formatnya
+     * memang diminta CSV, jadi perbaikannya cukup BOM, bukan workbook asli).
      */
-    private function paginateUsers(Request $request)
+    public function export(Request $request)
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(['csv', 'pdf'])],
+            'unit' => 'nullable|string|max:255',
+            'jabatan' => 'nullable|string|max:255',
+            'role' => 'nullable|string|max:255',
+        ]);
+
+        $users = $this->baseUsersQuery($request)->orderBy('name')->get();
+        $filterLabel = collect([
+            $data['unit'] ?? null,
+            $data['jabatan'] ?? null,
+            $data['role'] ?? null,
+        ])->filter()->implode(' · ') ?: 'Semua pengguna';
+
+        $filename = 'user-export-'.now()->format('Ymd-Hi');
+
+        if ($data['format'] === 'csv') {
+            return response()->streamDownload(function () use ($users) {
+                $handle = fopen('php://output', 'w');
+                fwrite($handle, "\xEF\xBB\xBF");
+                fputcsv($handle, ['Nama', 'NPP', 'Email', 'Telepon', 'Unit Kerja', 'Jabatan', 'Role', 'Status', 'Terakhir Login']);
+
+                foreach ($users as $u) {
+                    fputcsv($handle, [
+                        $u->name,
+                        $u->nip ?: '-',
+                        $u->email ?: '-',
+                        $u->phone ?: '-',
+                        $u->unit ?: '-',
+                        $u->jabatan ?: '-',
+                        $u->roles->pluck('name')->implode(', ') ?: '-',
+                        $u->isActive() ? 'Aktif' : 'Nonaktif',
+                        $u->last_login_at?->format('Y-m-d H:i') ?? '-',
+                    ]);
+                }
+
+                fclose($handle);
+            }, $filename.'.csv', ['Content-Type' => 'text/csv']);
+        }
+
+        // Sebelas kolom di A4 tegak akan terpotong; daftar pengguna selalu
+        // dicetak mendatar seperti laporan Team Lead yang lebar.
+        return Pdf::loadView('reports.users-export', [
+            'users' => $users,
+            'filterLabel' => $filterLabel,
+            'generatedAt' => now()->format('d M Y · H:i'),
+        ])->setPaper('a4', 'landscape')->download($filename.'.pdf');
+    }
+
+    /**
+     * Query bersama untuk layar penuh, endpoint JSON, DAN ekspor CSV/PDF —
+     * supaya ketiganya tidak pernah bisa menyaring dengan aturan berbeda.
+     * Ekspor lewat popupnya sendiri hanya pernah mengirim unit/jabatan/role
+     * (tidak ada `search`/`status` di sana), jadi menambahkan filter di sini
+     * otomatis tersedia untuk keduanya tanpa duplikasi logika.
+     *
+     * @return Builder<User>
+     */
+    private function baseUsersQuery(Request $request): Builder
     {
         $search = trim((string) $request->query('search', ''));
         $status = (string) $request->query('status', '');
         $role = (string) $request->query('role', '');
         $unit = (string) $request->query('unit', '');
+        $jabatan = (string) $request->query('jabatan', '');
 
         return User::with('roles')
             ->when($search !== '', function ($query) use ($search) {
@@ -118,6 +187,15 @@ class UserRoleController extends Controller
             // kini disusun dari kolom yang sama (lihat unitOptions()) — jadi
             // setiap pilihan yang bisa diklik pasti punya baris.
             ->when($unit !== '', fn ($q) => $q->where('unit', $unit))
+            ->when($jabatan !== '', fn ($q) => $q->where('jabatan', $jabatan));
+    }
+
+    /**
+     * @return LengthAwarePaginator<int,User>
+     */
+    private function paginateUsers(Request $request)
+    {
+        return $this->baseUsersQuery($request)
             ->orderBy('name')
             ->paginate(self::PER_PAGE)
             ->withQueryString();
@@ -157,6 +235,26 @@ class UserRoleController extends Controller
             ->distinct()
             ->orderBy('unit')
             ->pluck('unit')
+            ->all();
+    }
+
+    /**
+     * Pilihan "Jabatan" untuk popup ekspor — sama alasannya dengan
+     * unitOptions() di atas: nilai NYATA yang ada di kolom, bukan daftar
+     * karangan. Jabatan jauh lebih beragam daripada unit (ratusan nilai
+     * unik pada 3.800-an pegawai), jadi dropdown-nya wajib dipakai dengan
+     * mode `searchable` di sisi klien.
+     *
+     * @return list<string>
+     */
+    private function jabatanOptions(): array
+    {
+        return User::query()
+            ->whereNotNull('jabatan')
+            ->where('jabatan', '!=', '')
+            ->distinct()
+            ->orderBy('jabatan')
+            ->pluck('jabatan')
             ->all();
     }
 

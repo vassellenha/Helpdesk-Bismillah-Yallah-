@@ -257,3 +257,48 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+
+/*
+ * "Liquid Glass" — kaca berlapis ala iOS 26, dipakai KHUSUS untuk popup Ekspor
+ * Pengguna (ExportUsersModal.jsx), bukan treatment umum. Modal lain di app ini
+ * sengaja tetap solid (`bg-white dark:bg-panel-2` lewat Modal.jsx) — isinya
+ * formulir/tabel padat yang butuh kontras stabil, dan latar tembus pandang
+ * yang bergerak di baliknya justru mengganggu keterbacaan. Popup ekspor cocok
+ * untuk gaya ini karena isinya cuma beberapa pilihan singkat.
+ *
+ * Dua lapis yang membentuk kesan "kaca": (1) blur+saturate pada apa pun di
+ * belakangnya, meniru refraksi, (2) garis highlight setipis rambut di tepi
+ * atas lewat inset box-shadow, meniru pantulan spekular pada lengkungan kaca.
+ * Sengaja TANPA pseudo-element/blend-mode tambahan — kombinasi itu dengan
+ * backdrop-filter tidak konsisten lintas browser dan berisiko menutupi
+ * elemen interaktif di dalamnya.
+ */
+.liquid-glass {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.75) 0%, rgb(255 255 255 / 0.55) 100%);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgb(255 255 255 / 0.6);
+    box-shadow:
+        0 20px 60px -12px rgb(15 23 42 / 0.25),
+        inset 0 1px 0 rgb(255 255 255 / 0.8);
+}
+:root.dark .liquid-glass {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.03) 100%);
+    border-color: rgb(255 255 255 / 0.14);
+    box-shadow:
+        0 24px 70px -14px rgb(0 0 0 / 0.65),
+        inset 0 1px 0 rgb(255 255 255 / 0.16);
+}
+
+/* Varian lebih terang untuk elemen di ATAS panel kaca (pill format, input) —
+   panel utamanya sudah blur, jadi lapisan kedua ini hanya perlu beda opasitas
+   untuk tetap terlihat sebagai "kaca di atas kaca", tanpa blur berlapis yang
+   mahal untuk GPU render berulang. */
+.liquid-glass-well {
+    background: rgb(255 255 255 / 0.5);
+    border: 1px solid rgb(255 255 255 / 0.6);
+}
+:root.dark .liquid-glass-well {
+    background: rgb(255 255 255 / 0.05);
+    border-color: rgb(255 255 255 / 0.1);
+}

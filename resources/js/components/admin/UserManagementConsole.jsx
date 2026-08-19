@@ -3,6 +3,7 @@ import RoleManagerModal from './RoleManagerModal';
 import AddRoleWizard from './AddRoleWizard';
 import AddUserModal from './AddUserModal';
 import ManageUserModal from './ManageUserModal';
+import ExportUsersModal from './ExportUsersModal';
 import RowActionMenu, { menuPositionFor } from '../RowActionMenu';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
@@ -18,7 +19,7 @@ const ALL_STATUS = '__all_status';
 const ALL_ROLE = '__all_role';
 const ALL_UNIT = '__all_unit';
 
-export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi }) {
+export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi, jabatanOptions, exportUrl }) {
     const [users, setUsers] = useState(initialUsers);
     const [meta, setMeta] = useState(usersMeta);
     const [stats, setStats] = useState(userStats);
@@ -219,6 +220,9 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                     </button>
                     <button onClick={() => setModal('role')} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         ⚙ Kelola Role
+                    </button>
+                    <button onClick={() => setModal('export')} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                        {trans('admin.users.export')}
                     </button>
                     <button onClick={() => setModal('addUser')} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
                         {trans('admin.users.add_user')}
@@ -498,6 +502,16 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                 />
             )}
             {modal === 'addUser' && <AddUserModal roles={roles} onClose={() => setModal(null)} onSave={addUser} />}
+            {modal === 'export' && (
+                <ExportUsersModal
+                    onClose={() => setModal(null)}
+                    listUrl={listUrl}
+                    exportUrl={exportUrl}
+                    roles={roles}
+                    unitOrganisasi={unitOrganisasi}
+                    jabatanOptions={jabatanOptions}
+                />
+            )}
             {modal?.type === 'manageUser' && (
                 <ManageUserModal user={modal.user} roles={roles} onClose={() => setModal(null)} onSave={saveUser} />
             )}

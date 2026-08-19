@@ -14,6 +14,8 @@
         'permissionModules' => $permissionModules,
         'permissionActions' => $permissionActions,
         'unitOrganisasi' => $unitOrganisasi,
+        'jabatanOptions' => $jabatanOptions,
+        'exportUrl' => $exportUrl,
     ]) }}"
 ></div>
 @endsection
