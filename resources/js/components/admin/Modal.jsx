@@ -1,12 +1,23 @@
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import { t as trans } from '../../lib/i18n';
 
-export default function Modal({ children, onClose, maxWidth = 'max-w-lg' }) {
+/**
+ * Setiap pemanggil di sini adalah form panjang (Tambah User, wizard Tambah
+ * Role, Form Tiket Baru, dst.) atau tabel/daftar padat — makanya defaultnya
+ * `dense`, varian kaca yang nyaris solid (lihat `.liquid-glass-dense` di
+ * app.css). `light` ada untuk pemanggil mendatang yang isinya singkat
+ * (konfirmasi, pemilihan) dan boleh memakai `.liquid-glass` yang lebih
+ * tembus pandang — belum ada yang memakainya hari ini, semua modal yang ada
+ * sudah padat.
+ */
+export default function Modal({ children, onClose, maxWidth = 'max-w-lg', variant = 'dense' }) {
     useLockBodyScroll();
+    const glassClass = variant === 'light' ? 'liquid-glass' : 'liquid-glass-dense';
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
             <div
-                className={`flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl`}
+                className={`${glassClass} flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl shadow-xl`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {children}
@@ -30,5 +41,8 @@ export function ModalHeader({ title, subtitle, onClose }) {
 }
 
 export function ModalFooter({ children }) {
-    return <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">{children}</div>;
+    // Tanpa latar solid sendiri — sebelumnya `bg-gray-50 dark:bg-panel-3`
+    // memutus kesan kaca panel di atasnya dengan balok rata di bawah. Cukup
+    // garis pemisah; latar kaca panel induk tetap terlihat menerus.
+    return <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-edge px-6 py-4">{children}</div>;
 }

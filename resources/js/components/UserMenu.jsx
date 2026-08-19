@@ -28,7 +28,7 @@ export default function UserMenu({ name, title, initials, profileUrl, dashboardU
     return (
         <div ref={ref} className="relative">
             <button type="button" onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:text-accent-text">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:text-accent-text">
                     {initials}
                 </span>
                 <span className="hidden text-left sm:block">
@@ -51,7 +51,7 @@ export default function UserMenu({ name, title, initials, profileUrl, dashboardU
                         muncul ikut hilang di layar kecil.
                     */}
                     <div className="mb-1 flex items-center gap-2.5 border-b border-gray-50 dark:border-edge px-3 py-2.5">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:text-accent-text">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:text-accent-text">
                             {initials}
                         </span>
                         <span className="min-w-0">

@@ -154,8 +154,8 @@ function EditRoleModal({ role, onClose, onSaved }) {
     }
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
-            <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="liquid-glass w-full max-w-sm rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="border-b border-gray-100 dark:border-edge px-5 py-4">
                     <h3 className="text-base font-bold text-gray-900 dark:text-ink-1">{trans('admin.roles.edit')}</h3>
                 </div>
@@ -174,7 +174,7 @@ function EditRoleModal({ role, onClose, onSaved }) {
                         />
                     </div>
                 </div>
-                <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-5 py-4">
+                <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-edge px-5 py-4">
                     <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-edge-strong px-4 py-2 text-sm font-medium text-gray-600 dark:text-ink-2 hover:bg-white dark:hover:bg-panel-hover">{trans('admin.common.cancel')}</button>
                     <button onClick={save} disabled={saving || !name} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 disabled:opacity-50">
                         {saving ? trans('admin.common.saving') : trans('admin.common.save')}

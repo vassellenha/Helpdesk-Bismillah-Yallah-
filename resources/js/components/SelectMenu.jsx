@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Portal from './Portal';
 
 /**
@@ -55,7 +55,15 @@ export default function SelectMenu({ value, onChange, options, searchable = fals
     // Posisi dihitung ulang tiap dibuka, plus saat halaman digulir/diubah
     // ukuran selama menu terbuka — kalau tidak, menu yang sudah terbuka akan
     // tertinggal di posisi lama begitu leluhurnya (mis. body modal) digulir.
-    useEffect(() => {
+    //
+    // useLayoutEffect, BUKAN useEffect: keduanya jalan setelah DOM ter-mutasi,
+    // tapi useEffect jalan setelah browser SUDAH mengecat layar, jadi ada satu
+    // frame di mana panel sempat tergambar di posisi lama (atau di 0,0) sebelum
+    // lompat ke posisi benar — kedipan yang di layar lambat/refresh rate
+    // rendah bisa terlihat seperti dua elemen bertumpuk sesaat. useLayoutEffect
+    // jalan SEBELUM cat layar, jadi posisi yang salah tidak pernah sempat
+    // terlihat sama sekali.
+    useLayoutEffect(() => {
         if (! open) return;
 
         function updateRect() {
@@ -106,6 +114,19 @@ export default function SelectMenu({ value, onChange, options, searchable = fals
 
             {open && rect && (
                 <Portal>
+                    {/*
+                        Kotak cari dan daftar pilihan dipisah jadi DUA kotak flex,
+                        bukan satu kontainer `overflow-y-auto` dengan kotak cari
+                        `sticky` di dalamnya seperti sebelumnya. `sticky` cuma
+                        tinggal di tempat SELAMA elemen sebelum/sesudahnya tidak
+                        pernah salah ukur tinggi — begitu itu meleset (pernah
+                        terlihat: baris pilihan pertama muncul di ATAS kotak cari,
+                        bukan di bawahnya), sticky jadi sumber bug yang sulit
+                        dilacak. Flex-column dengan kotak cari `shrink-0` di atas
+                        dan daftar `overflow-y-auto` terpisah di bawahnya membuat
+                        urutan visualnya taat urutan DOM, tidak ada cara keduanya
+                        bertukar tempat.
+                    */}
                     <div
                         ref={panelRef}
                         style={{
@@ -116,13 +137,10 @@ export default function SelectMenu({ value, onChange, options, searchable = fals
                             right: Math.max(8, window.innerWidth - rect.right),
                             width: Math.max(rect.width, 180),
                         }}
-                        className="z-50 overflow-y-auto rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-1 shadow-lg"
+                        className="z-50 flex flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-lg"
                     >
                         {searchable && (
-                            // Menempel di atas saat daftar digulir — pada ribuan
-                            // baris, kotak cari yang ikut menggulir hilang setelah
-                            // beberapa putaran dan tidak bisa ditemukan lagi.
-                            <div className="sticky top-0 z-10 border-b border-gray-100 dark:border-edge bg-white dark:bg-panel-2 p-2">
+                            <div className="shrink-0 border-b border-gray-100 dark:border-edge p-2">
                                 <input
                                     ref={searchRef}
                                     value={query}
@@ -132,22 +150,24 @@ export default function SelectMenu({ value, onChange, options, searchable = fals
                                 />
                             </div>
                         )}
-                        {visible.length === 0 && (
-                            <p className="px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">Tidak ada yang cocok.</p>
-                        )}
-                        {visible.map((o) => (
-                            <button
-                                key={o.value}
-                                type="button"
-                                onClick={() => { onChange(o.value); setOpen(false); }}
-                                className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] ${o.value === value ? 'bg-blue-50 dark:bg-accent-soft font-semibold text-blue-700 dark:text-accent-text' : 'text-gray-700 dark:text-ink-2'}`}
-                            >
-                                {o.label}
-                                {o.value === value && (
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M20 6 9 17l-5-5" /></svg>
-                                )}
-                            </button>
-                        ))}
+                        <div className="min-h-0 flex-1 overflow-y-auto py-1">
+                            {visible.length === 0 && (
+                                <p className="px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">Tidak ada yang cocok.</p>
+                            )}
+                            {visible.map((o) => (
+                                <button
+                                    key={o.value}
+                                    type="button"
+                                    onClick={() => { onChange(o.value); setOpen(false); }}
+                                    className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03] ${o.value === value ? 'bg-blue-50 dark:bg-accent-soft font-semibold text-blue-700 dark:text-accent-text' : 'text-gray-700 dark:text-ink-2'}`}
+                                >
+                                    {o.label}
+                                    {o.value === value && (
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M20 6 9 17l-5-5" /></svg>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </Portal>
             )}

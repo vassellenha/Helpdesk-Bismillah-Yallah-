@@ -12,6 +12,12 @@ import { t as trans } from '../../lib/i18n';
 const ICON_EDIT = 'M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z';
 const ICON_DEACTIVATE = 'M12 2v10 M18.4 5.6a8 8 0 1 1-12.8 0';
 const ICON_ACTIVATE = 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9';
+// Perisai, bukan roda gigi ⚙ (emoji mentah sebelumnya) — Kelola Role
+// mengatur hak akses/izin, jadi ikon keamanan lebih tepat secara makna
+// daripada ikon "pengaturan umum", dan gaya garisnya kini konsisten dengan
+// ikon lain di toolbar ini (SVG stroke 2px, bukan glyph emoji).
+const ICON_ROLES = 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z';
+const ICON_EXPORT = 'M12 3v10 M7 9l5 5 5-5 M4 19h16';
 
 // Language-independent filter sentinels. A translated label here would be
 // compared against real status/role/unit values and match nothing.
@@ -218,10 +224,16 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                         </svg>
                         {syncing ? trans('admin.users.syncing') : trans('admin.users.sync')}
                     </button>
-                    <button onClick={() => setModal('role')} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                        ⚙ Kelola Role
+                    <button onClick={() => setModal('role')} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                            <path d={ICON_ROLES} />
+                        </svg>
+                        Kelola Role
                     </button>
-                    <button onClick={() => setModal('export')} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                    <button onClick={() => setModal('export')} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                            <path d={ICON_EXPORT} />
+                        </svg>
                         {trans('admin.users.export')}
                     </button>
                     <button onClick={() => setModal('addUser')} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">

@@ -245,6 +245,7 @@ export function Modal({ title, children, onClose, width = '460px' }) {
     return (
         <div
             onClick={onClose}
+            className="eva-glass-overlay"
             style={{
                 position: 'fixed', inset: 0, zIndex: 60, display: 'flex',
                 alignItems: 'center', justifyContent: 'center', padding: '20px',
@@ -255,10 +256,10 @@ export function Modal({ title, children, onClose, width = '460px' }) {
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
+                className="eva-glass-modal"
                 style={{
-                    width: '100%', maxWidth: width, background: 'var(--surface)',
-                    borderRadius: '10px', boxShadow: '0 18px 48px var(--shadow-25)',
-                    border: '1px solid var(--border-soft)', overflow: 'hidden',
+                    width: '100%', maxWidth: width,
+                    borderRadius: '10px', overflow: 'hidden',
                 }}
             >
                 <div style={{ padding: '16px 20px 0' }}>

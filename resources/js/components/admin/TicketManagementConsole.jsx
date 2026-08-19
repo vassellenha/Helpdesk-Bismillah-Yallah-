@@ -6,6 +6,8 @@ import { t as trans } from '../../lib/i18n';
 import TicketFlow from '../TicketFlow';
 import RatingStars from '../RatingStars';
 
+const ICON_EXPORT = 'M12 3v10 M7 9l5 5 5-5 M4 19h16';
+
 const STATUS_STYLES = {
     Draft: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20',
     Returned: 'bg-amber-50 dark:bg-warn-soft text-amber-700 dark:text-warn-text ring-amber-600/20',
@@ -145,8 +147,11 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.tickets.subtitle')}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={handleExport} className="rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                        ⬇ Export CSV
+                    <button onClick={handleExport} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                            <path d={ICON_EXPORT} />
+                        </svg>
+                        Export CSV
                     </button>
                 </div>
             </div>
@@ -173,7 +178,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                             <button
                                 key={p}
                                 onClick={() => setPeriod(p)}
-                                className={`rounded-md px-3 py-1.5 font-medium ${period === p ? 'bg-gray-900 dark:bg-panel-selected text-white' : 'text-gray-500 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
+                                className={`rounded-lg px-3.5 py-2 text-[13px] font-semibold ${period === p ? 'bg-blue-600 dark:bg-blue-500 text-white' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
                             >
                                 {trans(PERIOD_LABEL[p])}
                             </button>
@@ -346,8 +351,8 @@ function Stat({ icon, value, label, bg, color }) {
 function TicketDetailModal({ ticket: t, onClose, busy, onToggle }) {
     useLockBodyScroll();
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
-            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="liquid-glass-dense flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-6 py-4">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">{t.ticketNo}</h2>
@@ -462,7 +467,7 @@ function TicketDetailModal({ ticket: t, onClose, busy, onToggle }) {
                     </div>
                 </div>
 
-                <div className="flex justify-end border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
+                <div className="flex justify-end border-t border-gray-100 dark:border-edge px-6 py-4">
                     <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">{trans('admin.common.close')}</button>
                 </div>
             </div>

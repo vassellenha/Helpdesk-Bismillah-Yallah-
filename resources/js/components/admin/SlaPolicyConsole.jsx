@@ -216,8 +216,8 @@ function PriorityBadge({ priority }) {
 function PolicyDetailModal({ policy, onClose }) {
     useLockBodyScroll();
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
-            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="liquid-glass w-full max-w-md overflow-hidden rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-6 py-4">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">{trans('admin.sla.detail_title')}</h2>
@@ -233,7 +233,7 @@ function PolicyDetailModal({ policy, onClose }) {
                     <Detail label={trans('admin.sla.warning_threshold')} value={`${policy.warning_threshold_percent}%`} />
                     <Detail label={trans('admin.common.status')} value={policy.status === 'active' ? trans('admin.common.active') : trans('admin.common.inactive')} />
                 </div>
-                <div className="flex justify-end border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
+                <div className="flex justify-end border-t border-gray-100 dark:border-edge px-6 py-4">
                     <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">{trans('admin.common.close')}</button>
                 </div>
             </div>

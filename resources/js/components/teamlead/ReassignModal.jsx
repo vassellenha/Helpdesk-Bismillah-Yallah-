@@ -102,8 +102,8 @@ export default function ReassignModal({ ticket, agents = [], remindUrlBase, onCl
     }
 
     return (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-gray-900/40 p-4" onMouseDown={onClose}>
-            <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onMouseDown={onClose}>
+            <div className="liquid-glass-dense flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-6 py-4">
                     <div>
                         <h2 className="text-[17px] font-extrabold text-gray-900 dark:text-ink-1">{trans('teamlead.reassign.title')}</h2>

@@ -23,9 +23,9 @@ export default function MyProfileModal({ profileUrl, onClose }) {
 
     return (
         <Portal>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
                 <div
-                    className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl"
+                    className="liquid-glass-dense flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl shadow-xl"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-6 py-4">
@@ -106,7 +106,7 @@ export default function MyProfileModal({ profileUrl, onClose }) {
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-4">
+                    <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-edge px-6 py-4">
                         <button onClick={onClose} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
                             Tutup
                         </button>

@@ -32,8 +32,8 @@ export default function RaisePriorityModal({ ticket, remindUrlBase, onClose, onS
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onMouseDown={onClose}>
-            <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onMouseDown={onClose}>
+            <div className="liquid-glass w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-5 py-4">
                     <div>
                         <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.raise.title')}</h2>

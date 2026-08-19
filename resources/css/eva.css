@@ -108,6 +108,19 @@
     --surface-muted: rgb(246, 247, 249);
     --overlay: rgba(11, 28, 48, 0.34);
 
+    /*
+       Kaca — dialog konfirmasi hapus. Rumus persis sama dengan `.liquid-glass`
+       tim di app.css (gradient dua-stop + blur 28px + speculer di tepi atas),
+       hanya ditarik lewat token EVA sendiri alih-alih kelas Tailwind, supaya
+       dialognya tetap satu bahasa visual dengan popup singkat di sisi lain
+       aplikasi tanpa mengimpor sistem desain tim ke dalam EVA.
+    */
+    --glass-top: rgb(255 255 255 / 0.82);
+    --glass-bottom: rgb(255 255 255 / 0.68);
+    --glass-border: rgb(255 255 255 / 0.8);
+    --glass-specular: rgb(255 255 255 / 0.9);
+    --glass-shadow: rgb(15 23 42 / 0.3);
+
     /* Teks di atas latar jenuh (tombol biru/merah, gelembung chat). */
     --on-accent: rgb(255, 255, 255);
 
@@ -221,6 +234,15 @@
         --overlay: rgb(3 6 15 / 0.66);
         --danger-banner: rgb(239 68 68 / 0.12);
 
+        /* Kaca — tarik dari --surface gelap (#131a2e), bukan putih tembus
+           pandang: putih transparan di atas latar gelap terlihat berkabut,
+           bukan berkaca. Sama seperti `.liquid-glass-dense` versi gelap. */
+        --glass-top: rgb(19 26 46 / 0.85);
+        --glass-bottom: rgb(19 26 46 / 0.7);
+        --glass-border: rgb(255 255 255 / 0.14);
+        --glass-specular: rgb(255 255 255 / 0.1);
+        --glass-shadow: rgb(0 0 0 / 0.6);
+
         /*
            Bayangan berbasis hitam, dan lebih pekat. Bayangan abu-abu mode
            terang praktis tak terlihat di atas panel gelap, sehingga kartu dan
@@ -236,6 +258,22 @@
 .eva-app *::before,
 .eva-app *::after {
     box-sizing: border-box;
+}
+
+/* Panel kaca dialog konfirmasi hapus — lihat token --glass-* di atas. */
+.eva-glass-modal {
+    background: linear-gradient(180deg, var(--glass-top) 0%, var(--glass-bottom) 100%);
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+        0 20px 60px -12px var(--glass-shadow),
+        inset 0 1px 0 var(--glass-specular);
+}
+
+.eva-glass-overlay {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
 .eva-app input,

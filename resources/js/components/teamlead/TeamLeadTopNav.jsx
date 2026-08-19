@@ -127,7 +127,7 @@ export default function TeamLeadTopNav({ notifications = [], user = {}, dashboar
                     }}
                     className={`flex items-center gap-2.5 rounded-[10px] px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-panel-hover ${profileOpen ? 'bg-gray-100 dark:bg-panel-3' : ''}`}
                 >
-                    <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:text-accent-text">
+                    <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:text-accent-text">
                         {user.initials ?? 'T'}
                     </span>
                     <span className="hidden text-left leading-tight sm:block">
@@ -140,7 +140,7 @@ export default function TeamLeadTopNav({ notifications = [], user = {}, dashboar
                 {profileOpen && (
                     <div className="absolute right-0 top-[54px] z-50 w-[250px] overflow-hidden rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-xl">
                         <div className="mb-1.5 flex items-center gap-2.5 border-b border-gray-50 dark:border-edge px-3 py-2.5">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:text-accent-text">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:text-accent-text">
                                 {user.initials ?? 'T'}
                             </span>
                             <span className="min-w-0">

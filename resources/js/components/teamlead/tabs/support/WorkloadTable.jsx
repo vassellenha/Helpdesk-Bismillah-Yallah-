@@ -134,9 +134,9 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
     useLockBodyScroll();
     const a = AVAIL[agent.availability] ?? AVAIL.Online;
     return (
-        <div className="fixed inset-0 z-50 flex justify-end bg-gray-900/40" onMouseDown={onClose}>
-            <div className="flex h-full w-[440px] max-w-full flex-col bg-gray-50 dark:bg-panel-3 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-3.5 border-b border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-6 py-5">
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 backdrop-blur-sm" onMouseDown={onClose}>
+            <div className="liquid-glass-dense flex h-full w-[440px] max-w-full flex-col shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="liquid-glass-well flex items-center gap-3.5 border-b border-gray-200 dark:border-edge-strong px-6 py-5">
                     <span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-base font-extrabold text-blue-700 dark:text-accent-text">{agent.initials}</span>
                     <div className="min-w-0 flex-1">
                         <p className="text-lg font-extrabold text-gray-900 dark:text-ink-1">{agent.name}</p>

@@ -219,15 +219,15 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
     const finished = ['Resolved', 'Completed', 'Closed'].includes(t?.status);
 
     return (
-        <div className="fixed inset-0 z-40 flex justify-end bg-gray-900/45" onMouseDown={onClose}>
-            <div className="flex h-full w-[33vw] min-w-[420px] max-w-full flex-col bg-gray-50 dark:bg-panel-3 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-40 flex justify-end bg-slate-950/40 backdrop-blur-sm" onMouseDown={onClose}>
+            <div className="liquid-glass-dense flex h-full w-[33vw] min-w-[420px] max-w-full flex-col shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
                 {loading ? (
                     <SlideOverSkeleton />
                 ) : !t ? (
                     <div className="flex flex-1 items-center justify-center text-sm text-gray-400 dark:text-ink-3">{trans('teamlead.ticket.not_found')}</div>
                 ) : (
                     <>
-                        <div className="border-b border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-6 py-5">
+                        <div className="liquid-glass-well border-b border-gray-200 dark:border-edge-strong px-6 py-5">
                             <div className="flex items-center justify-between">
                                 <span className="text-[13px] font-bold text-blue-600 dark:text-accent-text">{t.id}</span>
                                 <button onClick={onClose} className="rounded-lg p-1 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>

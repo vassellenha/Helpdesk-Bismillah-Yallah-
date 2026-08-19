@@ -22,8 +22,8 @@ function AttachmentPreviewModal({ file, onClose }) {
     const isVideo = file.type.startsWith('video/');
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 p-4" onClick={onClose}>
-            <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="liquid-glass flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between border-b border-gray-100 dark:border-edge px-5 py-3.5">
                     <p className="truncate pr-4 text-sm font-bold text-gray-900 dark:text-ink-1">{file.name}</p>
                     <button type="button" onClick={onClose} className="shrink-0 rounded-full p-1.5 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover hover:text-gray-600">✕</button>

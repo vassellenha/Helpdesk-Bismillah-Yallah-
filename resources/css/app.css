@@ -274,13 +274,17 @@
  * elemen interaktif di dalamnya.
  */
 .liquid-glass {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.75) 0%, rgb(255 255 255 / 0.55) 100%);
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgb(255 255 255 / 0.6);
+    /* 0.5/0.32 sebelumnya kebablasan: terlalu bening, panelnya jadi kusam
+       dan sulit dibaca di mode terang. Dinaikkan lagi ke rentang yang lebih
+       putih/terang, tapi tetap di bawah 0.75/0.55 lama supaya blur di
+       baliknya masih samar kelihatan alih-alih kartu solid. */
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.82) 0%, rgb(255 255 255 / 0.68) 100%);
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    border: 1px solid rgb(255 255 255 / 0.8);
     box-shadow:
-        0 20px 60px -12px rgb(15 23 42 / 0.25),
-        inset 0 1px 0 rgb(255 255 255 / 0.8);
+        0 20px 60px -12px rgb(15 23 42 / 0.3),
+        inset 0 1px 0 rgb(255 255 255 / 0.9);
 }
 :root.dark .liquid-glass {
     background: linear-gradient(180deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.03) 100%);
@@ -295,10 +299,44 @@
    untuk tetap terlihat sebagai "kaca di atas kaca", tanpa blur berlapis yang
    mahal untuk GPU render berulang. */
 .liquid-glass-well {
-    background: rgb(255 255 255 / 0.5);
-    border: 1px solid rgb(255 255 255 / 0.6);
+    background: rgb(255 255 255 / 0.6);
+    border: 1px solid rgb(255 255 255 / 0.75);
 }
 :root.dark .liquid-glass-well {
     background: rgb(255 255 255 / 0.05);
     border-color: rgb(255 255 255 / 0.1);
+}
+
+/*
+ * Kaca "padat" — dipakai di form panjang (Tambah User, wizard Tambah Role,
+ * Form Tiket Baru, dst) dan drawer kanan yang isinya detail operasional
+ * lengkap. `.liquid-glass` di atas sengaja sangat tembus pandang; itu bagus
+ * untuk popup singkat (konfirmasi, pemilihan) tapi berbahaya begitu isinya
+ * belasan input atau tabel padat — latar yang bergerak/tembus pandang
+ * mengganggu mata saat membaca/mengisi form panjang.
+ *
+ * Tetap satu keluarga (blur + saturate + border halus + speculer di tepi
+ * atas), hanya opacity latarnya dinaikkan jauh — hampir solid, tapi baur
+ * kaca di TEPI panel (di atas apa pun yang ada di baliknya) tetap terlihat,
+ * jadi popup singkat dan form panjang masih terasa satu bahasa visual.
+ *
+ * Warna dasarnya ditarik dari token panel yang SUDAH ada (bukan putih polos)
+ * supaya di dark mode terasa seperti "panel gelap biasa yang tepinya
+ * berkaca", bukan kartu terang yang tiba-tiba nyasar ke tengah tema gelap.
+ */
+.liquid-glass-dense {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.96) 0%, rgb(255 255 255 / 0.9) 100%);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgb(255 255 255 / 0.7);
+    box-shadow:
+        0 20px 60px -12px rgb(15 23 42 / 0.25),
+        inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+:root.dark .liquid-glass-dense {
+    background: linear-gradient(180deg, rgb(19 26 46 / 0.94) 0%, rgb(19 26 46 / 0.9) 100%);
+    border-color: rgb(255 255 255 / 0.1);
+    box-shadow:
+        0 24px 70px -14px rgb(0 0 0 / 0.65),
+        inset 0 1px 0 rgb(255 255 255 / 0.08);
 }

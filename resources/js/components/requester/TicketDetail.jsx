@@ -96,8 +96,8 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onClose}>
-            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-panel-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="liquid-glass-dense w-full max-w-md overflow-hidden rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-5 py-4">
                     <div>
                         <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.detail.confirm_title')}</h2>
@@ -301,8 +301,8 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     const support = (ticket.people.support ?? [])[0];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4" onClick={onDismiss}>
-            <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-panel-2 p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onDismiss}>
+            <div className="liquid-glass w-full max-w-sm rounded-2xl p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 dark:bg-ok-soft text-emerald-600 dark:text-ok-text">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                 </span>

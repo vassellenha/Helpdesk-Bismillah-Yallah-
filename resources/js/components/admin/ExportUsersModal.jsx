@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
+import Modal, { ModalHeader, ModalFooter } from './Modal';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
 import { downloadFile } from '../../lib/download';
 import { t as trans } from '../../lib/i18n';
-import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
 const ALL_UNIT = '__all_unit';
 const ALL_JABATAN = '__all_jabatan';
 const ALL_ROLE = '__all_role';
 
 /**
- * Popup Ekspor Pengguna (CSV) — gaya visual sengaja beda dari modal lain di
- * app ini (lihat komentar `.liquid-glass` di app.css untuk alasannya).
+ * Popup Ekspor Pengguna (CSV) — bentuknya sama dengan modal lain lewat
+ * `Modal`/`ModalHeader`/`ModalFooter` bersama, varian `light` (kaca
+ * `.liquid-glass`, bukan `-dense`) karena isinya singkat: tiga filter dan
+ * satu angka pratinjau, bukan form panjang.
  *
  * Unit Kerja dan Jabatan SALING menyaring pilihan satu sama lain lewat
  * `filterOptionsUrl` — pilih satu, dan pilihan yang lain hanya menawarkan
@@ -21,8 +23,6 @@ const ALL_ROLE = '__all_role';
  * dijamin tidak pernah berbeda.
  */
 export default function ExportUsersModal({ onClose, listUrl, exportUrl, filterOptionsUrl, roles, unitOrganisasi, jabatanOptions }) {
-    useLockBodyScroll();
-
     const [unit, setUnit] = useState(ALL_UNIT);
     const [jabatan, setJabatan] = useState(ALL_JABATAN);
     const [role, setRole] = useState(ALL_ROLE);
@@ -112,76 +112,57 @@ export default function ExportUsersModal({ onClose, listUrl, exportUrl, filterOp
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
+        <Modal onClose={onClose} maxWidth="max-w-md" variant="light">
+            <ModalHeader title={trans('admin.users.export_title')} subtitle={trans('admin.users.export_subtitle')} onClose={onClose} />
 
-            <div
-                className="liquid-glass relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex items-start justify-between px-6 pb-1 pt-6">
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">{trans('admin.users.export_title')}</h2>
-                        <p className="mt-0.5 text-sm text-gray-600 dark:text-ink-2">{trans('admin.users.export_subtitle')}</p>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="liquid-glass-well rounded-full p-1.5 text-gray-500 dark:text-ink-2 hover:text-gray-800 dark:hover:text-ink-1"
-                        aria-label={trans('admin.common.close')}
-                    >
-                        ✕
-                    </button>
+            <div className="space-y-4 overflow-y-auto px-6 py-5">
+                {error && <p className="rounded-xl bg-red-50/90 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
+
+                <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
+                        {trans('admin.users.col_unit')}
+                    </label>
+                    <SelectMenu value={unit} onChange={setUnit} options={unitOptions} searchable />
                 </div>
 
-                <div className="space-y-4 overflow-y-auto px-6 py-5">
-                    {error && <p className="rounded-xl bg-red-50/90 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
-
-                    <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
-                            {trans('admin.users.col_unit')}
-                        </label>
-                        <SelectMenu value={unit} onChange={setUnit} options={unitOptions} searchable />
-                    </div>
-
-                    <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
-                            {trans('admin.users.col_jabatan')}
-                        </label>
-                        <SelectMenu value={jabatan} onChange={setJabatan} options={jabatanSelectOptions} searchable />
-                    </div>
-
-                    <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
-                            {trans('admin.users.col_role')}
-                        </label>
-                        <SelectMenu value={role} onChange={setRole} options={roleOptions} />
-                    </div>
-
-                    <p className="liquid-glass-well rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-ink-2">
-                        {counting
-                            ? trans('admin.users.export_counting')
-                            : count === null
-                                ? trans('admin.users.export_count_unknown')
-                                : trans('admin.users.export_count', { count })}
-                    </p>
+                <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
+                        {trans('admin.users.col_jabatan')}
+                    </label>
+                    <SelectMenu value={jabatan} onChange={setJabatan} options={jabatanSelectOptions} searchable />
                 </div>
 
-                <div className="flex justify-end gap-2 px-6 pb-6 pt-1">
-                    <button
-                        onClick={onClose}
-                        className="liquid-glass-well rounded-xl px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-white/50 dark:hover:bg-white/10"
-                    >
-                        {trans('admin.common.cancel')}
-                    </button>
-                    <button
-                        onClick={handleExport}
-                        disabled={downloading || count === 0}
-                        className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {downloading ? trans('admin.users.export_downloading') : trans('admin.users.export_action')}
-                    </button>
+                <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-ink-3">
+                        {trans('admin.users.col_role')}
+                    </label>
+                    <SelectMenu value={role} onChange={setRole} options={roleOptions} />
                 </div>
+
+                <p className="liquid-glass-well rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-ink-2">
+                    {counting
+                        ? trans('admin.users.export_counting')
+                        : count === null
+                            ? trans('admin.users.export_count_unknown')
+                            : trans('admin.users.export_count', { count })}
+                </p>
             </div>
-        </div>
+
+            <ModalFooter>
+                <button
+                    onClick={onClose}
+                    className="rounded-xl px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-panel-hover"
+                >
+                    {trans('admin.common.cancel')}
+                </button>
+                <button
+                    onClick={handleExport}
+                    disabled={downloading || count === 0}
+                    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {downloading ? trans('admin.users.export_downloading') : trans('admin.users.export_action')}
+                </button>
+            </ModalFooter>
+        </Modal>
     );
 }
