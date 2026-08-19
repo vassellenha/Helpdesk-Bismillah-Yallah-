@@ -36,47 +36,61 @@ return new class extends Migration
     /**
      * Isi ulang berdasarkan peran penerima PADA TIKET tersebut.
      *
-     * Dikerjakan dengan UPDATE ... FROM sederhana per kasus, bukan memuat
-     * seluruh baris ke PHP: tabel ini tumbuh seiring pemakaian dan migrasi
-     * harus tetap selesai di basis data produksi.
+     * Dikerjakan dua langkah — SELECT id dulu, baru UPDATE dengan daftar id
+     * biasa — bukan satu UPDATE ber-subquery ke tabel yang sedang ditulis.
+     * Pola subquery itu ditolak MySQL dengan error 1093 ("You can't specify
+     * target table for update in FROM clause"); MariaDB kebetulan
+     * memaafkannya, jadi migrasi yang lolos di mesin pengembang bisa gagal di
+     * server. Bentuk dua langkah ini berlaku di MySQL, MariaDB, PostgreSQL,
+     * maupun SQLite.
+     *
+     * Diproses per 500 id supaya klausa IN tidak membengkak pada instalasi
+     * yang notifikasinya sudah banyak.
      */
     private function backfill(): void
     {
         // 1. Penerima adalah requester tiketnya.
-        DB::table('ticket_notifications')
-            ->whereNull('role')
-            ->whereIn('id', fn ($q) => $q->select('n.id')
-                ->from('ticket_notifications as n')
-                ->join('tickets as t', 't.id', '=', 'n.ticket_id')
-                ->whereColumn('t.requester_id', 'n.user_id'))
-            ->update(['role' => 'requester']);
+        $this->assign('requester', fn ($q) => $q
+            ->join('tickets as t', 't.id', '=', 'n.ticket_id')
+            ->whereColumn('t.requester_id', 'n.user_id'));
 
         // 2. Penerima adalah approver tiketnya.
-        DB::table('ticket_notifications')
-            ->whereNull('role')
-            ->whereIn('id', fn ($q) => $q->select('n.id')
-                ->from('ticket_notifications as n')
-                ->join('tickets as t', 't.id', '=', 'n.ticket_id')
-                ->whereColumn('t.approver_id', 'n.user_id'))
-            ->update(['role' => 'approver']);
+        $this->assign('approver', fn ($q) => $q
+            ->join('tickets as t', 't.id', '=', 'n.ticket_id')
+            ->whereColumn('t.approver_id', 'n.user_id'));
 
         // 3. Penerima adalah PIC tiketnya — Support IT atau Support BPO,
         //    dibedakan oleh kolom `type` di support_agents.
         foreach (['it' => 'support', 'bpo' => 'support-bpo'] as $agentType => $roleKey) {
-            DB::table('ticket_notifications')
-                ->whereNull('role')
-                ->whereIn('id', fn ($q) => $q->select('n.id')
-                    ->from('ticket_notifications as n')
-                    ->join('tickets as t', 't.id', '=', 'n.ticket_id')
-                    ->join('support_agents as a', 'a.id', '=', 't.assigned_agent_id')
-                    ->whereColumn('a.user_id', 'n.user_id')
-                    ->where('a.type', $agentType))
-                ->update(['role' => $roleKey]);
+            $this->assign($roleKey, fn ($q) => $q
+                ->join('tickets as t', 't.id', '=', 'n.ticket_id')
+                ->join('support_agents as a', 'a.id', '=', 't.assigned_agent_id')
+                ->whereColumn('a.user_id', 'n.user_id')
+                ->where('a.type', $agentType));
+
         }
 
         // 4. Sisanya: notifikasi tanpa tiket (mis. teguran rating dari Team
         //    Lead) yang perannya tidak bisa disimpulkan dari data. Dibiarkan
         //    NULL — lihat catatan di atas.
+    }
+
+    /**
+     * Tandai baris yang cocok dengan $filter sebagai milik $role.
+     *
+     * @param  \Closure(\Illuminate\Database\Query\Builder):\Illuminate\Database\Query\Builder  $filter
+     */
+    private function assign(string $role, \Closure $filter): void
+    {
+        $ids = $filter(
+            DB::table('ticket_notifications as n')->whereNull('n.role')
+        )->pluck('n.id');
+
+        foreach ($ids->chunk(500) as $chunk) {
+            DB::table('ticket_notifications')
+                ->whereIn('id', $chunk->all())
+                ->update(['role' => $role]);
+        }
     }
 
     public function down(): void
