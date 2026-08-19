@@ -217,7 +217,7 @@ function PolicyDetailModal({ policy, onClose }) {
     useLockBodyScroll();
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onClose}>
-            <div className="liquid-glass w-full max-w-md overflow-hidden rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="liquid-glass-dense w-full max-w-md overflow-hidden rounded-2xl shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between border-b border-gray-100 dark:border-edge px-6 py-4">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900 dark:text-ink-1">{trans('admin.sla.detail_title')}</h2>

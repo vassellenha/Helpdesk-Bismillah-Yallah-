@@ -40,7 +40,7 @@ export default function NotificationBell({ notifications = [] }) {
             </button>
 
             {open && (
-                <div className="liquid-glass absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl shadow-lg">
+                <div className="liquid-glass-dense absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl shadow-lg">
                     <div className="flex items-center justify-between border-b border-gray-100 dark:border-edge px-4 py-3">
                         <p className="text-sm font-semibold text-gray-900 dark:text-ink-1">Notifikasi</p>
                         <span className="text-xs text-gray-400 dark:text-ink-3">{unreadCount} belum dibaca</span>

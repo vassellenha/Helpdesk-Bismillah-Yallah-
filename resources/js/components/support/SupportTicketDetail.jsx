@@ -75,7 +75,7 @@ function ConfirmModal({ action, ticketId, note, submitting, error, onCancel, onC
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onCancel}>
-            <div className="liquid-glass w-full max-w-md overflow-hidden rounded-2xl p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="liquid-glass-dense w-full max-w-md overflow-hidden rounded-2xl p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 dark:bg-warn-soft text-amber-600 dark:text-warn-text">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4 M12 17h.01 M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
@@ -124,7 +124,7 @@ function StartWorkModal({ ticketId, starting, error, onDismiss, onLater, onStart
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onDismiss}>
-            <div className="liquid-glass w-full max-w-sm rounded-2xl p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="liquid-glass-dense w-full max-w-sm rounded-2xl p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 dark:bg-accent-soft text-blue-600 dark:text-accent-text">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3 20 12 6 21Z" /></svg>
                 </span>

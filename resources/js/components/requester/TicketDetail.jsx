@@ -303,7 +303,7 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onDismiss}>
-            <div className="liquid-glass w-full max-w-sm rounded-2xl p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="liquid-glass-dense w-full max-w-sm rounded-2xl p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 dark:bg-ok-soft text-emerald-600 dark:text-ok-text">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                 </span>

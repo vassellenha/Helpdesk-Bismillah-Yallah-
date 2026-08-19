@@ -11,9 +11,9 @@ const ALL_ROLE = '__all_role';
 
 /**
  * Popup Ekspor Pengguna (CSV) — bentuknya sama dengan modal lain lewat
- * `Modal`/`ModalHeader`/`ModalFooter` bersama, varian `light` (kaca
- * `.liquid-glass`, bukan `-dense`) karena isinya singkat: tiga filter dan
- * satu angka pratinjau, bukan form panjang.
+ * `Modal`/`ModalHeader`/`ModalFooter` bersama. Memakai kaca `-dense` seperti
+ * seluruh popup lain: varian `light` terlalu tembus pandang di mode gelap
+ * (10% opacity) sehingga teks halaman di baliknya ikut terbaca.
  *
  * Unit Kerja dan Jabatan SALING menyaring pilihan satu sama lain lewat
  * `filterOptionsUrl` — pilih satu, dan pilihan yang lain hanya menawarkan
@@ -112,7 +112,7 @@ export default function ExportUsersModal({ onClose, listUrl, exportUrl, filterOp
     }
 
     return (
-        <Modal onClose={onClose} maxWidth="max-w-md" variant="light">
+        <Modal onClose={onClose} maxWidth="max-w-md">
             <ModalHeader title={trans('admin.users.export_title')} subtitle={trans('admin.users.export_subtitle')} onClose={onClose} />
 
             <div className="space-y-4 overflow-y-auto px-6 py-5">
