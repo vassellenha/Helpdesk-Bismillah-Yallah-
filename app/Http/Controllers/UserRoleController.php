@@ -98,12 +98,12 @@ class UserRoleController extends Controller
 
         return User::with('roles')
             ->when($search !== '', function ($query) use ($search) {
-                // Kolom yang sama dengan yang dulu dicari di sisi klien, plus NIP:
-                // dengan ribuan baris, NIP/NPP jadi cara tercepat menemukan satu
-                // orang, dan dulu tidak bisa karena pencariannya hanya melihat
-                // nama, email, dan unit.
+                // Kolom yang sama dengan yang dulu dicari di sisi klien, plus NIP
+                // dan jabatan: dengan ribuan baris, NIP/NPP jadi cara tercepat
+                // menemukan satu orang, dan jabatan (mis. "Manager") ditampilkan
+                // sebagai kolom sendiri di tabel tapi sebelumnya tidak ikut dicari.
                 $query->where(function ($q) use ($search) {
-                    foreach (['name', 'email', 'unit', 'nip'] as $column) {
+                    foreach (['name', 'email', 'unit', 'nip', 'jabatan'] as $column) {
                         $q->orWhere($column, 'like', '%'.$search.'%');
                     }
                 });
