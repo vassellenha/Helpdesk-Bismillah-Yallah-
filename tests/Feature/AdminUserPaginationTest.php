@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ActsAsRole;
 use Tests\TestCase;
 
 /**
@@ -20,14 +21,18 @@ use Tests\TestCase;
  */
 class AdminUserPaginationTest extends TestCase
 {
-    use RefreshDatabase;
+    use ActsAsRole, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // CurrentActor::admin() mencari persona ini; tanpanya layar Admin 404.
-        $this->persona('19870114001', 'Administrator');
+        // Layar Admin dijaga `auth` + `role:admin`. Tes ini ditulis saat
+        // CurrentActor::admin() masih mencari persona lewat NIP, jadi
+        // membuat barisnya saja sudah cukup. Sejak login diwajibkan
+        // (11 Agu 2026) request tanpa identitas ditolak sebelum menyentuh
+        // controller — 302 ke halaman masuk, atau 401 untuk permintaan JSON.
+        $this->persona('19870114001', 'admin');
     }
 
     public function test_halaman_pertama_dibatasi_25_baris_walau_datanya_ratusan(): void
@@ -132,7 +137,8 @@ class AdminUserPaginationTest extends TestCase
         $this->assertSame(1, $meta['last_page']);
     }
 
-    private function persona(string $nip, string $roleName): User
+    /** @param string $roleKey kunci role di config/helpdesk.php, bukan nama barisnya */
+    private function persona(string $nip, string $roleKey): User
     {
         $user = User::factory()->create([
             'nip' => $nip,
@@ -140,8 +146,6 @@ class AdminUserPaginationTest extends TestCase
             'helpdesk_access' => 'enabled',
         ]);
 
-        $user->roles()->attach(Role::firstOrCreate(['name' => $roleName])->id);
-
-        return $user;
+        return $this->actingAsUserWithRoles($user, $roleKey);
     }
 }
