@@ -10,9 +10,14 @@ const PRIORITY_PILL = {
     Low: 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2',
 };
 
-function StatCard({ s }) {
+function StatCard({ s, onClick }) {
+    const Tag = onClick ? 'button' : 'div';
     return (
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
+        <Tag
+            type={onClick ? 'button' : undefined}
+            onClick={onClick}
+            className={`flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 text-left shadow-sm ${onClick ? 'transition-shadow hover:shadow-md hover:border-blue-200 dark:hover:border-accent-text' : ''}`}
+        >
             <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-500 dark:text-ink-2">{s.label}</span>
                 <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${s.bg} ${s.fg}`}>
@@ -20,7 +25,7 @@ function StatCard({ s }) {
                 </span>
             </div>
             <div className="text-[28px] font-extrabold leading-none text-gray-900 dark:text-ink-1">{s.value.toLocaleString('id-ID')}</div>
-        </div>
+        </Tag>
     );
 }
 
@@ -319,7 +324,9 @@ export default function OperationalTab({ opStats = [], appTrend = {}, escalation
     return (
         <div className="flex flex-col gap-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-5">
-                {opStats.map((s) => <StatCard key={s.label} s={s} />)}
+                {opStats.map((s) => (
+                    <StatCard key={s.label} s={s} onClick={actions.viewMonitoring ? () => actions.viewMonitoring(s.statuses ?? [], s.label) : undefined} />
+                ))}
             </div>
 
             <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[0.85fr_1.6fr]">

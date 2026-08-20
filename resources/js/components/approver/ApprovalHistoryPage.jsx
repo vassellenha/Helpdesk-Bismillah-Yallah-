@@ -52,14 +52,48 @@ function statusMatches(status, filterKey) {
     return test ? test(status) : true;
 }
 
+// Dashboard metric cards link here with `?status=<key>` (matches
+// STATUS_BUCKET directly) or `?decision=approved|rejected&thisMonth=1`.
+// The decision-based cards ("Disetujui/Ditolak Bulan Ini") can't be
+// expressed as a status filter at all — an approved ticket can be sitting
+// at any downstream status (Open, In Progress, Resolved, ...), so this
+// checks the approver's own decision + its month instead, using the same
+// `decision`/`createdAt` (decision timestamp, not ticket creation) fields
+// `rows` already carries.
+function readIncomingFilter() {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    const decision = params.get('decision');
+    const thisMonth = params.get('thisMonth') === '1';
+    if (!status && !decision) return null;
+    return { status, decision, thisMonth, label: params.get('label') ?? '' };
+}
+
+function isThisMonth(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
 export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
-    const [activeStatus, setActiveStatus] = useState('Total');
+    const [incomingFilter, setIncomingFilter] = useState(readIncomingFilter);
+    const [activeStatus, setActiveStatus] = useState(() => readIncomingFilter()?.status ?? 'Total');
     const [search, setSearch] = useState('');
     const [layanan, setLayanan] = useState(ALL_SERVICE);
     const [periodDays, setPeriodDays] = useState(366);
     const [periodLabel, setPeriodLabel] = useState('this_year');
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
+
+    function clearIncomingFilter() {
+        setIncomingFilter(null);
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    function selectStatus(key) {
+        setActiveStatus(key);
+        if (incomingFilter) clearIncomingFilter();
+    }
 
     function toggleSort(key) {
         if (key === sortKey) {
@@ -81,7 +115,10 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
         const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000;
 
         const list = rows.filter((r) => {
-            if (!statusMatches(r.status, activeStatus)) return false;
+            if (incomingFilter?.decision) {
+                if (r.decision !== incomingFilter.decision) return false;
+                if (incomingFilter.thisMonth && !isThisMonth(r.createdAt)) return false;
+            } else if (!statusMatches(r.status, activeStatus)) return false;
             if (layanan !== ALL_SERVICE && r.layanan !== layanan) return false;
             if (new Date(r.createdAt).getTime() < cutoff) return false;
             if (search.trim() !== '') {
@@ -100,7 +137,7 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
         });
 
         return list;
-    }, [rows, activeStatus, layanan, periodDays, search, sortKey, sortDir]);
+    }, [rows, activeStatus, incomingFilter, layanan, periodDays, search, sortKey, sortDir]);
 
     return (
         <div className="flex flex-col gap-7">
@@ -113,8 +150,8 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
                 {CARDS.map((c) => (
                     <button
                         key={c.key}
-                        onClick={() => setActiveStatus(c.key)}
-                        className={`flex flex-col gap-2.5 rounded-2xl border bg-white dark:bg-panel-2 p-4 text-left shadow-sm transition ${activeStatus === c.key ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 dark:border-edge-strong hover:border-gray-300'}`}
+                        onClick={() => selectStatus(c.key)}
+                        className={`flex flex-col gap-2.5 rounded-2xl border bg-white dark:bg-panel-2 p-4 text-left shadow-sm transition ${!incomingFilter?.decision && activeStatus === c.key ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 dark:border-edge-strong hover:border-gray-300'}`}
                     >
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-400 dark:text-ink-3">{trans(c.labelKey)}</span>
@@ -126,6 +163,17 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
                     </button>
                 ))}
             </div>
+
+            {incomingFilter && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 dark:border-edge-strong bg-blue-50 dark:bg-accent-soft px-4 py-3 text-[13px]">
+                    <span className="font-semibold text-blue-800 dark:text-accent-text">
+                        Menampilkan tiket dari kartu dashboard{incomingFilter.label ? `: ${incomingFilter.label}` : ''}
+                    </span>
+                    <button type="button" onClick={clearIncomingFilter} className="font-bold text-blue-700 dark:text-accent-text hover:underline">
+                        Tampilkan semua
+                    </button>
+                </div>
+            )}
 
             <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-3 shadow-sm">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400 dark:text-ink-3"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -142,11 +190,11 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
                 <div className="flex flex-wrap gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-sm">
                     {STATUS_PILLS.map((p) => {
                         const key = p === 'Semua' ? 'Total' : p;
-                        const active = activeStatus === key;
+                        const active = !incomingFilter?.decision && activeStatus === key;
                         return (
                             <button
                                 key={p}
-                                onClick={() => setActiveStatus(key)}
+                                onClick={() => selectStatus(key)}
                                 className={`rounded-lg px-3.5 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 dark:bg-blue-500 text-white' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
                             >
                                 {p}

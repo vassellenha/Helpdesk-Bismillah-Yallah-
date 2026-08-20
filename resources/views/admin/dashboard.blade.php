@@ -4,11 +4,11 @@
 
 @php
     $stats = [
-        ['label' => 'TOTAL USER', 'value' => $totalUsers, 'icon' => 'users', 'bg' => 'bg-blue-50 dark:bg-accent-soft', 'color' => 'text-blue-600 dark:text-accent-text'],
-        ['label' => 'ROLE AKTIF', 'value' => $activeRoles, 'icon' => 'check', 'bg' => 'bg-emerald-50 dark:bg-ok-soft', 'color' => 'text-emerald-600 dark:text-ok-text'],
-        ['label' => 'SERVICE CATALOG', 'value' => $serviceCatalogCount, 'icon' => 'catalog', 'bg' => 'bg-amber-50 dark:bg-warn-soft', 'color' => 'text-amber-600 dark:text-warn-text'],
-        ['label' => 'SLA POLICY AKTIF', 'value' => $slaPolicyActiveCount, 'icon' => 'dot', 'bg' => 'bg-red-50 dark:bg-bad-soft', 'color' => 'text-red-600 dark:text-bad-text'],
-        ['label' => 'AUDIT LOG HARI INI', 'value' => $auditLogToday, 'icon' => 'doc', 'bg' => 'bg-gray-100 dark:bg-panel-3', 'color' => 'text-gray-600 dark:text-ink-2'],
+        ['label' => 'TOTAL USER', 'value' => $totalUsers, 'icon' => 'users', 'bg' => 'bg-blue-50 dark:bg-accent-soft', 'color' => 'text-blue-600 dark:text-accent-text', 'href' => route('admin.users')],
+        ['label' => 'ROLE AKTIF', 'value' => $activeRoles, 'icon' => 'check', 'bg' => 'bg-emerald-50 dark:bg-ok-soft', 'color' => 'text-emerald-600 dark:text-ok-text', 'href' => route('admin.users')],
+        ['label' => 'SERVICE CATALOG', 'value' => $serviceCatalogCount, 'icon' => 'catalog', 'bg' => 'bg-amber-50 dark:bg-warn-soft', 'color' => 'text-amber-600 dark:text-warn-text', 'href' => route('admin.service-catalog')],
+        ['label' => 'SLA POLICY AKTIF', 'value' => $slaPolicyActiveCount, 'icon' => 'dot', 'bg' => 'bg-red-50 dark:bg-bad-soft', 'color' => 'text-red-600 dark:text-bad-text', 'href' => route('admin.sla')],
+        ['label' => 'AUDIT LOG HARI INI', 'value' => $auditLogToday, 'icon' => 'doc', 'bg' => 'bg-gray-100 dark:bg-panel-3', 'color' => 'text-gray-600 dark:text-ink-2', 'href' => route('admin.audit-trail')],
     ];
 @endphp
 
@@ -17,13 +17,13 @@
 
 <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
     @foreach ($stats as $s)
-        <div class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
+        <a href="{{ $s['href'] }}" class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm transition-shadow hover:shadow-md hover:border-blue-200 dark:hover:border-accent-text">
             <span class="flex h-9 w-9 items-center justify-center rounded-lg {{ $s['bg'] }} {{ $s['color'] }}">
                 <span class="h-2.5 w-2.5 rounded-full bg-current"></span>
             </span>
             <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-ink-1">{{ number_format($s['value'], 0, ',', '.') }}</p>
             <p class="text-xs font-medium text-gray-400 dark:text-ink-3">{{ $s['label'] }}</p>
-        </div>
+        </a>
     @endforeach
 </div>
 

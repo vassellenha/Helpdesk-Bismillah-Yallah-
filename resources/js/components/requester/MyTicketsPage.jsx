@@ -96,9 +96,22 @@ function DeleteConfirmModal({ count, label, deleting, onCancel, onConfirm }) {
     );
 }
 
+// Dashboard stat cards link here with `?statuses=A,B&label=...` — a set of
+// exact statuses that doesn't always match one STATUS_PILLS bucket (e.g.
+// "Tiket Aktif" spans Waiting for Approval + Open + the whole In Progress
+// bucket at once). Read once on mount, not derived from `tab`, so it can
+// coexist with — and be cleared independently of — the pill filter below.
+function readIncomingFilter() {
+    const params = new URLSearchParams(window.location.search);
+    const statuses = params.get('statuses');
+    if (!statuses) return null;
+    return { statuses: statuses.split(',').filter(Boolean), label: params.get('label') ?? '' };
+}
+
 export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl, approversUrl, submitUrl }) {
     const [tickets, setTickets] = useState(initialTickets);
     const [tab, setTab] = useState('Semua');
+    const [incomingFilter, setIncomingFilter] = useState(readIncomingFilter);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState(ALL);
     const [service, setService] = useState(ALL);
@@ -111,6 +124,18 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteError, setDeleteError] = useState('');
+
+    function clearIncomingFilter() {
+        setIncomingFilter(null);
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    // Picking a pill by hand is the user overriding the dashboard's filter —
+    // it should win outright, not stack with it.
+    function selectTab(p) {
+        setTab(p);
+        if (incomingFilter) clearIncomingFilter();
+    }
 
     const bulkDeletable = BULK_DELETABLE.includes(tab);
 
@@ -149,7 +174,9 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
         const cutoff = Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
 
         const rows = tickets.filter((t) => {
-            if (!inTab(tab, t.status)) return false;
+            if (incomingFilter) {
+                if (!incomingFilter.statuses.includes(t.status)) return false;
+            } else if (!inTab(tab, t.status)) return false;
             if (category !== ALL && t.category !== category) return false;
             if (service !== ALL && t.service !== service) return false;
             if (subcategory !== ALL && t.subcategory !== subcategory) return false;
@@ -170,7 +197,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
             return sortDir === 'asc' ? cmp : -cmp;
         });
         return rows;
-    }, [tickets, tab, category, service, subcategory, priority, period, search, sortKey, sortDir]);
+    }, [tickets, tab, incomingFilter, category, service, subcategory, priority, period, search, sortKey, sortDir]);
 
     const allFilteredSelected = filtered.length > 0 && filtered.every((row) => selectedIds.has(row.id));
 
@@ -234,6 +261,17 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                 </button>
             )}
 
+            {incomingFilter && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 dark:border-edge-strong bg-blue-50 dark:bg-accent-soft px-4 py-3 text-[13px]">
+                    <span className="font-semibold text-blue-800 dark:text-accent-text">
+                        Menampilkan tiket dari kartu dashboard{incomingFilter.label ? `: ${incomingFilter.label}` : ''}
+                    </span>
+                    <button type="button" onClick={clearIncomingFilter} className="font-bold text-blue-700 dark:text-accent-text hover:underline">
+                        Tampilkan semua
+                    </button>
+                </div>
+            )}
+
             <div className="flex items-center gap-2 rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-3 shadow-sm">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-400 dark:text-ink-3"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
                 <input
@@ -248,11 +286,11 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-1.5 rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-1.5 shadow-sm">
                     {STATUS_PILLS.map((p) => {
-                        const active = tab === p;
+                        const active = !incomingFilter && tab === p;
                         return (
                             <button
                                 key={p}
-                                onClick={() => setTab(p)}
+                                onClick={() => selectTab(p)}
                                 className={`rounded-lg px-3.5 py-2 text-[13px] font-semibold ${active ? 'bg-blue-600 dark:bg-blue-500 text-white' : 'text-gray-600 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]'}`}
                             >
                                 {p}

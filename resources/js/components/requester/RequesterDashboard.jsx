@@ -14,9 +14,13 @@ const CARD_ICONS = {
     closed: 'M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z',
 };
 
-function StatCard({ label, value, hint, hintClass = 'text-gray-400 dark:text-ink-3', iconBg, iconColor, path }) {
+function StatCard({ label, value, hint, hintClass = 'text-gray-400 dark:text-ink-3', iconBg, iconColor, path, href }) {
+    const Tag = href ? 'a' : 'div';
     return (
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
+        <Tag
+            {...(href ? { href } : {})}
+            className={`flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm ${href ? 'transition-shadow hover:shadow-md hover:border-blue-200 dark:hover:border-accent-text' : ''}`}
+        >
             <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-400 dark:text-ink-3">{label}</span>
                 <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
@@ -25,8 +29,19 @@ function StatCard({ label, value, hint, hintClass = 'text-gray-400 dark:text-ink
             </div>
             <div className="text-[32px] font-extrabold leading-none text-gray-900 dark:text-ink-1">{value}</div>
             {hint && <div className={`text-[11px] ${hintClass}`}>{hint}</div>}
-        </div>
+        </Tag>
     );
+}
+
+// `statuses`/`label` become the `?statuses=...&label=...` query MyTicketsPage
+// reads to pre-filter itself. Built here instead of matching one of
+// MyTicketsPage's STATUS_PILLS because "Tiket Aktif" spans several of them at
+// once (it mirrors Ticket::ACTIVE_STATUSES, which also folds in "Waiting for
+// Approval" — the same overlap the dashboard counts already have).
+function cardHref(ticketsUrl, statuses, label) {
+    if (!ticketsUrl) return undefined;
+    const params = new URLSearchParams({ statuses: statuses.join(','), label });
+    return `${ticketsUrl}?${params.toString()}`;
 }
 
 export default function RequesterDashboard({ user = {}, stats, chart = [], periods = {}, slaDonut, slaRows = [], catalogUrl, approversUrl, submitUrl, ticketsUrl, evaDraft = null }) {
@@ -53,12 +68,14 @@ export default function RequesterDashboard({ user = {}, stats, chart = [], perio
                     value={stats.active.count}
                     hint={stats.active.breakdown}
                     iconBg="bg-blue-50 dark:bg-accent-soft" iconColor="text-blue-600 dark:text-accent-text" path={CARD_ICONS.active}
+                    href={cardHref(ticketsUrl, ['Waiting for Approval', 'Open', 'Assigned', 'In Progress', 'Waiting for Response'], trans('requester.dashboard.active_tickets'))}
                 />
                 <StatCard
                     label={trans('requester.dashboard.awaiting_approval')}
                     value={stats.awaitingApproval.count}
                     hint={stats.awaitingApproval.breakdown}
                     iconBg="bg-gray-100 dark:bg-panel-3" iconColor="text-gray-600 dark:text-ink-2" path={CARD_ICONS.awaitingApproval}
+                    href={cardHref(ticketsUrl, ['Waiting for Approval'], trans('requester.dashboard.awaiting_approval'))}
                 />
                 <StatCard
                     label={trans('requester.dashboard.needs_response')}
@@ -66,18 +83,21 @@ export default function RequesterDashboard({ user = {}, stats, chart = [], perio
                     hint={stats.needsResponse.count > 0 ? trans('requester.dashboard.hint_waiting_response') : trans('requester.dashboard.hint_all_caught_up')}
                     hintClass="font-semibold text-violet-600 dark:text-violet-text"
                     iconBg="bg-violet-50 dark:bg-violet-soft" iconColor="text-violet-700 dark:text-violet-text" path={CARD_ICONS.needsResponse}
+                    href={cardHref(ticketsUrl, ['Waiting for Response'], trans('requester.dashboard.needs_response'))}
                 />
                 <StatCard
                     label={trans('requester.dashboard.resolved')}
                     value={stats.resolved.count}
                     hint={trans('requester.dashboard.hint_awaiting_confirmation')}
                     iconBg="bg-emerald-50 dark:bg-ok-soft" iconColor="text-emerald-600 dark:text-ok-text" path={CARD_ICONS.resolved}
+                    href={cardHref(ticketsUrl, ['Resolved'], trans('requester.dashboard.resolved'))}
                 />
                 <StatCard
                     label={trans('requester.dashboard.closed')}
                     value={stats.closed.count}
                     hint={trans('requester.dashboard.hint_last_6_months')}
                     iconBg="bg-gray-100 dark:bg-panel-3" iconColor="text-gray-500 dark:text-ink-2" path={CARD_ICONS.closed}
+                    href={cardHref(ticketsUrl, ['Closed', 'Completed'], trans('requester.dashboard.closed'))}
                 />
             </div>
 

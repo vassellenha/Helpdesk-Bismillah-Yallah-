@@ -629,6 +629,7 @@ class SupportBpoController extends Controller
             'service' => $t->service_name ?? '—',
             'layanan' => $t->service_name ?? '—',
             'status' => $t->status,
+            'slaKind' => $t->sla_kind,
             'priority' => $t->priority,
             'requester' => $t->requester?->name ?? '—',
             'createdAt' => $t->created_at->toIso8601String(),

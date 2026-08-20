@@ -52,6 +52,10 @@ export default function TeamLeadWorkspace(props) {
     const [ticketOpen, setTicketOpen] = useState(null); // ticket id for the slide-over
     const [toast, setToast] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    // A stat card on Operational jumping to Monitoring pre-filtered — kept as
+    // workspace-level state (not a MonitoringTab-local default) since the
+    // click that sets it happens on a different tab entirely.
+    const [monitorFilter, setMonitorFilter] = useState(null); // { statuses, label }
 
     function flash(message) {
         setToast(message);
@@ -64,6 +68,11 @@ export default function TeamLeadWorkspace(props) {
         raise: (row, onSuccess) => setModal({ type: 'raise', row, onSuccess }),
         openTicket: (id) => setTicketOpen(id),
         refresh: () => refresh(),
+        viewMonitoring: (statuses, label) => {
+            setMonitorFilter(statuses.length > 0 ? { statuses, label } : null);
+            setActive('monitoring');
+        },
+        clearMonitorFilter: () => setMonitorFilter(null),
     };
 
     // Refetch the whole dashboard payload and swap it into state, so every
@@ -111,7 +120,7 @@ export default function TeamLeadWorkspace(props) {
 
     const title = trans(`teamlead.titles.${active}`);
     const subtitle = trans(`teamlead.titles.${active}_sub`);
-    const shared = { ...data, actions };
+    const shared = { ...data, actions, monitorFilter };
 
     return (
         <div className="flex min-h-screen flex-col">

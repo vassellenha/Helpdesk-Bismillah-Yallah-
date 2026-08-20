@@ -42,9 +42,13 @@ function options(list) {
 
 const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
-function StatCard({ label, value, icon, iconBg, iconColor }) {
+function StatCard({ label, value, icon, iconBg, iconColor, href }) {
+    const Tag = href ? 'a' : 'div';
     return (
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
+        <Tag
+            {...(href ? { href } : {})}
+            className={`flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm ${href ? 'transition-shadow hover:shadow-md hover:border-blue-200 dark:hover:border-accent-text' : ''}`}
+        >
             <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-400 dark:text-ink-3">{label}</span>
                 <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
@@ -52,8 +56,19 @@ function StatCard({ label, value, icon, iconBg, iconColor }) {
                 </span>
             </div>
             <div className="text-[28px] font-extrabold leading-none text-gray-900 dark:text-ink-1">{value}</div>
-        </div>
+        </Tag>
     );
+}
+
+// Mirrors SupportHistoryPage's CARDS keys (Total/Open/In Progress/Resolved/
+// Closed) for `status`, and its separate `slaRisk` overlay for the one card
+// that isn't a status bucket at all (SLA risk cuts across every status).
+function cardHref(ticketsUrl, { status, slaRisk }, label) {
+    if (!ticketsUrl) return undefined;
+    const params = new URLSearchParams({ label });
+    if (status) params.set('status', status);
+    if (slaRisk) params.set('slaRisk', '1');
+    return `${ticketsUrl}?${params.toString()}`;
 }
 
 function PriorityBarChart({ rows = [] }) {
@@ -130,7 +145,7 @@ function MyRatingBadge({ rating = {} }) {
     );
 }
 
-export default function SupportDashboard({ stats = {}, periods = {}, queue = [], myRating = {} }) {
+export default function SupportDashboard({ stats = {}, periods = {}, queue = [], myRating = {}, ticketsUrl }) {
     const [period, setPeriod] = useState('month');
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState(ALL);
@@ -188,24 +203,28 @@ export default function SupportDashboard({ stats = {}, periods = {}, queue = [],
                     value={stats.assignedToMe ?? 0}
                     icon="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z M14 5v14"
                     iconBg="bg-blue-50 dark:bg-accent-soft" iconColor="text-blue-600 dark:text-accent-text"
+                    href={cardHref(ticketsUrl, { status: 'Open' }, trans('support.dashboard.assigned_to_me'))}
                 />
                 <StatCard
                     label={trans('support.dashboard.in_progress')}
                     value={stats.inProgress ?? 0}
                     icon="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 7v5l3 3"
                     iconBg="bg-amber-50 dark:bg-warn-soft" iconColor="text-amber-600 dark:text-warn-text"
+                    href={cardHref(ticketsUrl, { status: 'In Progress' }, trans('support.dashboard.in_progress'))}
                 />
                 <StatCard
                     label={trans('support.dashboard.near_sla')}
                     value={stats.slaAtRisk ?? 0}
                     icon="M12 9v4 M12 17h.01 M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"
                     iconBg="bg-red-50 dark:bg-bad-soft" iconColor="text-red-600 dark:text-bad-text"
+                    href={cardHref(ticketsUrl, { slaRisk: true }, trans('support.dashboard.near_sla'))}
                 />
                 <StatCard
                     label={trans('support.dashboard.resolved')}
                     value={stats.resolvedThisMonth ?? 0}
                     icon="M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9"
                     iconBg="bg-emerald-50 dark:bg-ok-soft" iconColor="text-emerald-600 dark:text-ok-text"
+                    href={cardHref(ticketsUrl, { status: 'Resolved' }, trans('support.dashboard.resolved'))}
                 />
             </div>
 

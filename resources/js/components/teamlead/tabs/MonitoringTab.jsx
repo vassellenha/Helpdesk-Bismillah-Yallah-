@@ -37,7 +37,7 @@ function liveSla(slaMinutes, elapsedSec) {
     return { overdue: total < 0, text: total < 0 ? trans('teamlead.monitoring.overdue', { time: body }) : trans('teamlead.monitoring.remaining', { time: body }) };
 }
 
-export default function MonitoringTab({ monitorRows = [], monitorFilters = {}, actions = {}, remindUrlBase }) {
+export default function MonitoringTab({ monitorRows = [], monitorFilters = {}, actions = {}, remindUrlBase, monitorFilter = null }) {
     const [rows, setRows] = useState(monitorRows);
     const [query, setQuery] = useState('');
     const [sortNB, setSortNB] = useState(false);
@@ -60,6 +60,7 @@ export default function MonitoringTab({ monitorRows = [], monitorFilters = {}, a
 
     function resetFilters() {
         setF({ priority: ALL, status: ALL, type: ALL, subcat: ALL, app: ALL, unit: ALL, pic: ALL });
+        actions.clearMonitorFilter?.();
     }
 
     const elapsed = live ? Math.floor((Date.now() - mount.current) / 1000) : 0;
@@ -94,12 +95,13 @@ export default function MonitoringTab({ monitorRows = [], monitorFilters = {}, a
             if (f.app !== ALL && r.service !== f.app) return false;
             if (f.unit !== ALL && r.unit !== f.unit) return false;
             if (f.pic !== ALL && r.agent !== f.pic) return false;
+            if (monitorFilter && !monitorFilter.statuses.includes(r.status)) return false;
             if (q && !`${r.id} ${r.subject} ${r.service} ${r.agent}`.toLowerCase().includes(q)) return false;
             return true;
         });
         if (sortNB) out = [...out].sort((a, b) => (a.slaMinutes ?? 1e9) - (b.slaMinutes ?? 1e9));
         return out;
-    }, [rows, f, query, sortNB]);
+    }, [rows, f, monitorFilter, query, sortNB]);
 
     // Kembali ke halaman 1 setiap kali hasil filter berubah, biar tidak nyangkut di halaman kosong.
     useEffect(() => { setPage(1); }, [f, query, sortNB]);
@@ -111,10 +113,26 @@ export default function MonitoringTab({ monitorRows = [], monitorFilters = {}, a
     const endIdx = Math.min(safePage * PAGE_SIZE, filtered.length);
 
     function patch(id, fields) { setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...fields } : r))); }
-    const setFilter = (key, val) => setF((prev) => ({ ...prev, [key]: val }));
+    // Picking a filter by hand overrides the dashboard card's filter rather
+    // than stacking with it — same rule as every other list page here.
+    const setFilter = (key, val) => {
+        setF((prev) => ({ ...prev, [key]: val }));
+        if (monitorFilter) actions.clearMonitorFilter?.();
+    };
 
     return (
         <div className="flex flex-col gap-5">
+            {monitorFilter && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-blue-200 dark:border-edge-strong bg-blue-50 dark:bg-accent-soft px-5 py-3 text-[13px]">
+                    <span className="font-semibold text-blue-800 dark:text-accent-text">
+                        Menampilkan tiket dari kartu dashboard{monitorFilter.label ? `: ${monitorFilter.label}` : ''}
+                    </span>
+                    <button type="button" onClick={() => actions.clearMonitorFilter?.()} className="font-bold text-blue-700 dark:text-accent-text hover:underline">
+                        Tampilkan semua
+                    </button>
+                </div>
+            )}
+
             {warnTickets.length > 0 && warnOpen && (
                 <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-warn-soft px-5 py-4">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-panel-2 text-amber-600 dark:text-warn-text shadow-sm">

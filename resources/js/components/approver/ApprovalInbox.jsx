@@ -19,9 +19,13 @@ const COLUMNS = [
 
 const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
-function MetricCard({ label, value, icon, iconBg, iconColor }) {
+function MetricCard({ label, value, icon, iconBg, iconColor, href }) {
+    const Tag = href ? 'a' : 'div';
     return (
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm">
+        <Tag
+            {...(href ? { href } : {})}
+            className={`flex flex-col gap-2.5 rounded-2xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-4 shadow-sm ${href ? 'transition-shadow hover:shadow-md hover:border-blue-200 dark:hover:border-accent-text' : ''}`}
+        >
             <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-400 dark:text-ink-3">{label}</span>
                 <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
@@ -29,8 +33,19 @@ function MetricCard({ label, value, icon, iconBg, iconColor }) {
                 </span>
             </div>
             <div className="text-[28px] font-extrabold leading-none text-gray-900 dark:text-ink-1">{value}</div>
-        </div>
+        </Tag>
     );
+}
+
+// Mirrors ApprovalHistoryPage's STATUS_BUCKET keys for `status`. The two
+// "this month" cards aren't statuses at all — an approved ticket can be
+// sitting at any downstream status — so they carry `decision`+`thisMonth`
+// instead, which ApprovalHistoryPage matches against the approver's own
+// decision record rather than the ticket's current status.
+function cardHref(ticketsUrl, query, label) {
+    if (!ticketsUrl) return undefined;
+    const params = new URLSearchParams({ ...query, label });
+    return `${ticketsUrl}?${params.toString()}`;
 }
 
 function PriorityDistribution({ rows = [], total = 0, highlight = '', period = 'month' }) {
@@ -87,7 +102,7 @@ function DecisionTrendChart({ data = [], period = 'month' }) {
     );
 }
 
-export default function ApprovalInbox({ metrics, priorityDistribution = [], priorityTotal = 0, priorityHighlight = '', decisionTrend = [], periods = {}, pending = [] }) {
+export default function ApprovalInbox({ metrics, priorityDistribution = [], priorityTotal = 0, priorityHighlight = '', decisionTrend = [], periods = {}, pending = [], ticketsUrl }) {
     const [period, setPeriod] = useState('month');
     // Cadangan ke prop lama bila `periods` belum terkirim.
     const current = periods[period] ?? { priorityDistribution, priorityTotal, priorityHighlight, decisionTrend };
@@ -143,6 +158,7 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
                     value={metrics.waitingApproval}
                     icon="M9 12h6M9 16h6M9 8h6M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
                     iconBg="bg-blue-50 dark:bg-accent-soft" iconColor="text-blue-600 dark:text-accent-text"
+                    href={cardHref(ticketsUrl, { status: 'Waiting for Approval' }, trans('approver.inbox.stat_pending'))}
                 />
                 <MetricCard
                     label={trans('approver.inbox.stat_oldest')}
@@ -155,12 +171,14 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
                     value={metrics.approvedThisMonth}
                     icon="M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9"
                     iconBg="bg-emerald-50 dark:bg-ok-soft" iconColor="text-emerald-600 dark:text-ok-text"
+                    href={cardHref(ticketsUrl, { decision: 'approved', thisMonth: '1' }, trans('approver.inbox.stat_approved_month'))}
                 />
                 <MetricCard
                     label={trans('approver.inbox.stat_rejected_month')}
                     value={metrics.rejectedThisMonth}
                     icon="M4 10h16 M6 10V7a4 4 0 0 1 8 0v3 M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z"
                     iconBg="bg-gray-100 dark:bg-panel-3" iconColor="text-gray-500 dark:text-ink-2"
+                    href={cardHref(ticketsUrl, { decision: 'rejected', thisMonth: '1' }, trans('approver.inbox.stat_rejected_month'))}
                 />
             </div>
 

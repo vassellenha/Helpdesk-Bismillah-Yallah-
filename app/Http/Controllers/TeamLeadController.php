@@ -1177,14 +1177,19 @@ class TeamLeadController extends Controller
         ];
     }
 
+    /**
+     * `statuses` rides along per card so OperationalTab's stat cards can jump
+     * to Monitoring pre-filtered to the exact same set counted here, instead
+     * of the frontend re-guessing which statuses "In Progress"/"Closed" mean.
+     */
     private function opStats(Collection $tickets): array
     {
         return [
-            ['label' => __('teamlead.columns.total_tickets'), 'value' => $tickets->count(), 'icon' => self::I_TICKET, 'bg' => 'bg-blue-50', 'fg' => 'text-blue-600'],
-            ['label' => 'Open', 'value' => $tickets->where('status', 'Open')->count(), 'icon' => self::I_INBOX, 'bg' => 'bg-gray-100', 'fg' => 'text-gray-500'],
-            ['label' => 'Assigned', 'value' => $tickets->where('status', 'Assigned')->count(), 'icon' => self::I_USER, 'bg' => 'bg-sky-50', 'fg' => 'text-sky-600'],
-            ['label' => 'In Progress', 'value' => $tickets->whereIn('status', ['In Progress', 'Waiting for Response'])->count(), 'icon' => self::I_CLOCK, 'bg' => 'bg-amber-50', 'fg' => 'text-amber-600'],
-            ['label' => 'Closed', 'value' => $tickets->whereIn('status', Ticket::DONE_STATUSES)->count(), 'icon' => self::I_CHECK, 'bg' => 'bg-emerald-50', 'fg' => 'text-emerald-600'],
+            ['label' => __('teamlead.columns.total_tickets'), 'value' => $tickets->count(), 'icon' => self::I_TICKET, 'bg' => 'bg-blue-50', 'fg' => 'text-blue-600', 'statuses' => []],
+            ['label' => 'Open', 'value' => $tickets->where('status', 'Open')->count(), 'icon' => self::I_INBOX, 'bg' => 'bg-gray-100', 'fg' => 'text-gray-500', 'statuses' => ['Open']],
+            ['label' => 'Assigned', 'value' => $tickets->where('status', 'Assigned')->count(), 'icon' => self::I_USER, 'bg' => 'bg-sky-50', 'fg' => 'text-sky-600', 'statuses' => ['Assigned']],
+            ['label' => 'In Progress', 'value' => $tickets->whereIn('status', ['In Progress', 'Waiting for Response'])->count(), 'icon' => self::I_CLOCK, 'bg' => 'bg-amber-50', 'fg' => 'text-amber-600', 'statuses' => ['In Progress', 'Waiting for Response']],
+            ['label' => 'Closed', 'value' => $tickets->whereIn('status', Ticket::DONE_STATUSES)->count(), 'icon' => self::I_CHECK, 'bg' => 'bg-emerald-50', 'fg' => 'text-emerald-600', 'statuses' => Ticket::DONE_STATUSES],
         ];
     }
 

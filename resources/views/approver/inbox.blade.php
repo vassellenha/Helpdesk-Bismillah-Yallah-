@@ -13,6 +13,7 @@
         'decisionTrend' => $decisionTrend,
         'periods' => $periods,
         'pending' => $pending,
+        'ticketsUrl' => route('approver.tickets'),
     ]) }}"
 ></div>
 @endsection

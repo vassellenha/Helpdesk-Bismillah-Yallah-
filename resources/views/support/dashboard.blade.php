@@ -10,6 +10,7 @@
         'periods' => $periods,
         'queue' => $queue,
         'myRating' => $myRating,
+        'ticketsUrl' => route('support.tickets'),
     ]) }}"
 ></div>
 @endsection
