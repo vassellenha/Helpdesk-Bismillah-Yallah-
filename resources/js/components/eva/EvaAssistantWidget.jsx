@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import EvaMark from './EvaMark';
 import { EvaBubble, UserBubble, QUICK_QUESTIONS } from './widget/EvaChatMessages';
+import EvaSourceModal from './widget/EvaSourceModal';
 
 /*
  | Widget EVA — asisten mengambang di pojok kanan bawah portal.
@@ -31,6 +32,8 @@ export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
     const [conversationId, setConversationId] = useState(null);
     const [pending, setPending] = useState(false);
     const [error, setError] = useState(null);
+    // Materi rujukan yang sedang dibuka popup-nya. null = tidak ada popup.
+    const [openSource, setOpenSource] = useState(null);
     const scrollRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -199,6 +202,7 @@ export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
                                     onRate={(stars) => rate(message, stars)}
                                     onNote={(note) => attachNote(message, note)}
                                     onTicketDraft={() => requestTicketDraft(message)}
+                                    onOpenSource={endpoints.material ? setOpenSource : null}
                                 />
                             ),
                         )}
@@ -264,6 +268,14 @@ export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
                 */}
                 {open ? '✕' : <EvaMark size={56} />}
             </button>
+
+            {openSource && (
+                <EvaSourceModal
+                    hit={openSource}
+                    endpoint={endpoints.material}
+                    onClose={() => setOpenSource(null)}
+                />
+            )}
         </div>
     );
 }

@@ -21,10 +21,24 @@ final class SearchHit
         public readonly ?int $catalogSubjectId,
     ) {}
 
+    /**
+     * Kunci jenis yang dipakai layar: 'article' atau 'faq'.
+     *
+     * `source_type` berisi nama kelas PHP dan tetap begitu — kb_answer_logs
+     * menyimpannya apa adanya. Tapi klien tidak boleh memotong-motong nama
+     * kelas untuk tahu ia sedang memegang artikel atau FAQ; begitu namespace
+     * berubah, potongan itu diam-diam salah. Jadi jenisnya disebut terpisah.
+     */
+    public function type(): string
+    {
+        return $this->sourceType === \App\Models\Knowledge\Faq::class ? 'faq' : 'article';
+    }
+
     public function toArray(): array
     {
         return [
             'source_type' => $this->sourceType,
+            'type' => $this->type(),
             'source_id' => $this->sourceId,
             'title' => $this->title,
             'answer' => $this->answer,

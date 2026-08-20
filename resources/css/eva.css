@@ -854,6 +854,154 @@ html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
     color: var(--blue-ink);
 }
 
+/*
+   Judul sumber yang bisa ditekan.
+
+   Dirender sebagai <button>, jadi gaya bawaan peramban (border, font, warna
+   teks sistem) harus dilucuti dulu — tanpa itu chip biru berubah jadi tombol
+   abu-abu berbingkai yang tidak sama dengan versi tidak-bisa-ditekannya.
+
+   Garis bawah putus-putus yang menandainya bisa dibuka; menaikkan warna latar
+   saja tidak cukup karena chip ini memang sudah berlatar sejak awal.
+*/
+.eva-widget .eva-w-source-link {
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.eva-widget .eva-w-source-link:hover,
+.eva-widget .eva-w-source-link:focus-visible {
+    background: var(--blue-050-alt);
+    text-decoration-style: solid;
+}
+
+/* ---- Popup materi rujukan ------------------------------------------------
+   Sengaja TIDAK diruangkupkan di bawah `.eva-widget`: popup ini dipakai widget
+   mengambang di portal maupun EVA Preview di konsol, dan di Preview ia dirender
+   di luar pembungkus widget supaya tidak ikut terpotong panel percakapan.
+
+   z-index di atas 60 (peluncur widget) — popup harus menutupi tombolnya sendiri,
+   bukan muncul di belakangnya.
+*/
+.eva-src-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--overlay);
+}
+
+/*
+   Latarnya PEKAT (--surface), bukan tembus pandang. Popup berlatar transparan
+   di atas percakapan yang penuh teks membuat kedua lapis tulisan saling
+   bertindih dan tidak ada yang terbaca — dan di mode gelap efeknya paling
+   parah. Blur hanya diberikan pada lapisan overlay di atas, bukan di sini.
+*/
+.eva-src-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(560px, 100%);
+    max-height: min(78vh, 640px);
+    background: var(--surface);
+    /* Warna teks diwarisi dari halaman — EVA tidak punya token teks utama, dan
+       menciptakan satu di sini hanya untuk popup akan melenceng dari sisanya. */
+    color: inherit;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    box-shadow: 0 24px 60px var(--glass-shadow);
+    overflow: hidden;
+}
+
+.eva-src-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--glass-border);
+    background: var(--surface-muted);
+}
+
+.eva-src-kind {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue-ink);
+    margin-bottom: 3px;
+}
+
+.eva-src-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.eva-src-close {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    line-height: 1;
+    font-size: 20px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--slate-500);
+}
+
+.eva-src-close:hover,
+.eva-src-close:focus-visible {
+    background: var(--blue-050);
+    color: var(--blue-ink);
+}
+
+.eva-src-body {
+    padding: 16px 18px 20px;
+    overflow-y: auto;
+}
+
+.eva-src-subject {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--blue-ink);
+    background: var(--blue-050);
+    border-radius: 999px;
+    padding: 3px 9px;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+
+.eva-src-summary {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--slate-500);
+    margin: 0 0 12px;
+}
+
+/*
+   `pre-wrap` menjaga baris baru dan penomoran langkah yang ditulis admin —
+   panduan "Langkah 1 … Langkah 2" yang runtuh jadi satu paragraf kehilangan
+   justru hal yang membuatnya bisa diikuti.
+*/
+.eva-src-text {
+    font-size: 13.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.eva-src-muted { font-size: 12.5px; color: var(--slate-500); }
+.eva-src-error { font-size: 12.5px; color: var(--red-600); }
+
 .eva-widget .eva-w-muted { font-size: 11px; color: var(--slate-500); }
 .eva-widget .eva-w-error { font-size: 11px; color: var(--red-600); margin-top: 5px; }
 

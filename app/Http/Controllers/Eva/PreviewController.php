@@ -29,6 +29,11 @@ class PreviewController extends Controller
                 'rate' => route('eva.preview.rate'),
                 'note' => route('eva.preview.note'),
                 'ticketDraft' => route('eva.preview.ticket-draft'),
+                // Sengaja menunjuk rute widget, bukan kembaran di grup preview.
+                // Isi materi yang dibaca admin di sini HARUS sama persis dengan
+                // yang dibaca karyawan — Preview kehilangan gunanya begitu ia
+                // memperlihatkan sesuatu yang berbeda dari kenyataan.
+                'material' => route('eva.assistant.material', ['type' => '__type__', 'id' => '__id__']),
             ],
             'thresholds' => [
                 'min_confidence' => KnowledgeSearch::MIN_CONFIDENCE,

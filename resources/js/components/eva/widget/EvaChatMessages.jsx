@@ -47,7 +47,7 @@ export function UserBubble({ text }) {
  *                    AnswerBubble. Widget portal tidak mengirimnya, jadi
  *                    tampilannya di sana tidak berubah sedikit pun.
  */
-export function EvaBubble({ message, thresholds = null, onClarifyPick, onRate, onNote, onTicketDraft }) {
+export function EvaBubble({ message, thresholds = null, onClarifyPick, onRate, onNote, onTicketDraft, onOpenSource }) {
     if (message.type === 'ticket_draft') {
         return <TicketDraftBubble message={message} />;
     }
@@ -81,7 +81,15 @@ export function EvaBubble({ message, thresholds = null, onClarifyPick, onRate, o
         );
     }
 
-    return <AnswerBubble message={message} thresholds={thresholds} onRate={onRate} onNote={onNote} />;
+    return (
+        <AnswerBubble
+            message={message}
+            thresholds={thresholds}
+            onRate={onRate}
+            onNote={onNote}
+            onOpenSource={onOpenSource}
+        />
+    );
 }
 
 function TicketDraftBubble({ message }) {
@@ -138,7 +146,7 @@ function ClarifyBubble({ message, onPick }) {
  | antara kedua permukaan; sisanya wajib identik, karena Preview tidak ada
  | gunanya kalau ia memperlihatkan sesuatu yang berbeda dari yang dialami user.
 */
-function AnswerBubble({ message, thresholds, onRate, onNote }) {
+function AnswerBubble({ message, thresholds, onRate, onNote, onOpenSource }) {
     return (
         <div className="eva-w-bubble eva-w-bubble-eva eva-pop">
             {message.is_hedged && (
@@ -150,7 +158,27 @@ function AnswerBubble({ message, thresholds, onRate, onNote }) {
             <div className="eva-w-answer">{message.text}</div>
 
             <div className="eva-w-source">
-                <span className="eva-w-source-tag">{message.hit.title}</span>
+                {/*
+                  | Judul sumber adalah TOMBOL, bukan label — menekannya membuka
+                  | materi utuhnya. Tetap dirender sebagai <button> walau
+                  | tampilannya chip, supaya keyboard dan pembaca layar
+                  | memperlakukannya sebagai sesuatu yang bisa ditekan.
+                  |
+                  | Kalau pemasangnya tidak memberi onOpenSource, ia kembali jadi
+                  | label mati seperti dulu — bukan tombol yang diam saat ditekan.
+                */}
+                {onOpenSource ? (
+                    <button
+                        type="button"
+                        className="eva-w-source-tag eva-w-source-link"
+                        onClick={() => onOpenSource(message.hit)}
+                        title="Buka materi selengkapnya"
+                    >
+                        {message.hit.title}
+                    </button>
+                ) : (
+                    <span className="eva-w-source-tag">{message.hit.title}</span>
+                )}
                 {thresholds && (
                     <span className="eva-w-muted">
                         keyakinan {message.hit.confidence} (ambang {thresholds.min_confidence})

@@ -33,6 +33,11 @@ final class AssistantWidget
                 'rate' => route('eva.assistant.rate'),
                 'note' => route('eva.assistant.note'),
                 'ticketDraft' => route('eva.assistant.ticket-draft'),
+                // Alamat bercetakan: klien mengganti __type__ dan __id__ dengan
+                // milik materi yang diklik. Dibangun lewat route() supaya
+                // bentuk alamatnya tetap ditentukan satu tempat — daftar rute —
+                // bukan disusun ulang dengan tangan di dalam JavaScript.
+                'material' => route('eva.assistant.material', ['type' => '__type__', 'id' => '__id__']),
             ],
             'offsetBottom' => $offsetBottom,
         ];

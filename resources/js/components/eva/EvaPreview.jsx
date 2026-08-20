@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { PAGE, PageHeader, Card, ErrorBanner } from './ui';
 import { EvaBubble, UserBubble, QUICK_QUESTIONS } from './widget/EvaChatMessages';
+import EvaSourceModal from './widget/EvaSourceModal';
 
 /*
  | EVA Preview — mencoba EVA persis seperti yang dilihat user.
@@ -37,6 +38,8 @@ export default function EvaPreview({ endpoints, thresholds }) {
     const [conversationId, setConversationId] = useState(null);
     const [pending, setPending] = useState(false);
     const [error, setError] = useState(null);
+    // Materi rujukan yang sedang dibuka popup-nya. null = tidak ada popup.
+    const [openSource, setOpenSource] = useState(null);
     const scrollRef = useRef(null);
 
     useEffect(() => {
@@ -162,6 +165,7 @@ export default function EvaPreview({ endpoints, thresholds }) {
                                             onRate={(stars) => rate(message, stars)}
                                             onNote={(note) => attachNote(message, note)}
                                             onTicketDraft={() => requestTicketDraft(message)}
+                                            onOpenSource={endpoints.material ? setOpenSource : null}
                                         />
                                     ),
                                 )}
@@ -221,6 +225,14 @@ export default function EvaPreview({ endpoints, thresholds }) {
                     </p>
                 </Card>
             </div>
+
+            {openSource && (
+                <EvaSourceModal
+                    hit={openSource}
+                    endpoint={endpoints.material}
+                    onClose={() => setOpenSource(null)}
+                />
+            )}
         </div>
     );
 }

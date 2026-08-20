@@ -337,6 +337,22 @@ Route::prefix('assistant/api')->name('eva.assistant.')->middleware('auth')->grou
     Route::post('/ticket-draft', [EvaAssistantController::class, 'ticketDraft'])
         ->middleware('throttle:20,1')
         ->name('ticket-draft');
+
+    /*
+    | Isi utuh materi yang dikutip sebuah jawaban — dibaca popup rujukan.
+    |
+    | Satu pembacaan baris tunggal, jauh lebih murah daripada /ask, jadi
+    | throttle-nya dilonggarkan: membuka beberapa rujukan berturut-turut untuk
+    | membandingkan panduan adalah cara pakai yang wajar, bukan penyalahgunaan.
+    |
+    | {type} dibatasi di sini, bukan cuma di dalam MaterialLookup. Pola rutenya
+    | menolak segmen asing sebelum satu baris kode pun berjalan, jadi pemindai
+    | alamat tidak pernah menyentuh controller.
+    */
+    Route::get('/material/{type}/{id}', [EvaAssistantController::class, 'material'])
+        ->where(['type' => 'article|faq', 'id' => '[0-9]+'])
+        ->middleware('throttle:60,1')
+        ->name('material');
 });
 
 /*

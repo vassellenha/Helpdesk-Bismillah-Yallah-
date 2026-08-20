@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Eva;
 use App\Http\Controllers\Controller;
 use App\Services\Knowledge\EvaChat;
 use App\Support\CurrentActor;
+use App\Support\Eva\MaterialLookup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -38,6 +39,27 @@ final class AssistantController extends Controller
             $data['conversation_id'] ?? null,
             CurrentActor::requester(),
         ));
+    }
+
+    /**
+     * Isi utuh materi yang dikutip sebuah jawaban.
+     *
+     * Judul sumber di bawah jawaban selama ini teks mati: karyawan tahu
+     * panduannya bernama apa, tapi tidak punya jalan membacanya tanpa
+     * meninggalkan percakapan. Endpoint ini yang membukanya di tempat.
+     *
+     * Jenis dan nomor yang tidak lolos gerbang MaterialLookup dijawab 404 yang
+     * sama — tidak dibedakan antara "tidak ada" dan "ada tapi disembunyikan".
+     * Membedakannya akan memberi tahu penebak nomor bahwa materi itu memang
+     * ada, dan itu satu-satunya hal yang ingin diketahuinya.
+     */
+    public function material(string $type, int $id): JsonResponse
+    {
+        $material = MaterialLookup::find($type, $id);
+
+        abort_if($material === null, 404, 'Materi tidak ditemukan.');
+
+        return response()->json($material);
     }
 
     /**
