@@ -32,9 +32,12 @@ class EmployeeSync
     private const MAX_REPORTED_CHANGES = 25;
 
     /**
+     * @param  ?EmployeeDirectory  $directory  Overrides the configured driver — used to run the exact
+     *                                          same pipeline against a source other than the live API
+     *                                          (see CsvEmployeeDirectory, driven from the Import CSV button).
      * @return array{fetched:int,created:int,updated:int,unchanged:int,deactivated:int,kept_empty:int,kept_admin_override:int,changes:array<int,array{name:string,fields:array<int,string>}>,skipped:array<int,string>,dry_run:bool}
      */
-    public static function run(bool $dryRun = false): array
+    public static function run(bool $dryRun = false, ?EmployeeDirectory $directory = null): array
     {
         // A full company directory can take minutes to fetch and hash — well
         // past the default request time budget. CLI (the scheduled sync) is
@@ -50,7 +53,7 @@ class EmployeeSync
         $fallbackBy = $config['fallback_match_by'] ?? null;
         $overwriteWithEmpty = (bool) ($config['overwrite_with_empty'] ?? false);
 
-        $rows = self::directory()->fetch();
+        $rows = ($directory ?? self::directory())->fetch();
 
         $summary = [
             'fetched' => count($rows),

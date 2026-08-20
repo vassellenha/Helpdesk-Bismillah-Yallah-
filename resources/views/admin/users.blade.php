@@ -17,6 +17,7 @@
         'jabatanOptions' => $jabatanOptions,
         'exportUrl' => $exportUrl,
         'filterOptionsUrl' => $filterOptionsUrl,
+        'importUrl' => $importUrl,
     ]) }}"
 ></div>
 @endsection

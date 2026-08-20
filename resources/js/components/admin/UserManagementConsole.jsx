@@ -6,7 +6,7 @@ import ManageUserModal from './ManageUserModal';
 import ExportUsersModal from './ExportUsersModal';
 import RowActionMenu, { menuPositionFor } from '../RowActionMenu';
 import SelectMenu from '../SelectMenu';
-import { apiFetch } from '../../lib/api';
+import { apiFetch, uploadFile } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
 
 const ICON_EDIT = 'M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z';
@@ -18,6 +18,11 @@ const ICON_ACTIVATE = 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9';
 // ikon lain di toolbar ini (SVG stroke 2px, bukan glyph emoji).
 const ICON_ROLES = 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z';
 const ICON_EXPORT = 'M12 3v10 M7 9l5 5 5-5 M4 19h16';
+// Kebalikan Export secara visual (panah naik, bukan turun) — bukan sekadar
+// selera: "Import" berarti berkas masuk KE aplikasi, jadi arahnya harus
+// terbaca berlawanan dengan "Export" (berkas keluar) di ikon yang sama-sama
+// duduk berdampingan di toolbar ini.
+const ICON_IMPORT = 'M12 13V3 M7 8l5-5 5 5 M4 19h16';
 
 // Language-independent filter sentinels. A translated label here would be
 // compared against real status/role/unit values and match nothing.
@@ -25,7 +30,7 @@ const ALL_STATUS = '__all_status';
 const ALL_ROLE = '__all_role';
 const ALL_UNIT = '__all_unit';
 
-export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi, jabatanOptions, exportUrl, filterOptionsUrl }) {
+export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi, jabatanOptions, exportUrl, filterOptionsUrl, importUrl }) {
     const [users, setUsers] = useState(initialUsers);
     const [meta, setMeta] = useState(usersMeta);
     const [stats, setStats] = useState(userStats);
@@ -42,6 +47,11 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
     const [notice, setNotice] = useState('');
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null);
+    // 'api' | 'csv' — which action produced syncResult, so the banner can
+    // say "Sinkronisasi" or "Impor CSV" instead of always claiming the API.
+    const [syncKind, setSyncKind] = useState('api');
+    const [importing, setImporting] = useState(false);
+    const importInputRef = useRef(null);
 
     function openMenu(e, user) {
         if (menu?.user.id === user.id) {
@@ -159,11 +169,41 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
             setUsers(fresh);
             setMeta(freshMeta);
             setStats(freshStats);
+            setSyncKind('api');
             setSyncResult(summary);
         } catch (e) {
             setError(e.message || trans('admin.users.sync_failed'));
         } finally {
             setSyncing(false);
+        }
+    }
+
+    function pickImportFile() {
+        importInputRef.current?.click();
+    }
+
+    async function importCsv(e) {
+        const file = e.target.files?.[0];
+        // Cleared regardless of what happens next — otherwise picking the
+        // exact same file twice in a row (e.g. after fixing it) never fires
+        // onChange the second time, since the input's value never changed.
+        e.target.value = '';
+        if (!file) return;
+
+        setError('');
+        setSyncResult(null);
+        setImporting(true);
+        try {
+            const { summary, users: fresh, meta: freshMeta, stats: freshStats } = await uploadFile(importUrl, file);
+            setUsers(fresh);
+            setMeta(freshMeta);
+            setStats(freshStats);
+            setSyncKind('csv');
+            setSyncResult(summary);
+        } catch (err) {
+            setError(err.message || trans('admin.users.import_failed'));
+        } finally {
+            setImporting(false);
         }
     }
 
@@ -236,6 +276,22 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                         </svg>
                         {trans('admin.users.export')}
                     </button>
+                    {importUrl && (
+                        <>
+                            <input ref={importInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
+                            <button
+                                onClick={pickImportFile}
+                                disabled={importing}
+                                title={trans('admin.users.import_title')}
+                                className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                                    <path d={ICON_IMPORT} />
+                                </svg>
+                                {importing ? trans('admin.users.importing') : trans('admin.users.import')}
+                            </button>
+                        </>
+                    )}
                     <button onClick={() => setModal('addUser')} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
                         {trans('admin.users.add_user')}
                     </button>
@@ -261,7 +317,7 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                 <div className="mb-4 rounded-lg bg-emerald-50 dark:bg-ok-soft p-3 text-sm text-emerald-800 dark:text-ok-text">
                     <div className="flex items-start justify-between gap-3">
                         <p>
-                            <span className="font-semibold">{trans('admin.users.sync_done')}</span>{' '}
+                            <span className="font-semibold">{trans(syncKind === 'csv' ? 'admin.users.import_done' : 'admin.users.sync_done')}</span>{' '}
                             {syncResult.fetched} data diterima — {syncResult.created} dibuat, {syncResult.updated} diperbarui,{' '}
                             {syncResult.unchanged} tidak berubah
                             {syncResult.deactivated > 0 && <>, {syncResult.deactivated} dinonaktifkan</>}

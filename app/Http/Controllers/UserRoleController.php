@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\AuditDescriber;
 use App\Support\CurrentActor;
 use App\Support\DummyData;
+use App\Support\EmployeeDirectory\CsvEmployeeDirectory;
 use App\Support\EmployeeSync;
 use App\Support\SupportAgentSync;
 use Illuminate\Database\Eloquent\Builder;
@@ -70,6 +71,13 @@ class UserRoleController extends Controller
             'jabatanOptions' => $this->jabatanOptions(),
             'exportUrl' => route('admin.users.export'),
             'filterOptionsUrl' => route('admin.users.filter-options'),
+            // Import User (CSV) exists to patch a *local dev* gap — real
+            // environments already stay fresh via employees:sync against the
+            // live API, and a raw "upload a CSV, bulk-edit thousands of
+            // accounts" button has no legitimate use there. Hidden outside
+            // local; importCsv() below refuses the request either way, so
+            // this is convenience, not the actual guard.
+            'importUrl' => app()->environment('local') ? route('admin.users.import') : null,
         ]);
     }
 
@@ -322,6 +330,43 @@ class UserRoleController extends Controller
         if ($summary['fetched'] === 0) {
             return response()->json([
                 'message' => 'Tidak ada data pegawai yang diterima dari sumber. Cek konfigurasi integrasi atau log aplikasi.',
+            ], 422);
+        }
+
+        $page = $this->paginateUsers($request);
+
+        return response()->json([
+            'summary' => $summary,
+            'users' => collect($page->items())->map($this->presentUser(...)),
+            'meta' => $this->pageMeta($page),
+            'stats' => $this->userStats(),
+        ]);
+    }
+
+    /**
+     * Push edits made outside the app — a CSV pulled from another
+     * environment, a spreadsheet reconciliation — through the exact same
+     * pipeline as "Sinkronkan Data Pegawai": mapping, matching by NIP,
+     * admin-override protection, its own audit row. Same response shape as
+     * syncEmployees() so the console repaints with one shared summary panel.
+     *
+     * The uploaded file must be the CSV this same screen's own Export button
+     * produces (see export() below) — that symmetry is what lets
+     * CsvEmployeeDirectory read it with no separate template to keep in sync.
+     */
+    public function importCsv(Request $request): JsonResponse
+    {
+        abort_unless(app()->environment('local'), 404);
+
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:10240',
+        ]);
+
+        $summary = EmployeeSync::run(false, new CsvEmployeeDirectory($request->file('file')->getRealPath()));
+
+        if ($summary['fetched'] === 0) {
+            return response()->json([
+                'message' => 'Tidak ada baris yang bisa diimpor — pastikan berkasnya adalah hasil Export dari layar ini dan kolom NPP-nya terisi.',
             ], 422);
         }
 

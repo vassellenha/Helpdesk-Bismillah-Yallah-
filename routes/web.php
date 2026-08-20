@@ -200,6 +200,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::prefix('users')->name('users.')->group(function () {
         // Declared before the /{user} routes so "sync"/"list"/"export" is never read as an id.
         Route::post('/sync', [UserRoleController::class, 'syncEmployees'])->name('sync');
+        Route::post('/import', [UserRoleController::class, 'importCsv'])->name('import');
         Route::get('/list', [UserRoleController::class, 'list'])->name('list');
         Route::get('/export', [UserRoleController::class, 'export'])->name('export');
         Route::get('/filter-options', [UserRoleController::class, 'filterOptions'])->name('filter-options');
