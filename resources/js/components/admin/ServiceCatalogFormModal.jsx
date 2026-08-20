@@ -152,6 +152,7 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
                     {showBpoField && (
                         <Field label={trans('admin.catalog.support_bpo')}>
                             <SelectMenu
+                                searchable
                                 value={String(form.support_agent_id ?? '')}
                                 onChange={(v) => set('support_agent_id', v)}
                                 options={[{ value: '', label: 'Pilih...' }, ...bpoAgents.map((a) => ({ value: String(a.id), label: a.name }))]}
@@ -161,6 +162,7 @@ export default function ServiceCatalogFormModal({ subject, supportAgents, onClos
                     {showItField && (
                         <Field label={trans('admin.catalog.support_it')}>
                             <SelectMenu
+                                searchable
                                 value={String(form.it_agent_id ?? '')}
                                 onChange={(v) => set('it_agent_id', v)}
                                 options={[{ value: '', label: 'Pilih...' }, ...itAgents.map((a) => ({ value: String(a.id), label: a.name }))]}

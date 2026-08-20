@@ -289,6 +289,19 @@ class SupportBpoController extends Controller
         abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
 
+        // Level ditentukan oleh Subjek-nya di service catalog: Level 2 berarti
+        // BPO dan IT menangani berurutan (BPO boleh lempar ke IT), Level 1
+        // berarti BPO-only — tidak ada IT yang seharusnya menerimanya, jadi
+        // eskalasi ditolak di sini alih-alih jatuh ke "agent IT aktif mana
+        // pun" seperti sebelumnya. Tiket "Lainnya" (catalog_subject_id null,
+        // tidak ada Level) tidak kena aturan ini — jalur broadcast di bawah
+        // tetap berlaku untuknya.
+        abort_if(
+            $ticket->catalogSubject && (int) $ticket->catalogSubject->support_level === 1,
+            422,
+            'Subjek tiket ini Level 1 (ditangani Support BPO saja) dan tidak bisa dieskalasikan ke Support IT.'
+        );
+
         TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
 
         $data = $request->validate(['note' => 'required|string|max:3000']);
@@ -331,11 +344,12 @@ class SupportBpoController extends Controller
         }
 
         /*
-         | Subject-nya ada tapi Level 1 (BPO-only, tidak punya it_agent_id) —
-         | kasus tepi yang jarang: bukan "Lainnya" jadi tidak ikut broadcast
-         | (TicketBroadcast::eligiblePics() mensyaratkan catalog_subject_id
-         | null), tapi juga tidak ada satu IT tujuan yang jelas. Jatuh ke
-         | agent IT aktif mana pun, diurutkan oleh id supaya deterministik.
+         | Kalau sampai sini, Subject-nya Level 2 (Level 1 sudah ditolak di
+         | atas) tapi it_agent_id-nya kosong — data katalog lama yang belum
+         | lengkap PIC IT-nya (assertPicAssigned() mencegah ini untuk data
+         | baru, tapi baris lama bisa saja belum dibereskan). Jatuh ke agent
+         | IT aktif mana pun, diurutkan oleh id supaya deterministik, alih-
+         | alih tiket macet tanpa penerima.
          */
         $itAgent = $subjectItAgent
             ?? SupportAgent::where('type', 'it')->where('is_active', true)->orderBy('id')->first();
@@ -669,6 +683,10 @@ class SupportBpoController extends Controller
                 'support' => TicketPeople::supportAgents($t),
             ],
             'canAct' => ! in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Waiting for Approval'], true),
+            // Subject Level 1 = BPO-only, tidak ada IT yang boleh menerima —
+            // tombol Eskalasi disembunyikan di frontend. Tiket "Lainnya" (tanpa
+            // catalogSubject) tidak kena aturan Level ini, tetap boleh eskalasi.
+            'canEscalate' => ! ($t->catalogSubject && (int) $t->catalogSubject->support_level === 1),
             'escalated' => $t->escalated_at !== null,
             'escalatedAt' => $t->escalated_at?->translatedFormat('j M Y · H:i'),
             'escalationNote' => $t->escalation_note,
