@@ -72,6 +72,7 @@ class UserRoleController extends Controller
             'jabatanOptions' => $this->jabatanOptions(),
             'exportUrl' => route('admin.users.export'),
             'filterOptionsUrl' => route('admin.users.filter-options'),
+            'lastSyncAt' => $this->lastSyncAt(),
             // Import User (CSV) exists to patch a *local dev* gap — real
             // environments already stay fresh via employees:sync against the
             // live API, and a raw "upload a CSV, bulk-edit thousands of
@@ -341,7 +342,25 @@ class UserRoleController extends Controller
             'users' => collect($page->items())->map($this->presentUser(...)),
             'meta' => $this->pageMeta($page),
             'stats' => $this->userStats(),
+            'lastSyncAt' => $this->lastSyncAt(),
         ]);
+    }
+
+    /**
+     * When employee data was last actually synced — manual button, CSV
+     * import, or the nightly `employees:sync` schedule all write the same
+     * audit row (see EmployeeSync::recordAudit(), skipped only for dry
+     * runs), so this one query answers "is my data current?" regardless of
+     * which one ran it.
+     */
+    private function lastSyncAt(): ?string
+    {
+        $audit = AuditTrail::where('module', 'integration')
+            ->where('action', 'sync')
+            ->latest('id')
+            ->first();
+
+        return $audit?->created_at->translatedFormat('j M Y · H:i');
     }
 
     /**
@@ -378,6 +397,7 @@ class UserRoleController extends Controller
             'users' => collect($page->items())->map($this->presentUser(...)),
             'meta' => $this->pageMeta($page),
             'stats' => $this->userStats(),
+            'lastSyncAt' => $this->lastSyncAt(),
         ]);
     }
 

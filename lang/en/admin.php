@@ -101,6 +101,7 @@ return [
         'sync_done' => 'Sync complete.',
         'sync_failed' => 'Employee data sync failed.',
         'sync_audit_note' => 'Recorded in the Audit Trail — “Integrations” module.',
+        'last_sync' => 'Last sync: :at',
         'import' => 'Import User',
         'importing' => 'Importing…',
         'import_title' => 'Import users from a CSV file exported from this screen',

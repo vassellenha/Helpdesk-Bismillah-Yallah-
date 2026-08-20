@@ -299,7 +299,12 @@ function ResolutionNoteBanner({ resolutionNote }) {
 
 function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     useLockBodyScroll();
-    const support = (ticket.people.support ?? [])[0];
+    // `people.pic` is whoever actually holds the ticket right now — NOT
+    // `people.support[0]`, which leads with the catalog Subject's configured
+    // routing agent (e.g. the original BPO PIC) even after the ticket moved
+    // on to someone else entirely, which is what misattributed a Support IT
+    // resolution to the Subject's default BPO agent.
+    const support = ticket.people?.pic;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={onDismiss}>

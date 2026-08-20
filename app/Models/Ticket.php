@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $feedback_note
  * @property Carbon|null $escalated_at
  * @property string|null $escalation_note
+ * @property int|null $escalated_by_agent_id
  * @property string|null $reopen_note
  * @property Carbon|null $reopen_at
  * @property Carbon $created_at
@@ -92,7 +93,7 @@ class Ticket extends Model
         'response_due_at', 'resolution_due_at', 'warning_at',
         'sla_started_at', 'first_response_at', 'sla_extension_minutes',
         'status', 'is_draft', 'resolved_at', 'satisfaction_rating', 'rating_active', 'feedback_note',
-        'escalated_at', 'escalation_note',
+        'escalated_at', 'escalation_note', 'escalated_by_agent_id',
         'reopen_note', 'reopen_at',
     ];
 
@@ -133,6 +134,15 @@ class Ticket extends Model
     public function assignedAgent()
     {
         return $this->belongsTo(SupportAgent::class, 'assigned_agent_id');
+    }
+
+    // The BPO agent who escalated this ticket to IT — kept separately from
+    // assignedAgent() because escalate() overwrites assigned_agent_id with
+    // the IT agent, and this is how that BPO agent keeps read/comment access
+    // to a ticket that's no longer theirs to act on. See SupportBpoController.
+    public function escalatedByAgent()
+    {
+        return $this->belongsTo(SupportAgent::class, 'escalated_by_agent_id');
     }
 
     public function catalogService()

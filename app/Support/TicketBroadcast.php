@@ -192,6 +192,7 @@ class TicketBroadcast
             'status' => 'Open',
             'escalated_at' => now(),
             'escalation_note' => $note,
+            'escalated_by_agent_id' => $bpoAgent->id,
         ]);
 
         AuditTrail::record($bpoUser, [

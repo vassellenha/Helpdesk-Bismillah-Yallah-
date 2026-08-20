@@ -18,6 +18,7 @@
         'exportUrl' => $exportUrl,
         'filterOptionsUrl' => $filterOptionsUrl,
         'importUrl' => $importUrl,
+        'lastSyncAt' => $lastSyncAt,
     ]) }}"
 ></div>
 @endsection

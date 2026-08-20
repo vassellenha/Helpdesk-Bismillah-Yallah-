@@ -106,6 +106,7 @@ return [
         'sync_done' => 'Sinkronisasi selesai.',
         'sync_failed' => 'Sinkronisasi data pegawai gagal.',
         'sync_audit_note' => 'Tercatat di Audit Trail — modul “Integrasi”.',
+        'last_sync' => 'Terakhir sync: :at',
         'import' => 'Import User',
         'importing' => 'Mengimpor…',
         'import_title' => 'Impor pengguna dari berkas CSV hasil Export di layar ini',

@@ -90,7 +90,7 @@ class SupportBpoController extends Controller
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
 
-        $tickets = $this->visibleTicketsQuery($agent)
+        $tickets = $this->visibleTicketsQuery($agent, includeEscalatedAway: true)
             ->whereNotIn('status', Ticket::NOT_YET_RELEASED_STATUSES)
             ->with('requester')->latest('created_at')->get();
 
@@ -115,7 +115,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
+        abort_unless($this->canView($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
 
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
@@ -124,7 +124,7 @@ class SupportBpoController extends Controller
             'role' => 'support-bpo',
             'currentUser' => $this->currentUserPayload($bpoUser),
             'notifications' => $this->notifications($bpoUser),
-            'ticket' => $this->presentTicket($ticket),
+            'ticket' => $this->presentTicket($ticket, $agent),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
@@ -147,24 +147,36 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
+        abort_unless($this->canView($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
 
         $ticket->load(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return response()->json([
-            'ticket' => $this->presentTicket($ticket),
+            'ticket' => $this->presentTicket($ticket, $agent),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
             'timeline' => TicketTimeline::steps($ticket),
             'flow' => TicketFlow::stages($ticket),
         ]);
     }
 
+    /**
+     * A BPO agent who escalated this ticket to IT can still open it and
+     * chat in the discussion thread — but not start/resolve/escalate/return
+     * it, so those actions stay gated on the stricter TicketBroadcast::canAct()
+     * alone. Mirrors the includeEscalatedAway option on visibleTicketsQuery(),
+     * which is what keeps the ticket listed for them in the first place.
+     */
+    private function canView(Ticket $ticket, SupportAgent $agent): bool
+    {
+        return TicketBroadcast::canAct($ticket, $agent) || $ticket->escalated_by_agent_id === $agent->id;
+    }
+
     public function addComment(Request $request, Ticket $ticket): JsonResponse
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
+        abort_unless($this->canView($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
@@ -360,6 +372,7 @@ class SupportBpoController extends Controller
             'assigned_agent_id' => $itAgent->id,
             'escalated_at' => Carbon::now(),
             'escalation_note' => $data['note'],
+            'escalated_by_agent_id' => $agent->id,
         ]);
 
         // Support IT starts this case from scratch, so the resolution clock is
@@ -514,12 +527,25 @@ class SupportBpoController extends Controller
      * giliran mereka — padahal giliran BPO sudah selesai, dan tiket yang
      * sama muncul di dua portal sekaligus.
      */
-    private function visibleTicketsQuery(SupportAgent $agent)
+    /**
+     * `$includeEscalatedAway` is off by default: dashboard()'s stats/queue
+     * (assignedToMe, slaAtRisk, myRating, ...) mean "work that's still mine
+     * right now" — a ticket handed off to IT isn't that anymore (broadcast
+     * escalations even reset to status 'Open' with no assigned_agent_id,
+     * which would otherwise wrongly count as "assigned to me"/at-risk-for-me
+     * again). myTickets() (the History list) opts in, since that page is a
+     * record of everything this agent has touched, not an action queue.
+     */
+    private function visibleTicketsQuery(SupportAgent $agent, bool $includeEscalatedAway = false)
     {
         $broadcastServiceIds = $agent->bpoServiceIds();
 
-        return Ticket::where(function ($q) use ($agent, $broadcastServiceIds) {
+        return Ticket::where(function ($q) use ($agent, $broadcastServiceIds, $includeEscalatedAway) {
             $q->where('assigned_agent_id', $agent->id);
+
+            if ($includeEscalatedAway) {
+                $q->orWhere('escalated_by_agent_id', $agent->id);
+            }
 
             if ($broadcastServiceIds->isNotEmpty()) {
                 $q->orWhere(function ($q2) use ($broadcastServiceIds) {
@@ -647,7 +673,7 @@ class SupportBpoController extends Controller
      * menyatakan dua hal yang bertentangan, dan PIC BPO mengira tiket yang
      * masih bebas sudah menjadi miliknya.
      */
-    private function presentTicket(Ticket $t): array
+    private function presentTicket(Ticket $t, SupportAgent $agent): array
     {
 
         $isDone = in_array($t->status, Ticket::DONE_STATUSES, true);
@@ -684,6 +710,12 @@ class SupportBpoController extends Controller
                 'support' => TicketPeople::supportAgents($t),
             ],
             'canAct' => ! in_array($t->status, ['Resolved', 'Completed', 'Closed', 'Rejected', 'Waiting for Approval'], true),
+            // Distinct from `canAct` above, which is purely about ticket
+            // status: this is about the VIEWER — a BPO agent who escalated
+            // this ticket can open it and comment (canView() in show()/
+            // data()/addComment() allows that), but no longer owns it, so
+            // the frontend hides start/resolve/escalate/return here.
+            'canManage' => TicketBroadcast::canAct($t, $agent),
             // Subject Level 1 = BPO-only, tidak ada IT yang boleh menerima —
             // tombol Eskalasi disembunyikan di frontend. Tiket "Lainnya" (tanpa
             // catalogSubject) tidak kena aturan Level ini, tetap boleh eskalasi.

@@ -30,10 +30,11 @@ const ALL_STATUS = '__all_status';
 const ALL_ROLE = '__all_role';
 const ALL_UNIT = '__all_unit';
 
-export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi, jabatanOptions, exportUrl, filterOptionsUrl, importUrl }) {
+export default function UserManagementConsole({ users: initialUsers, usersMeta, userStats, listUrl, roles: initialRoles, permissionModules, permissionActions, unitOrganisasi, jabatanOptions, exportUrl, filterOptionsUrl, importUrl, lastSyncAt: initialLastSyncAt = null }) {
     const [users, setUsers] = useState(initialUsers);
     const [meta, setMeta] = useState(usersMeta);
     const [stats, setStats] = useState(userStats);
+    const [lastSyncAt, setLastSyncAt] = useState(initialLastSyncAt);
     const [loading, setLoading] = useState(false);
     const [roles, setRoles] = useState(initialRoles);
     const [search, setSearch] = useState('');
@@ -165,12 +166,13 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
         setSyncResult(null);
         setSyncing(true);
         try {
-            const { summary, users: fresh, meta: freshMeta, stats: freshStats } = await apiFetch('/admin/users/sync', { method: 'POST' });
+            const { summary, users: fresh, meta: freshMeta, stats: freshStats, lastSyncAt: freshSyncAt } = await apiFetch('/admin/users/sync', { method: 'POST' });
             setUsers(fresh);
             setMeta(freshMeta);
             setStats(freshStats);
             setSyncKind('api');
             setSyncResult(summary);
+            setLastSyncAt(freshSyncAt);
         } catch (e) {
             setError(e.message || trans('admin.users.sync_failed'));
         } finally {
@@ -194,12 +196,13 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
         setSyncResult(null);
         setImporting(true);
         try {
-            const { summary, users: fresh, meta: freshMeta, stats: freshStats } = await uploadFile(importUrl, file);
+            const { summary, users: fresh, meta: freshMeta, stats: freshStats, lastSyncAt: freshSyncAt } = await uploadFile(importUrl, file);
             setUsers(fresh);
             setMeta(freshMeta);
             setStats(freshStats);
             setSyncKind('csv');
             setSyncResult(summary);
+            setLastSyncAt(freshSyncAt);
         } catch (err) {
             setError(err.message || trans('admin.users.import_failed'));
         } finally {
@@ -264,6 +267,11 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                         </svg>
                         {syncing ? trans('admin.users.syncing') : trans('admin.users.sync')}
                     </button>
+                    {lastSyncAt && (
+                        <span className="flex items-center px-1 text-xs text-gray-400 dark:text-ink-3">
+                            {trans('admin.users.last_sync', { at: lastSyncAt })}
+                        </span>
+                    )}
                     <button onClick={() => setModal('role')} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
                             <path d={ICON_ROLES} />

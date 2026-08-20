@@ -269,6 +269,13 @@ class TicketDetailController extends Controller
             'people' => [
                 'requester' => $t->requester ? ['name' => $t->requester->name, 'role' => 'Requester', 'email' => $t->requester->email] : null,
                 'approver' => $t->approver ? ['name' => $t->approver->name, 'role' => 'Approver · '.$t->approver->jabatan, 'email' => $t->approver->email] : null,
+                // The agent who actually holds/resolved the ticket right now —
+                // NOT necessarily `support[0]` below, which leads with the
+                // catalog Subject's configured routing agent instead. Used for
+                // "who resolved this" attribution (see ResolvedAnnouncementModal).
+                'pic' => $t->assignedAgent
+                    ? ['name' => $t->assignedAgent->name, 'role' => 'Support '.strtoupper($t->assignedAgent->type), 'email' => $t->assignedAgent->email]
+                    : null,
                 // Everyone who actually touched the ticket — catalog routing,
                 // the current PIC, and every agent from the escalation /
                 // reassignment history — so the panel detects all involved

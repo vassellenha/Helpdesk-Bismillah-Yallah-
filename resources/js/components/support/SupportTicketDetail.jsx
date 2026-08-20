@@ -340,7 +340,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                             </div>
                         )}
 
-                        {ticket.canAct ? (
+                        {ticket.canAct && ticket.canManage !== false ? (
                             <>
                                 <label className="mb-1.5 mt-4 block text-[13px] font-bold text-gray-800 dark:text-ink-1">{trans('support.detail.note_label')}</label>
                                 <textarea
