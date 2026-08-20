@@ -54,25 +54,10 @@
                         di <code class="rounded bg-white/60 dark:bg-panel-2 px-1">.env</code> untuk memakai SINTA sungguhan.
                     </div>
 
-                    <form method="GET" action="{{ route('sso.redirect') }}" class="mt-4">
-                        <label for="as" class="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-ink-2">Masuk sebagai</label>
-                        <select
-                            id="as"
-                            name="as"
-                            required
-                            class="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
-                        >
-                            @foreach ($employees as $e)
-                                <option value="{{ $e['nip'] }}">
-                                    {{ $e['name'] }} — {{ $e['jabatan'] ?: 'tanpa jabatan' }} ({{ implode(', ', $e['roles']) ?: 'tanpa role' }})
-                                </option>
-                            @endforeach
-                        </select>
-
-                        <button type="submit" class="mt-4 w-full rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800 dark:hover:bg-blue-400">
-                            Masuk dengan SINTA (simulasi)
-                        </button>
-                    </form>
+                    <div
+                        data-react="MockSsoPicker"
+                        data-props="{{ json_encode(['employees' => $employees, 'redirectUrl' => route('sso.redirect')]) }}"
+                    ></div>
                 @else
                     <a
                         href="{{ $redirectUrl }}"
