@@ -72,6 +72,21 @@ return [
         // Terpisah dari parafrase karena wewenangnya lebih besar: yang dikirim
         // beberapa dokumen sekaligus, bukan satu jawaban yang sudah terpilih.
         'synthesis_enabled' => (bool) env('EVA_SYNTHESIS_ENABLED', false),
+
+        /*
+        | Lapisan PERCAKAPAN (OpenAiConversationEngine): mengurai pertanyaan
+        | lanjutan jadi pertanyaan utuh, dan membalas basa-basi dengan kalimat
+        | yang tidak kaleng.
+        |
+        | Saklar sendiri, terpisah dari parafrase dan rangkuman, karena yang
+        | dikirimnya berbeda jenis: bukan potongan SOP, melainkan KALIMAT
+        | KARYAWAN dari beberapa giliran terakhir. Siapa pun yang menimbang izin
+        | data harus bisa menyalakan satu tanpa menyalakan yang lain.
+        |
+        | Mematikannya mengembalikan EVA ke perilaku lamanya — tetap menjawab
+        | dari KB, hanya tanpa ingatan percakapan.
+        */
+        'conversation_enabled' => (bool) env('EVA_CONVERSATION_ENABLED', false),
     ],
 
 ];

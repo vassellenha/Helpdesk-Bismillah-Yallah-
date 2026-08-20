@@ -3,12 +3,15 @@
 namespace App\Providers;
 
 use App\Services\Knowledge\AnswerParaphraser;
+use App\Services\Knowledge\ConversationEngine;
 use App\Services\Knowledge\DocumentTextExtractor;
 use App\Services\Knowledge\FulltextKnowledgeSearch;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\KnowledgeSynthesizer;
+use App\Services\Knowledge\NoConversationEngine;
 use App\Services\Knowledge\NoSynthesizer;
 use App\Services\Knowledge\OcrBinaries;
+use App\Services\Knowledge\OpenAiConversationEngine;
 use App\Services\Knowledge\OpenAiParaphraser;
 use App\Services\Knowledge\OpenAiSynthesizer;
 use App\Services\Knowledge\PassthroughParaphraser;
@@ -78,6 +81,18 @@ class AppServiceProvider extends ServiceProvider
             return ($config['synthesis_enabled'] ?? false) && ! empty($config['key'])
                 ? new OpenAiSynthesizer($config)
                 : new NoSynthesizer;
+        });
+
+        // Seam keenam: apakah EVA mengingat percakapan dan bisa berbasa-basi
+        // dengan kalimatnya sendiri. Mati = perilaku aslinya, setiap pertanyaan
+        // dijawab dari nol dan sapaan dibalas kalimat tetap. Penjagaan kuncinya
+        // sama alasannya dengan dua seam di atas.
+        $this->app->bind(ConversationEngine::class, function () {
+            $config = (array) config('services.openai', []);
+
+            return ($config['conversation_enabled'] ?? false) && ! empty($config['key'])
+                ? new OpenAiConversationEngine($config)
+                : new NoConversationEngine;
         });
     }
 

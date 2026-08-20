@@ -46,6 +46,7 @@ final class EvaResponder
         private readonly AnswerParaphraser $paraphraser,
         private readonly KnowledgeSynthesizer $synthesizer,
         private readonly SmallTalkDetector $smallTalk,
+        private readonly ConversationEngine $conversationEngine,
     ) {}
 
     public function jawab(string $question, ?Conversation $conversation = null, ?User $asker = null): EvaReply
@@ -54,9 +55,32 @@ final class EvaResponder
         // dijawab, jadi ia tidak boleh menempuh pencarian, tidak boleh
         // menghasilkan tawaran tiket, dan tidak boleh masuk Unanswered
         // Questions sebagai celah materi yang mustahil ditutup.
+        $memory = ConversationMemory::recall($conversation);
+
         if ($balasan = $this->smallTalk->balasan($question)) {
-            return $this->smallTalkReply($balasan, $question, $conversation, $asker);
+            return $this->smallTalkReply(
+                $this->conversationEngine->chat($question, $memory, $balasan),
+                $question,
+                $conversation,
+                $asker,
+            );
         }
+
+        /*
+         | Pertanyaan lanjutan diurai jadi pertanyaan utuh SEBELUM apa pun yang
+         | lain menyentuhnya.
+         |
+         | Urutannya menentukan. "kalau masih gagal gimana?" adalah pertanyaan
+         | kabur bila dibaca sendirian — VagueQuestionDetector benar menandainya,
+         | dan EVA akan bertanya balik hal yang barusan dijawabnya sendiri. Yang
+         | membuatnya tidak kabur bukan kata-katanya, melainkan giliran
+         | sebelumnya. Jadi konteks dipulihkan dulu, baru kekaburannya dinilai.
+         |
+         | Basa-basi sengaja diperiksa lebih dulu: "makasih ya" tidak perlu
+         | diurai jadi pertanyaan, dan mengurainya justru mengubahnya menjadi
+         | pertanyaan yang tidak pernah ditanyakan siapa pun.
+        */
+        $question = $this->conversationEngine->standalone($question, $memory);
 
         if ($this->vagueDetector->isVague($question)) {
             return $this->clarify($question, $conversation, $asker);
@@ -64,6 +88,31 @@ final class EvaResponder
 
         $hits = $this->search->cari($question, self::SYNTHESIS_CANDIDATES);
         $best = $hits[0] ?? null;
+
+        /*
+         | Kutipan harus dibuktikan, bukan diandaikan.
+         |
+         | Pencarian teks memulangkan materi yang bertumpang KATA, belum tentu
+         | bertumpang MAKSUD. "apakah EVA bisa mengarahkan saya untuk pembuatan
+         | tiket" mengandung kata "tiket"; SOP akun SAP juga menyebut "formulir
+         | tiket". Cukup untuk lolos ambang, sama sekali tidak cukup untuk
+         | menjawab — dan yang lahir dari situ adalah jawaban salah topik yang
+         | JUSTRU tampak resmi karena membawa kutipan.
+         |
+         | Hanya diperiksa di pita keyakinan SEDANG. Di atas HEDGE_CONFIDENCE
+         | pencarian sudah cukup yakin dan pemeriksaan ini hanya menambah satu
+         | panggilan ke jalur yang paling sering dilewati; di bawah
+         | MIN_CONFIDENCE tidak ada yang perlu diperiksa karena tidak akan
+         | dikutip juga. Pita sedang inilah satu-satunya tempat kesalahan itu
+         | bisa hidup.
+        */
+        if ($best !== null
+            && $best->confidence < KnowledgeSearch::HEDGE_CONFIDENCE
+            && ! $this->conversationEngine->materialAnswers($question, $best->title, $best->answer)
+        ) {
+            $best = null;
+            $hits = [];
+        }
 
         // Merangkum lebih dulu, sebelum ambang keyakinan diperiksa. Jawaban
         // yang tersebar di beberapa dokumen tidak pernah membuat satu pun di
@@ -83,6 +132,24 @@ final class EvaResponder
 
             if ($tied !== []) {
                 return $this->clarifySubject($question, $tied, $conversation, $asker);
+            }
+
+            /*
+             | Jaring terakhir: mungkin ini memang bukan pertanyaan layanan.
+             |
+             | SmallTalkDetector di awal hanya mengenali sembilan pola tetap —
+             | sapaan, terima kasih, pamit, dan sejenisnya. Kalimat pembuka
+             | seperti "saya memiliki pertanyaan lagi" lolos dari daftar itu,
+             | lalu menempuh seluruh jalur pencarian dan berakhir disodori draf
+             | tiket, kepada orang yang bahkan belum sempat bertanya.
+             |
+             | Diperiksa DI SINI, bukan di awal, dan itu yang menjaganya tetap
+             | murah sekaligus aman: pertanyaan sungguhan selalu mendapat
+             | kesempatan dijawab Knowledge Base lebih dulu, dan panggilan ini
+             | hanya terjadi pada pertanyaan yang memang sudah gagal dijawab.
+            */
+            if ($obrolan = $this->conversationEngine->converse($question, $memory)) {
+                return $this->smallTalkReply($obrolan, $question, $conversation, $asker);
             }
 
             return $this->noAnswer($question, $conversation, $asker);
