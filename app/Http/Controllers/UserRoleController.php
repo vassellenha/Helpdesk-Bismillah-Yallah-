@@ -10,6 +10,7 @@ use App\Support\CurrentActor;
 use App\Support\DummyData;
 use App\Support\EmployeeDirectory\CsvEmployeeDirectory;
 use App\Support\EmployeeSync;
+use App\Support\OrgAbbreviation;
 use App\Support\SupportAgentSync;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -694,6 +695,11 @@ class UserRoleController extends Controller
             'jabatan' => $u->jabatan,
             'kode_departemen' => $u->kode_departemen ?: '-',
             'kode_divisi' => $u->kode_divisi ?: '-',
+            // Read-only display only — see OrgAbbreviation's docblock for why
+            // this must stay separate from kode_departemen/kode_divisi above,
+            // which the Edit tab's plain inputs read and write back verbatim.
+            'kode_departemen_display' => OrgAbbreviation::withPrefix($u->unit, 'DEPT') ?? '-',
+            'kode_divisi_display' => OrgAbbreviation::withPrefix($u->nama_divisi, 'DIV') ?? '-',
             'kode_proyek' => $u->kode_proyek ?: '-',
             'nama_proyek' => $u->nama_proyek ?: '-',
             'roles' => $u->roles->pluck('name')->all(),

@@ -126,8 +126,8 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                             <Detail label={trans('admin.user_form.helpdesk_access')} value={user.helpdesk_access === 'enabled' ? trans('admin.common.active') : trans('admin.common.inactive')} hint={trans('admin.user_form.set_by_admin')} />
                             <Detail label={trans('admin.user_form.jabatan')} value={user.jabatan} />
                             <Detail label={trans('admin.user_form.unit')} value={user.unit} />
-                            <Detail label={trans('admin.user_form.kode_departemen')} value={user.kode_departemen} />
-                            <Detail label={trans('admin.user_form.kode_divisi')} value={user.kode_divisi} />
+                            <Detail label={trans('admin.user_form.kode_departemen')} value={user.kode_departemen_display} />
+                            <Detail label={trans('admin.user_form.kode_divisi')} value={user.kode_divisi_display} />
                             <Detail label={trans('admin.user_form.kode_proyek')} value={user.kode_proyek} />
                             <Detail label={trans('admin.user_form.last_login')} value={user.last_login} />
                         </div>
