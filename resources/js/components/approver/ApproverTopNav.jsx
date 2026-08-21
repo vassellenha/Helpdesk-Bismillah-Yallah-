@@ -100,9 +100,6 @@ export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl
                             })}
                             {items.length === 0 && <p className="px-4 py-8 text-center text-sm text-gray-400 dark:text-ink-3">{trans('approver.nav.no_notifications')}</p>}
                         </div>
-                        <button onClick={() => (window.location.href = inboxUrl)} className="w-full border-t border-gray-100 dark:border-edge py-3 text-center text-xs font-bold text-blue-600 dark:text-accent-text hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                            Lihat semua notifikasi
-                        </button>
                     </div>
                 )}
             </div>
