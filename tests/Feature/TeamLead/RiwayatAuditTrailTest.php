@@ -148,6 +148,12 @@ class RiwayatAuditTrailTest extends TestCase
             ])->id,
             'name' => 'Login dan Otorisasi SAP',
             'it_agent_id' => $itAgent->id,
+            // Level 2 = BPO dan IT menangani berurutan, jadi BPO boleh
+            // mengeskalasi ke IT. Kolomnya default 1 (BPO-only), dan sejak
+            // aturan level dipasang di SupportBpoController, subjek Level 1
+            // menolak eskalasi dengan 422 — tes ini menyebutkan levelnya
+            // secara eksplisit alih-alih menumpang nilai default.
+            'support_level' => 2,
             'is_active' => true,
         ]);
     }
@@ -178,7 +184,25 @@ class RiwayatAuditTrailTest extends TestCase
 
     private function slaPolicyId(): int
     {
-        return $this->slaPolicyId ??= SlaPolicy::create([
+        if ($this->slaPolicyId !== null) {
+            return $this->slaPolicyId;
+        }
+
+        // Prioritas yang sah kini diturunkan dari SLA Policy aktif, bukan dari
+        // empat nama tetap di dalam controller. Tes ini menaikkan prioritas
+        // tiket ke "Critical", jadi policy-nya harus benar-benar ada — dulu
+        // tidak perlu karena nama itu selalu diterima apa pun isi basis data.
+        SlaPolicy::create([
+            'policy_name' => 'Uji Riwayat Critical',
+            'priority' => 'Critical',
+            'service_type' => 'Incident',
+            'response_time_minutes' => 60,
+            'resolution_time_minutes' => 240,
+            'warning_threshold_percent' => 80,
+            'status' => 'active',
+        ]);
+
+        return $this->slaPolicyId = SlaPolicy::create([
             'policy_name' => 'Uji Riwayat',
             'priority' => 'Medium',
             'service_type' => 'Incident',
