@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import { t as trans } from '../../lib/i18n';
+import { priorityNames } from '../../lib/priority';
 
-const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
 /** Change a ticket's priority (Team-Lead-only corrective action). */
 export default function RaisePriorityModal({ ticket, remindUrlBase, onClose, onSaved }) {
@@ -45,7 +45,7 @@ export default function RaisePriorityModal({ ticket, remindUrlBase, onClose, onS
                 </div>
                 <div className="px-5 py-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {PRIORITIES.map((p) => (
+                        {priorityNames().map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setPriority(p)}

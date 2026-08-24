@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
 import AnchoredMenu from '../AnchoredMenu';
+import { PriorityBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
 import TicketFlow from '../TicketFlow';
@@ -21,13 +22,6 @@ const STATUS_STYLES = {
     Completed: 'bg-emerald-50 dark:bg-ok-soft text-emerald-700 dark:text-ok-text ring-emerald-600/20',
     Closed: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20',
     Rejected: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text ring-red-600/20',
-};
-
-const PRIORITY_STYLES = {
-    Low: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2',
-    Medium: 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text',
-    High: 'bg-orange-50 dark:bg-warn-soft text-orange-700 dark:text-warn-text',
-    Critical: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text',
 };
 
 const SLA_TEXT_STYLES = {
@@ -220,9 +214,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
                                     </td>
                                     <td className="px-5 py-3 text-gray-700 dark:text-ink-2">{t.requesterName}</td>
                                     <td className="px-5 py-3">
-                                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${PRIORITY_STYLES[t.priority] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2'}`}>
-                                            {t.priority}
-                                        </span>
+                                        <PriorityBadge priority={t.priority} />
                                     </td>
                                     <td className="px-5 py-3 text-gray-700 dark:text-ink-2">
                                         {t.pic ?? <span className="font-medium text-amber-600 dark:text-warn-text">{trans('admin.tickets.unassigned')}</span>}
@@ -483,9 +475,6 @@ function StatusBadge({ status }) {
     return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[status] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20'}`}>{status}</span>;
 }
 
-function PriorityBadge({ priority }) {
-    return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${PRIORITY_STYLES[priority] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2'}`}>{priority}</span>;
-}
 
 function SearchIcon() {
     return (

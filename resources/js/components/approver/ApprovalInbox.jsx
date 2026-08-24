@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
+import { priorityColor, priorityNames, priorityRank } from '../../lib/priority';
 import { t as trans } from '../../lib/i18n';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { PriorityBadge } from '../StatusBadge';
 import SelectMenu from '../SelectMenu';
 import PeriodTabs from '../PeriodTabs';
 
-const PRIORITY_COLOR = { Critical: '#dc2626', High: '#d97706', Medium: '#2563eb', Low: '#9ca3af' };
 
 const COLUMNS = [
     { key: 'id', label: 'No. Tiket' },
@@ -17,7 +17,6 @@ const COLUMNS = [
     { key: 'created', label: 'Dibuat' },
 ];
 
-const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
 function MetricCard({ label, value, icon, iconBg, iconColor, href }) {
     const Tag = href ? 'a' : 'div';
@@ -63,7 +62,7 @@ function PriorityDistribution({ rows = [], total = 0, highlight = '', period = '
                             <span className="font-bold text-gray-900 dark:text-ink-1">{r.pct}%</span>
                         </div>
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
-                            <div className="h-full rounded-full" style={{ width: `${r.pct}%`, backgroundColor: PRIORITY_COLOR[r.priority] }} />
+                            <div className="h-full rounded-full" style={{ width: `${r.pct}%`, backgroundColor: priorityColor(r.priority) }} />
                         </div>
                     </div>
                 ))}
@@ -122,7 +121,7 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
     }
 
     function sortValue(row, key) {
-        if (key === 'priority') return PRIORITY_RANK[row.priority] ?? 0;
+        if (key === 'priority') return priorityRank(row.priority);
         if (key === 'created') return new Date(row.createdAt).getTime();
         return (row[key] ?? '').toString().toLowerCase();
     }
@@ -238,10 +237,7 @@ export default function ApprovalInbox({ metrics, priorityDistribution = [], prio
                                 onChange={setPriority}
                                 options={[
                                     { value: 'Semua', label: 'Semua Prioritas' },
-                                    { value: 'Critical', label: 'Critical' },
-                                    { value: 'High', label: 'High' },
-                                    { value: 'Medium', label: 'Medium' },
-                                    { value: 'Low', label: 'Low' },
+                                    ...priorityNames().map((name) => ({ value: name, label: name })),
                                 ]}
                             />
                         </label>

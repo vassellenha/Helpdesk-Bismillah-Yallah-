@@ -340,3 +340,23 @@
         0 24px 70px -14px rgb(0 0 0 / 0.65),
         inset 0 1px 0 rgb(255 255 255 / 0.08);
 }
+
+/*
+ * Lencana prioritas.
+ *
+ * Warnanya tidak bisa berupa kelas Tailwind: prioritas dibuat Admin saat
+ * aplikasi sudah berjalan, sementara kelas Tailwind harus sudah ada wujudnya
+ * waktu build. Jadi warna masuk lewat custom property `--priority-color`
+ * (lihat lib/priority.js), dan aturan terang/gelapnya ditulis sekali di sini.
+ */
+.priority-badge {
+    background-color: color-mix(in srgb, var(--priority-color, #64748b) 12%, transparent);
+    color: var(--priority-color, #64748b);
+}
+
+.dark .priority-badge {
+    background-color: color-mix(in srgb, var(--priority-color, #64748b) 22%, transparent);
+    /* Warna pekat yang enak dibaca di latar terang jadi terlalu redup di latar
+       gelap; dicerahkan supaya kontrasnya tetap terbaca. */
+    color: color-mix(in srgb, var(--priority-color, #64748b) 60%, white);
+}

@@ -10,6 +10,7 @@
     @viteReactRefresh
     @include('partials.translations', ['groups' => ['admin']])
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+    @include('partials.priority-registry')
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     <header class="sticky top-3 z-30 mx-3 rounded-2xl border border-black/5 dark:border-white/10 bg-white/65 dark:bg-white/[0.06] shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-lg backdrop-saturate-150 transition-all duration-200 md:mx-6">

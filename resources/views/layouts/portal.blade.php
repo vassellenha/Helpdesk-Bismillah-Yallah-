@@ -16,6 +16,7 @@
     @viteReactRefresh
     @include('partials.translations')
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+    @include('partials.priority-registry')
 </head>
 <body class="min-h-screen bg-[#eef0fb] dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     @yield('content')

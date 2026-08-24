@@ -271,6 +271,8 @@ return [
         'detail_title' => 'SLA Policy Detail',
         'how_calculated' => 'How the SLA is calculated',
         'status_failed' => 'Failed to update the status.',
+        'delete' => 'Delete',
+        'delete_failed' => 'Failed to delete the SLA policy.',
 
         'add_title' => 'Add SLA Policy',
         'edit_title' => 'Edit SLA Policy',

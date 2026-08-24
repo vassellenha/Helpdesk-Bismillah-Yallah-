@@ -1,13 +1,20 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { priorityList } from '../../lib/priority';
 
-const SERIES = [
-    { key: 'Critical', color: 'var(--chart-red)' },
-    { key: 'High', color: 'var(--chart-amber)' },
-    { key: 'Medium', color: 'var(--chart-blue)' },
-    { key: 'Low', color: 'var(--chart-green)' },
-];
+/**
+ * Seri grafik mengikuti prioritas yang benar-benar ada, bukan empat nama tetap.
+ *
+ * Dengan nama tetap, prioritas buatan Admin tidak pernah punya garis di grafik
+ * sekalipun datanya dikirim server — dan prioritas yang diganti namanya
+ * meninggalkan garis kosong yang tidak pernah bergerak.
+ */
+function series() {
+    return priorityList().map((p) => ({ key: p.name, color: p.color }));
+}
 
 export default function SlaTrendChart({ data = [] }) {
+    const SERIES = series();
+
     return (
         <div>
             <div className="mb-3 flex flex-wrap gap-4">

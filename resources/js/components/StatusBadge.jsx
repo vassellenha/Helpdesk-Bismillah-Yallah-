@@ -1,3 +1,5 @@
+import { priorityBadgeStyle } from '../lib/priority';
+
 const STATUS_STYLES = {
     Draft: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20',
     Returned: 'bg-amber-50 dark:bg-warn-soft text-amber-700 dark:text-warn-text ring-amber-600/20',
@@ -15,13 +17,6 @@ const STATUS_STYLES = {
     Rejected: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text ring-red-600/20',
 };
 
-const PRIORITY_STYLES = {
-    Low: 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2',
-    Medium: 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text',
-    High: 'bg-orange-50 dark:bg-warn-soft text-orange-700 dark:text-warn-text',
-    Urgent: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text',
-    Critical: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text',
-};
 
 export function StatusBadge({ status }) {
     const style = STATUS_STYLES[status] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2 ring-gray-500/20';
@@ -32,10 +27,20 @@ export function StatusBadge({ status }) {
     );
 }
 
+/**
+ * Warna lencana diambil dari peringkat SLA prioritasnya, bukan dari peta nama.
+ *
+ * Peta nama hanya benar selama namanya persis 'Critical'/'High'/'Medium'/'Low'.
+ * Begitu Admin mengganti "Critical" jadi "Kritikal", namanya tidak ada di peta
+ * dan lencana prioritas paling genting berubah abu-abu — sama persis dengan
+ * lencana prioritas paling santai.
+ */
 export function PriorityBadge({ priority }) {
-    const style = PRIORITY_STYLES[priority] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2';
     return (
-        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${style}`}>
+        <span
+            style={priorityBadgeStyle(priority)}
+            className="priority-badge inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
+        >
             {priority}
         </span>
     );

@@ -3,14 +3,9 @@ import Modal, { ModalFooter, ModalHeader } from './admin/Modal';
 import SelectMenu from './SelectMenu';
 import { apiFetch, uploadFile } from '../lib/api';
 import { t as trans } from '../lib/i18n';
+import { priorityGlyph, priorityList } from '../lib/priority';
 
 const OTHER = '__other__';
-const PRIORITIES = [
-    { label: 'Low', glyph: '≡' },
-    { label: 'Medium', glyph: '=' },
-    { label: 'High', glyph: '!' },
-    { label: 'Critical', glyph: '⚠' },
-];
 const MAX_ATTACHMENT_BYTES = 30 * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
 const ACCEPTED_ATTACHMENT_TYPES = ['image/png', 'image/jpeg', 'application/pdf', 'video/mp4', 'video/quicktime', 'video/webm'];
@@ -168,9 +163,15 @@ function PriorityTip({ priority, policy, disabled, index }) {
     return (
         <div
             role="tooltip"
-            className={`pointer-events-none absolute bottom-full z-20 mb-2 w-56 rounded-xl bg-gray-900 px-3 py-2.5 text-left text-[11.5px] leading-relaxed text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${TIP_ALIGN[index]}`}
+            className={`pointer-events-none absolute bottom-full z-20 mb-2 w-56 rounded-xl bg-gray-900 px-3 py-2.5 text-left text-[11.5px] leading-relaxed text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${TIP_ALIGN[index % TIP_ALIGN.length]}`}
         >
-            <p className="font-semibold">{trans(`requester.priority_help.${priority}`)}</p>
+            {/*
+                Prioritas buatan Admin tidak punya entri terjemahan, dan
+                mencetak kunci mentahnya ("requester.priority_help.Impossible")
+                di dalam tooltip jelas salah. Judulnya jatuh ke nama prioritas
+                itu sendiri; target SLA di bawahnya tetap menjelaskan artinya.
+            */}
+            <p className="font-semibold">{trans(`requester.priority_help.${priority}`, {}, priority)}</p>
             {disabled ? (
                 <p className="mt-1.5 text-[11px] text-amber-300">{trans('requester.priority_help.inactive')}</p>
             ) : policy ? (
@@ -314,13 +315,19 @@ export default function NewTicketModal({
 
     // A priority whose SLA policy the admin has deactivated can't be picked —
     // if the currently selected one just went inactive (or the form opened
-    // defaulting to one that isn't active), fall back to the first priority
-    // that still has a live policy.
+    // defaulting to one that isn't active), fall back to a priority that still
+    // has a live policy.
+    //
+    // Yang dipilih adalah yang PALING LONGGAR, bukan yang pertama di daftar.
+    // Daftarnya terurut dari yang paling mendesak, jadi mengambil yang pertama
+    // berarti tiket yang dibuka pengguna sudah tercentang di prioritas paling
+    // genting sebelum ia menyentuh apa pun — persis kebalikan dari default
+    // "Low" yang dipakai selama ini.
     useEffect(() => {
         if (!open || !policies) return;
         const activePriorityList = policies.map((p) => p.priority);
         if (activePriorityList.length > 0 && !activePriorityList.includes(form.priority)) {
-            set({ priority: activePriorityList[0] });
+            set({ priority: activePriorityList[activePriorityList.length - 1] });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, policies, form.priority]);
@@ -437,6 +444,26 @@ export default function NewTicketModal({
     const totalAttachmentCount = existingAttachments.length + attachments.length;
     const filteredApprovers = (approvers ?? []).filter((a) => a.name.toLowerCase().includes(approverQuery.toLowerCase()));
     const activePriorities = useMemo(() => new Set((policies ?? []).map((p) => p.priority)), [policies]);
+
+    /**
+     * Prioritas yang digambar di layar.
+     *
+     * Diambil dari SLA Policy aktif, bukan dari daftar nama di dalam berkas
+     * ini. Daftar itulah yang membuat prioritas baru buatan Admin tidak pernah
+     * muncul: server sudah mengirimkannya, tapi loop-nya hanya menggambar
+     * empat nama yang sudah ditulis lebih dulu.
+     *
+     * Selagi `policies` masih diambil, dipakai daftar yang dititipkan layout —
+     * isinya sama, dan pemilihnya jadi tidak berkedip dari empat tombol
+     * bawaan ke daftar yang sebenarnya.
+     */
+    const priorityChoices = useMemo(() => {
+        if (policies && policies.length > 0) {
+            return policies.map((p) => p.priority);
+        }
+
+        return priorityList().map((p) => p.name);
+    }, [policies]);
 
     const canSubmit =
         form.serviceId !== '' &&
@@ -669,16 +696,16 @@ export default function NewTicketModal({
 
                                 <Field label="Prioritas">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-2xl border border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 p-2.5 sm:grid-cols-4">
-                                        {PRIORITIES.map((p, i) => {
-                                            const active = form.priority === p.label;
-                                            const isActivePriority = !policies || activePriorities.has(p.label);
-                                            const policy = (policies ?? []).find((x) => x.priority === p.label);
+                                        {priorityChoices.map((name, i) => {
+                                            const active = form.priority === name;
+                                            const isActivePriority = !policies || activePriorities.has(name);
+                                            const policy = (policies ?? []).find((x) => x.priority === name);
                                             return (
-                                                <div key={p.label} className="group relative">
+                                                <div key={name} className="group relative">
                                                     <button
                                                         type="button"
                                                         disabled={!isActivePriority}
-                                                        onClick={() => set({ priority: p.label })}
+                                                        onClick={() => set({ priority: name })}
                                                         className={`flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-xs font-bold ${
                                                             !isActivePriority
                                                                 ? 'cursor-not-allowed border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 text-gray-300'
@@ -687,10 +714,10 @@ export default function NewTicketModal({
                                                                   : 'border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-gray-600 dark:text-ink-2 hover:border-gray-300'
                                                         }`}
                                                     >
-                                                        <span className="text-base font-extrabold leading-none">{p.glyph}</span>
-                                                        {p.label}
+                                                        <span className="text-base font-extrabold leading-none">{priorityGlyph(name)}</span>
+                                                        {name}
                                                     </button>
-                                                    <PriorityTip priority={p.label} policy={policy} disabled={!isActivePriority} index={i} />
+                                                    <PriorityTip priority={name} policy={policy} disabled={!isActivePriority} index={i} />
                                                 </div>
                                             );
                                         })}

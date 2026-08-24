@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { priorityNames } from '../../../lib/priority';
 import { StatusBadge, PriorityBadge } from '../../StatusBadge';
 import SelectMenu from '../../SelectMenu';
 import { t as trans } from '../../../lib/i18n';
@@ -7,7 +8,6 @@ import { t as trans } from '../../../lib/i18n';
 // stop matching real data values the moment the locale changes.
 const ALL = '__all';
 
-const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 const TYPES = ['Incident', 'Service Request', 'Access Request'];
 const PAGE_SIZE = 10;
 
@@ -74,13 +74,19 @@ export default function MonitoringTab({ monitorRows = [], monitorFilters = {}, a
     const apps = useMemo(() => monitorFilters.apps ?? derive('service'), [monitorFilters, rows]);
     const units = useMemo(() => monitorFilters.units ?? derive('unit'), [monitorFilters, rows]);
     const statuses = useMemo(() => monitorFilters.statuses ?? derive('status'), [monitorFilters, rows]);
-    const priorities = monitorFilters.priorities ?? PRIORITIES;
+    const priorities = monitorFilters.priorities ?? priorityNames();
     const types = monitorFilters.types ?? TYPES;
     const pics = useMemo(() => monitorFilters.pics ?? derive('agent'), [monitorFilters, rows]);
 
+    // "Dua prioritas paling mendesak", bukan nama 'Critical' dan 'High'.
+    // Dengan nama tetap, peringatan ini diam-diam berhenti bekerja begitu
+    // Admin mengganti namanya — tidak ada tiket yang cocok, jadi panelnya
+    // selalu kosong dan terbaca seperti "tidak ada yang genting".
+    const urgentPriorities = useMemo(() => priorityNames().slice(0, 2), []);
+
     const warnTickets = useMemo(
-        () => rows.filter((r) => ['Critical', 'High'].includes(r.priority) && r.slaMinutes !== null && r.slaMinutes < 30),
-        [rows],
+        () => rows.filter((r) => urgentPriorities.includes(r.priority) && r.slaMinutes !== null && r.slaMinutes < 30),
+        [rows, urgentPriorities],
     );
 
     const activeFilters = Object.values(f).filter((v) => v !== ALL).length;

@@ -10,6 +10,7 @@
     @viteReactRefresh
     @include('partials.translations', ['groups' => ['approver']])
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+    @include('partials.priority-registry')
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-panel-0 font-sans text-gray-900 dark:text-ink-1 antialiased">
     <div class="flex min-h-screen flex-col">

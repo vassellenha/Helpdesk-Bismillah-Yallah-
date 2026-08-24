@@ -187,6 +187,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::post('/', [SlaPolicyController::class, 'store'])->name('store');
         Route::put('/{slaPolicy}', [SlaPolicyController::class, 'update'])->name('update');
         Route::post('/{slaPolicy}/toggle', [SlaPolicyController::class, 'toggle'])->name('toggle');
+        Route::delete('/{slaPolicy}', [SlaPolicyController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('service-catalog/subjects')->name('service-catalog.subjects.')->group(function () {

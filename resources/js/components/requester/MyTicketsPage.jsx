@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { priorityNames, priorityRank } from '../../lib/priority';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import NewTicketModal from '../NewTicketModal';
 import SelectMenu from '../SelectMenu';
@@ -15,7 +16,6 @@ const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', n
 // language switch, so state holds the key and only its label is translated.
 const PERIOD_DAYS = { last_30_days: 30, last_3_months: 92, last_6_months: 183, this_year: 366 };
 const ALL = 'all';
-const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
 const COLUMNS = [
     { key: 'id', labelKey: 'requester.columns.id' },
@@ -55,7 +55,7 @@ function inTab(tab, status) {
 
 function sortValue(row, key) {
     if (key === 'slaMinutes') return row.slaMinutes === null ? Infinity : row.slaMinutes;
-    if (key === 'priority') return PRIORITY_RANK[row.priority] ?? 0;
+    if (key === 'priority') return priorityRank(row.priority);
     if (key === 'createdAt') return new Date(row.createdAt).getTime();
     return (row[key] ?? '').toString().toLowerCase();
 }
@@ -302,7 +302,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                     <SelectMenu value={service} onChange={setService} options={options(services, 'requester.filters.all_service')} />
                     <SelectMenu value={subcategory} onChange={setSubcategory} options={options(subcategories, 'requester.filters.all_subcategory')} />
                     <SelectMenu value={category} onChange={setCategory} options={options(categories, 'requester.filters.all_category')} />
-                    <SelectMenu value={priority} onChange={setPriority} options={options(['Critical', 'High', 'Medium', 'Low'], 'requester.filters.all_priority')} />
+                    <SelectMenu value={priority} onChange={setPriority} options={options(priorityNames(), 'requester.filters.all_priority')} />
                     <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: trans(`requester.periods.${p}`) }))} />
                 </div>
             </div>

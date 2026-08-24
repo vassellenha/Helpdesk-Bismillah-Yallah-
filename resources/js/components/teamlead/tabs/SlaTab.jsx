@@ -1,9 +1,9 @@
 import SlaStatusDonut from '../SlaStatusDonut';
+import { priorityColor } from '../../../lib/priority';
 import SlaTopSubjects from './SlaTopSubjects';
 import { MetricCard, Card, ICON } from '../ui';
 import { t as trans } from '../../../lib/i18n';
 
-const PRIORITY_COLOR = { Critical: '#dc2626', High: '#d97706', Medium: '#2563eb', Low: '#9ca3af' };
 
 export default function SlaTab({ slaDonut = {}, slaByPriority = [], metrics = {}, supportStats = {}, slaTopSubjects = [] }) {
     return (
@@ -26,10 +26,10 @@ export default function SlaTab({ slaDonut = {}, slaByPriority = [], metrics = {}
                             <div key={p.priority}>
                                 <div className="mb-1.5 flex items-center justify-between text-[13px]">
                                     <span className="font-semibold text-gray-700 dark:text-ink-2">{p.priority} <span className="text-gray-400 dark:text-ink-3">· {trans('teamlead.sla.ticket_count', { count: p.total })}</span></span>
-                                    <span className="font-bold" style={{ color: PRIORITY_COLOR[p.priority] }}>{p.pct}%</span>
+                                    <span className="font-bold" style={{ color: priorityColor(p.priority) }}>{p.pct}%</span>
                                 </div>
                                 <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-panel-3">
-                                    <div className="h-full rounded-full" style={{ width: `${p.pct}%`, backgroundColor: PRIORITY_COLOR[p.priority] }} />
+                                    <div className="h-full rounded-full" style={{ width: `${p.pct}%`, backgroundColor: priorityColor(p.priority) }} />
                                 </div>
                             </div>
                         ))}

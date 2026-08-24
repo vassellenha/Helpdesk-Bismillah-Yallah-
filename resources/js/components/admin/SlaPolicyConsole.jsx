@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import SlaPolicyModal from './SlaPolicyModal';
 import AnchoredMenu from '../AnchoredMenu';
+import { PriorityBadge } from '../StatusBadge';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
@@ -44,6 +45,26 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
             setPolicies((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
         } catch (e) {
             setError(e.message || trans('admin.sla.status_failed'));
+        }
+    }
+
+    /**
+     * Menghapus SLA Policy.
+     *
+     * Server yang memutuskan boleh atau tidak — kalau masih ada tiket yang
+     * memakainya, permintaannya ditolak beserta jumlah tiketnya, dan pesan itu
+     * ditampilkan apa adanya. Menghitungnya di sini akan menebak: layar ini
+     * hanya memegang daftar policy, bukan tiket.
+     */
+    async function removePolicy(policy) {
+        setMenu(null);
+        if (! confirm(`Hapus SLA Policy "${policy.policy_name}"?`)) return;
+        setError('');
+        try {
+            await apiFetch(`/admin/sla-policies/${policy.id}`, { method: 'DELETE' });
+            setPolicies((prev) => prev.filter((p) => p.id !== policy.id));
+        } catch (e) {
+            setError(e.message || trans('admin.sla.delete_failed'));
         }
     }
 
@@ -128,6 +149,9 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                     <button onClick={() => toggleStatus(menu.policy)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
                         <ToggleIcon /> {menu.policy.status === 'active' ? trans('admin.common.deactivate') : trans('admin.common.activate')}
                     </button>
+                    <button onClick={() => removePolicy(menu.policy)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
+                        <DeleteIcon /> {trans('admin.sla.delete')}
+                    </button>
                 </AnchoredMenu>
             )}
 
@@ -181,6 +205,14 @@ function ToggleIcon() {
     );
 }
 
+function DeleteIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-red-500">
+            <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
 function Stat({ label, value, bg, color }) {
     return (
         <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm">
@@ -193,16 +225,6 @@ function Stat({ label, value, bg, color }) {
     );
 }
 
-const PRIORITY_STYLES = {
-    Critical: 'bg-red-50 dark:bg-bad-soft text-red-700 dark:text-bad-text',
-    High: 'bg-orange-50 dark:bg-warn-soft text-orange-700 dark:text-warn-text',
-    Medium: 'bg-blue-50 dark:bg-accent-soft text-blue-700 dark:text-accent-text',
-    Low: 'bg-gray-100 dark:bg-panel-3 text-gray-500 dark:text-ink-2',
-};
-
-function PriorityBadge({ priority }) {
-    return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${PRIORITY_STYLES[priority] ?? 'bg-gray-100 dark:bg-panel-3 text-gray-600 dark:text-ink-2'}`}>{priority}</span>;
-}
 
 function PolicyDetailModal({ policy, onClose }) {
     useLockBodyScroll();

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { priorityNames, priorityRank } from '../../lib/priority';
 import TicketCategoryDonut from '../charts/TicketCategoryDonut';
 import SlaComplianceDonut from '../charts/SlaComplianceDonut';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
@@ -18,10 +19,7 @@ const CATEGORY_OPTIONS = [
 
 const PRIORITY_OPTIONS = [
     { value: ALL, labelKey: 'support.filters.all_priority' },
-    { value: 'Critical', label: 'Critical' },
-    { value: 'High', label: 'High' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'Low', label: 'Low' },
+    ...priorityNames().map((name) => ({ value: name, label: name })),
 ];
 
 const PERIOD_TABS = ['week', 'month', 'year'];
@@ -40,7 +38,6 @@ function options(list) {
     return list.map((o) => ({ value: o.value, label: o.labelKey ? trans(o.labelKey) : o.label }));
 }
 
-const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
 function StatCard({ label, value, icon, iconBg, iconColor, href }) {
     const Tag = href ? 'a' : 'div';
@@ -166,7 +163,7 @@ export default function SupportDashboard({ stats = {}, periods = {}, queue = [],
     }
 
     function sortValue(row, key) {
-        if (key === 'priority') return PRIORITY_RANK[row.priority] ?? 0;
+        if (key === 'priority') return priorityRank(row.priority);
         if (key === 'created') return new Date(row.createdAt).getTime();
         return (row[key] ?? '').toString().toLowerCase();
     }

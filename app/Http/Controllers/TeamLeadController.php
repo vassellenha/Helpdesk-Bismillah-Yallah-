@@ -795,8 +795,11 @@ class TeamLeadController extends Controller
 
         $lead = CurrentActor::teamLead();
 
+        // Daftar prioritas yang sah datang dari SLA Policy aktif, bukan empat
+        // nama tetap. Dengan daftar tetap, prioritas buatan Admin ditolak 422
+        // di sini — Team Lead melihatnya di layar tapi tidak bisa memilihnya.
         $data = $request->validate([
-            'priority' => 'required|in:Critical,High,Medium,Low',
+            'priority' => ['required', Rule::in(PriorityRegistry::all())],
         ]);
 
         $old = $ticket->priority;
@@ -1285,7 +1288,7 @@ class TeamLeadController extends Controller
         $data = $request->validate([
             'service' => 'required|string',
             'subcat' => 'required|string',
-            'to' => 'required|in:Critical,High,Medium,Low',
+            'to' => ['required', Rule::in(PriorityRegistry::all())],
         ]);
 
         $matched = $this->scopeTickets(Ticket::whereIn('status', Ticket::ACTIVE_STATUSES))

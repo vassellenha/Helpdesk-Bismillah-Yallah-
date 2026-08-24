@@ -92,8 +92,11 @@ class SlaPolicyController extends Controller
         $before = $slaPolicy->only(array_keys(self::FIELD_LABELS));
 
         $slaPolicy = DB::transaction(function () use ($data, $slaPolicy, $before, $actor) {
+            $renamedFrom = $before['priority'];
             $slaPolicy->update($data);
             $after = $slaPolicy->only(array_keys(self::FIELD_LABELS));
+
+            $movedTickets = $this->renamePriorityOnTickets($renamedFrom, $slaPolicy->priority);
 
             $changes = AuditDescriber::diff($before, $after, self::FIELD_LABELS, $this->formatters());
 
@@ -105,7 +108,8 @@ class SlaPolicyController extends Controller
                     'target_id' => $slaPolicy->id,
                     'target_name' => $slaPolicy->policy_name,
                     ...AuditDescriber::presentDiff($changes),
-                    'description' => AuditDescriber::describe($actor->name, 'SLA', $slaPolicy->policy_name, $changes),
+                    'description' => AuditDescriber::describe($actor->name, 'SLA', $slaPolicy->policy_name, $changes)
+                        .($movedTickets > 0 ? " Prioritas {$movedTickets} tiket ikut diganti namanya." : ''),
                 ]);
             }
 
@@ -113,6 +117,33 @@ class SlaPolicyController extends Controller
         });
 
         return response()->json($slaPolicy);
+    }
+
+    /**
+     * Ikut mengganti nama prioritas pada tiket yang memakainya.
+     *
+     * Tanpa ini, mengganti nama sebuah prioritas meninggalkan tiket lama
+     * memegang nama yang sudah tidak dimiliki policy mana pun: prioritasnya
+     * hilang dari semua filter, lencananya berubah netral, dan tiketnya
+     * berhenti terhitung di grafik distribusi — padahal Admin merasa hanya
+     * mengganti sebutan, bukan mencabut prioritas ratusan tiket.
+     *
+     * Tidak dilakukan kalau masih ada policy LAIN yang memakai nama lama:
+     * di situ nama itu masih sah, dan tiketnya memang milik policy tersebut.
+     */
+    private function renamePriorityOnTickets(string $from, string $to): int
+    {
+        if ($from === $to) {
+            return 0;
+        }
+
+        $stillInUse = SlaPolicy::where('priority', $from)->exists();
+
+        if ($stillInUse) {
+            return 0;
+        }
+
+        return Ticket::where('priority', $from)->update(['priority' => $to]);
     }
 
     public function toggle(SlaPolicy $slaPolicy): JsonResponse
@@ -140,6 +171,85 @@ class SlaPolicyController extends Controller
         });
 
         return response()->json($slaPolicy);
+    }
+
+    /**
+     * Menghapus SLA Policy — hanya kalau benar-benar tidak dipakai tiket mana pun.
+     *
+     * Tiket menyimpan `sla_policy_id` sebagai foreign key, dan kolom itu tidak
+     * boleh kosong. Menghapus policy yang masih dipakai berarti salah satu dari
+     * dua hal buruk: basis data menolaknya dengan galat SQL mentah yang tidak
+     * berarti apa-apa bagi Admin, atau — kalau kelak dipasang cascade — tiketnya
+     * ikut terhapus. Keduanya tidak pernah yang dimaksud Admin ketika ia hanya
+     * ingin merapikan daftar SLA.
+     *
+     * Jadi penghalangnya dipasang di sini, dengan angka yang bisa ditindaklanjuti:
+     * Admin diberi tahu berapa tiket yang menahannya, lalu bisa memilih
+     * menonaktifkan policy itu saja — yang menyembunyikannya dari pemilih
+     * prioritas tanpa menyentuh riwayat tiket sama sekali.
+     */
+    public function destroy(SlaPolicy $slaPolicy): JsonResponse
+    {
+        $actor = CurrentActor::admin();
+        $usage = $this->ticketsHeldBy($slaPolicy);
+
+        if ($usage > 0) {
+            return response()->json([
+                'message' => "SLA Policy ini masih dipakai {$usage} tiket, jadi tidak bisa dihapus. "
+                    .'Nonaktifkan saja kalau tidak ingin dipakai lagi — tiket lama tetap utuh.',
+                'tickets_using' => $usage,
+            ], 422);
+        }
+
+        DB::transaction(function () use ($slaPolicy, $actor) {
+            AuditTrail::record($actor, [
+                'module' => 'sla_configuration',
+                'action' => 'delete',
+                'target_type' => 'sla_policy',
+                'target_id' => $slaPolicy->id,
+                'target_name' => $slaPolicy->policy_name,
+                'old_value' => $slaPolicy->only(array_keys(self::FIELD_LABELS)),
+                'new_value' => null,
+                'description' => "{$actor->name} menghapus SLA Policy \"{$slaPolicy->policy_name}\".",
+            ]);
+
+            $slaPolicy->delete();
+        });
+
+        return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * Berapa tiket yang menahan sebuah policy agar tidak bisa dihapus.
+     *
+     * Dihitung dari DUA arah, karena ada dua cara tiket bergantung pada policy
+     * ini dan hanya satu di antaranya terlihat lewat foreign key:
+     *
+     * 1. Tiket yang memang menunjuk policy ini (`sla_policy_id`) — jalur biasa,
+     *    requester memilih prioritasnya saat membuat tiket.
+     * 2. Tiket yang prioritasnya sama dengan prioritas policy ini, tapi
+     *    `sla_policy_id`-nya menunjuk policy lain. Ini terjadi ketika Team Lead
+     *    menaikkan prioritas tiket: yang diganti hanya kolom `priority`, SLA
+     *    aslinya tetap dipegang. Tanpa hitungan kedua, policy-nya bisa dihapus
+     *    dan tiket itu tertinggal memegang prioritas yang tidak diakui siapa
+     *    pun — hilang dari filter, lencananya netral, tak terhitung di grafik.
+     *
+     * Arah kedua diabaikan kalau masih ada policy LAIN dengan prioritas yang
+     * sama: di situ nama prioritasnya tetap sah tanpa policy ini.
+     */
+    private function ticketsHeldBy(SlaPolicy $slaPolicy): int
+    {
+        $query = Ticket::where('sla_policy_id', $slaPolicy->id);
+
+        $priorityStillCovered = SlaPolicy::where('priority', $slaPolicy->priority)
+            ->whereKeyNot($slaPolicy->id)
+            ->exists();
+
+        if (! $priorityStillCovered) {
+            $query->orWhere('priority', $slaPolicy->priority);
+        }
+
+        return $query->count();
     }
 
     public function activeForRequester(): JsonResponse

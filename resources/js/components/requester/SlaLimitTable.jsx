@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
+import { priorityRank } from '../../lib/priority';
 import { t as trans } from '../../lib/i18n';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 
 const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', none: '#9ca3af' };
-const PRIORITY_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
 const COLUMNS = [
     { key: 'id', label: 'Ticket No.' },
@@ -16,7 +16,7 @@ const COLUMNS = [
 
 function sortValue(row, key) {
     if (key === 'slaMinutes') return row.slaMinutes === null ? Infinity : row.slaMinutes;
-    if (key === 'priority') return PRIORITY_RANK[row.priority] ?? 0;
+    if (key === 'priority') return priorityRank(row.priority);
     return (row[key] ?? '').toString().toLowerCase();
 }
 

@@ -32,6 +32,7 @@
     @viteReactRefresh
     @include('partials.translations')
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+    @include('partials.priority-registry')
 </head>
 {{--
     Layout sendiri, bukan layouts/app.blade.php: sidebar role milik tim dan

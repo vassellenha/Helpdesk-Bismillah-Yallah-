@@ -3,8 +3,7 @@ import Modal, { ModalFooter, ModalHeader } from './Modal';
 import SelectMenu from '../SelectMenu';
 import { t as trans } from '../../lib/i18n';
 import { apiFetch } from '../../lib/api';
-
-const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
+import { priorityNames } from '../../lib/priority';
 
 // The API stores everything in minutes (fine-grained enough for any future
 // need), but typing "480" to mean "8 jam" is exactly the friction admins
@@ -13,7 +12,7 @@ function minutesToHours(minutes) {
     return minutes || minutes === 0 ? minutes / 60 : '';
 }
 
-export default function SlaPolicyModal({ policy, onClose, onSaved, existingPriorities = PRIORITIES }) {
+export default function SlaPolicyModal({ policy, onClose, onSaved, existingPriorities = null }) {
     const isEdit = !!policy;
     const [form, setForm] = useState({
         policy_name: policy?.policy_name ?? '',
@@ -82,7 +81,7 @@ export default function SlaPolicyModal({ policy, onClose, onSaved, existingPrior
                         className="w-full rounded-lg border border-gray-200 dark:border-edge-strong bg-gray-50 dark:bg-panel-3 px-3 py-2.5 text-sm focus:border-blue-400 focus:bg-white dark:focus:bg-panel-hover focus:outline-none"
                     />
                     <datalist id="sla-priority-options">
-                        {existingPriorities.map((p) => <option key={p} value={p} />)}
+                        {(existingPriorities ?? priorityNames()).map((p) => <option key={p} value={p} />)}
                     </datalist>
                 </Field>
 

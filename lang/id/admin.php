@@ -276,6 +276,8 @@ return [
         'detail_title' => 'Detail SLA Policy',
         'how_calculated' => 'Bagaimana SLA dihitung',
         'status_failed' => 'Gagal memperbarui status.',
+        'delete' => 'Hapus',
+        'delete_failed' => 'Gagal menghapus SLA Policy.',
 
         'add_title' => 'Tambah SLA Policy',
         'edit_title' => 'Edit SLA Policy',
