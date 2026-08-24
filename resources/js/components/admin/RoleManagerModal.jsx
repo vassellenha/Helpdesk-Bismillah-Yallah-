@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './Modal';
-import RowActionMenu, { menuPositionFor } from '../RowActionMenu';
+import RowActionMenu from '../RowActionMenu';
 import SelectMenu from '../SelectMenu';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
@@ -25,8 +25,7 @@ export default function RoleManagerModal({ roles, onClose, onAddRole, onRoleSave
             setMenu(null);
             return;
         }
-        const rect = e.currentTarget.getBoundingClientRect();
-        setMenu({ role, ...menuPositionFor(rect) });
+        setMenu({ role, anchorEl: e.currentTarget });
     }
 
     async function toggleStatus(role) {
@@ -106,7 +105,7 @@ export default function RoleManagerModal({ roles, onClose, onAddRole, onRoleSave
 
             {menu && (
                 <RowActionMenu
-                    anchor={menu}
+                    anchorEl={menu.anchorEl}
                     onClose={() => setMenu(null)}
                     items={[
                         { label: trans('admin.roles.edit'), icon: ICON_EDIT, onClick: () => setEditingRole(menu.role) },

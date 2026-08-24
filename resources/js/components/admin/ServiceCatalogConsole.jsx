@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ServiceCatalogFormModal from './ServiceCatalogFormModal';
 import ServiceCatalogDetailModal from './ServiceCatalogDetailModal';
 import SelectMenu from '../SelectMenu';
+import AnchoredMenu from '../AnchoredMenu';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
 import { LEVEL_LABELS } from '../../lib/formatters';
@@ -22,19 +23,8 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
     const [statusFilter, setStatusFilter] = useState(ALL);
 
     const [modal, setModal] = useState(null); // 'add' | { type: 'edit'|'detail'|'duplicate', subject }
-    const [menu, setMenu] = useState(null); // { subject, top, left }
+    const [menu, setMenu] = useState(null); // { subject, anchorEl }
     const [error, setError] = useState('');
-    const menuRef = useRef(null);
-
-    useEffect(() => {
-        if (!menu) return;
-        function onClickOutside(e) {
-            if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(null);
-        }
-        document.addEventListener('mousedown', onClickOutside);
-        return () => document.removeEventListener('mousedown', onClickOutside);
-    }, [menu]);
-
     const layananOptions = useMemo(() => Array.from(new Set(subjects.map((s) => s.layanan))).sort(), [subjects]);
     const subcategoryOptions = useMemo(() => Array.from(new Set(subjects.map((s) => s.subcategory))).sort(), [subjects]);
 
@@ -76,8 +66,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
             setMenu(null);
             return;
         }
-        const rect = e.currentTarget.getBoundingClientRect();
-        setMenu({ subject, top: rect.bottom + 4, left: rect.right - 176 });
+        setMenu({ subject, anchorEl: e.currentTarget });
     }
 
     async function toggleStatus(subject) {
@@ -211,7 +200,12 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
             </div>
 
             {menu && (
-                <div ref={menuRef} style={{ top: menu.top, left: menu.left }} className="fixed z-50 w-44 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-left shadow-lg">
+                <AnchoredMenu
+                    anchorEl={menu.anchorEl}
+                    onClose={() => setMenu(null)}
+                    width={176}
+                    className="z-50 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-left shadow-lg"
+                >
                     <button onClick={() => { setModal({ type: 'detail', subject: menu.subject }); setMenu(null); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         <SearchIcon /> Lihat Detail
                     </button>
@@ -227,7 +221,7 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                     <button onClick={() => remove(menu.subject)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
                         <DeleteIcon /> Delete
                     </button>
-                </div>
+                </AnchoredMenu>
             )}
 
             {(modal === 'add' || modal?.type === 'edit') && (

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
+import AnchoredMenu from '../AnchoredMenu';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
 import TicketFlow from '../TicketFlow';
@@ -64,18 +65,8 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
     const [categoryFilter, setCategoryFilter] = useState(ALL.category);
     const [requesterFilter, setRequesterFilter] = useState(ALL.requester);
     const [picFilter, setPicFilter] = useState(ALL.pic);
-    const [menu, setMenu] = useState(null); // { ticket, top, left }
+    const [menu, setMenu] = useState(null); // { ticket, anchorEl }
     const [detailTicket, setDetailTicket] = useState(null);
-    const menuRef = useRef(null);
-
-    useEffect(() => {
-        if (!menu) return;
-        function onClickOutside(e) {
-            if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(null);
-        }
-        document.addEventListener('mousedown', onClickOutside);
-        return () => document.removeEventListener('mousedown', onClickOutside);
-    }, [menu]);
 
     const filtered = useMemo(() => {
         const now = new Date();
@@ -115,8 +106,7 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
             setMenu(null);
             return;
         }
-        const rect = e.currentTarget.getBoundingClientRect();
-        setMenu({ ticket, top: rect.bottom + 4, left: rect.right - 160 });
+        setMenu({ ticket, anchorEl: e.currentTarget });
     }
 
     function handleExport() {
@@ -265,14 +255,19 @@ export default function TicketManagementConsole({ tickets: initialTickets, stats
             </div>
 
             {menu && (
-                <div ref={menuRef} style={{ top: menu.top, left: menu.left }} className="fixed z-50 w-44 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-left shadow-lg">
+                <AnchoredMenu
+                    anchorEl={menu.anchorEl}
+                    onClose={() => setMenu(null)}
+                    width={176}
+                    className="z-50 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-left shadow-lg"
+                >
                     <button
                         onClick={() => { setDetailTicket(menu.ticket); setMenu(null); }}
                         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]"
                     >
                         <SearchIcon /> Lihat Detail
                     </button>
-                </div>
+                </AnchoredMenu>
             )}
 
             {detailTicket && (

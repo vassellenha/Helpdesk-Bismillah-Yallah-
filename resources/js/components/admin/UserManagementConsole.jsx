@@ -4,7 +4,7 @@ import AddRoleWizard from './AddRoleWizard';
 import AddUserModal from './AddUserModal';
 import ManageUserModal from './ManageUserModal';
 import ExportUsersModal from './ExportUsersModal';
-import RowActionMenu, { menuPositionFor } from '../RowActionMenu';
+import RowActionMenu from '../RowActionMenu';
 import SelectMenu from '../SelectMenu';
 import { apiFetch, uploadFile } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
@@ -59,11 +59,7 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
             setMenu(null);
             return;
         }
-        const rect = e.currentTarget.getBoundingClientRect();
-        // The employment-status note adds a third line, so the flip-above
-        // calculation needs the taller estimate or the menu clips off-screen.
-        const height = user.employment_status === 'Nonaktif' ? 150 : 96;
-        setMenu({ user, ...menuPositionFor(rect, { height }) });
+        setMenu({ user, anchorEl: e.currentTarget });
     }
 
     // Diambil dari daftar role, bukan diturunkan dari `users`. Sejak `users`
@@ -545,7 +541,7 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
 
             {menu && (
                 <RowActionMenu
-                    anchor={menu}
+                    anchorEl={menu.anchorEl}
                     onClose={() => setMenu(null)}
                     items={[
                         { label: trans('admin.users.edit'), icon: ICON_EDIT, onClick: () => setModal({ type: 'manageUser', user: menu.user }) },

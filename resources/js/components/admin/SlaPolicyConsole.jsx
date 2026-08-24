@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import SlaPolicyModal from './SlaPolicyModal';
+import AnchoredMenu from '../AnchoredMenu';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
@@ -14,28 +15,17 @@ function formatMinutes(minutes) {
 export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaBreakdown }) {
     const [policies, setPolicies] = useState(initialPolicies);
     const [modal, setModal] = useState(null); // 'add' | { type: 'edit', policy } | { type: 'detail', policy }
-    const [menu, setMenu] = useState(null); // { policy, top, left }
+    const [menu, setMenu] = useState(null); // { policy, anchorEl }
     const [error, setError] = useState('');
-    const menuRef = useRef(null);
 
     const activeCount = useMemo(() => policies.filter((p) => p.status === 'active').length, [policies]);
-
-    useEffect(() => {
-        if (!menu) return;
-        function onClickOutside(e) {
-            if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(null);
-        }
-        document.addEventListener('mousedown', onClickOutside);
-        return () => document.removeEventListener('mousedown', onClickOutside);
-    }, [menu]);
 
     function openMenu(e, policy) {
         if (menu?.policy.id === policy.id) {
             setMenu(null);
             return;
         }
-        const rect = e.currentTarget.getBoundingClientRect();
-        setMenu({ policy, top: rect.bottom + 4, left: rect.right - 160 });
+        setMenu({ policy, anchorEl: e.currentTarget });
     }
 
     function upsertPolicy(saved) {
@@ -123,10 +113,11 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
             </div>
 
             {menu && (
-                <div
-                    ref={menuRef}
-                    style={{ top: menu.top, left: menu.left }}
-                    className="fixed z-50 w-40 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-left shadow-lg"
+                <AnchoredMenu
+                    anchorEl={menu.anchorEl}
+                    onClose={() => setMenu(null)}
+                    width={160}
+                    className="z-50 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 text-left shadow-lg"
                 >
                     <button onClick={() => { setModal({ type: 'detail', policy: menu.policy }); setMenu(null); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
                         <SearchIcon /> Lihat Detail
@@ -137,7 +128,7 @@ export default function SlaPolicyConsole({ policies: initialPolicies, ticketSlaB
                     <button onClick={() => toggleStatus(menu.policy)} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 dark:text-bad-text hover:bg-red-50 dark:hover:bg-bad-soft">
                         <ToggleIcon /> {menu.policy.status === 'active' ? trans('admin.common.deactivate') : trans('admin.common.activate')}
                     </button>
-                </div>
+                </AnchoredMenu>
             )}
 
             <div className="mt-6 flex items-start gap-2 rounded-lg bg-blue-50 dark:bg-accent-soft p-4 text-sm text-blue-900 dark:text-accent-text">
