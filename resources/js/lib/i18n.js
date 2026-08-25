@@ -20,7 +20,7 @@ export function locale() {
 
 /**
  * t('requester.columns.status')
- * t('requester.showing', { shown: 5, total: 20 })
+ * t('common.pagination.showing', { from: 1, to: 15, total: 43 })
  *
  * `fallback` is for keys that legitimately may not exist — an admin-created
  * custom role has no admin.role_desc entry, and printing the raw key there

@@ -15,4 +15,13 @@ declare(strict_types=1);
 
 return [
     'close' => 'Tutup',
+
+    // Dipakai komponen Pagination bersama pada daftar tiket tiap peran.
+    'pagination' => [
+        'prev' => '← Sebelumnya',
+        'next' => 'Berikutnya →',
+        'page' => 'Halaman :page dari :total',
+        'showing' => 'Menampilkan :from–:to dari :total tiket',
+        'empty' => 'Menampilkan 0 dari 0 tiket',
+    ],
 ];

@@ -5,6 +5,8 @@ import NewTicketModal from '../NewTicketModal';
 import SelectMenu from '../SelectMenu';
 import AutoCloseCountdown from '../AutoCloseCountdown';
 import { apiFetch } from '../../lib/api';
+import { clampPage, pageSlice } from '../../lib/pagination';
+import Pagination from '../Pagination';
 // Imported as `trans`, not `t`: this file already uses `t` for a ticket in half
 // a dozen callbacks, and the shadowing would be silent — the translation call
 // would just read a property off a ticket and render nothing.
@@ -119,6 +121,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
     const [subcategory, setSubcategory] = useState(ALL);
     const [priority, setPriority] = useState(ALL);
     const [period, setPeriod] = useState(DEFAULT_PERIOD);
+    const [page, setPage] = useState(1);
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -224,6 +227,15 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
         });
         return rows;
     }, [tickets, tab, incomingFilter, category, service, subcategory, priority, period, search, sortKey, sortDir]);
+
+    // Any change to what the table shows sends the reader back to page 1;
+    // otherwise a filter that narrows 43 rows to 4 leaves them on an empty page 3.
+    useEffect(() => {
+        setPage(1);
+    }, [tab, incomingFilter, category, service, subcategory, priority, period, search, sortKey, sortDir]);
+
+    const currentPage = clampPage(page, filtered.length);
+    const visible = useMemo(() => pageSlice(filtered, currentPage), [filtered, currentPage]);
 
     const allFilteredSelected = filtered.length > 0 && filtered.every((row) => selectedIds.has(row.id));
 
@@ -404,7 +416,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((row) => (
+                            {visible.map((row) => (
                                 <tr
                                     key={row.id}
                                     onClick={() => row.href && (window.location.href = row.href)}
@@ -450,9 +462,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between px-5 py-3">
-                    <span className="text-xs text-gray-400 dark:text-ink-3">{trans('requester.showing', { shown: filtered.length, total: tickets.length })}</span>
-                </div>
+                <Pagination page={currentPage} total={filtered.length} onPageChange={setPage} />
             </div>
         </div>
     );

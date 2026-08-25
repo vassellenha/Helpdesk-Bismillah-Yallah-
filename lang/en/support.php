@@ -55,7 +55,6 @@ return [
         'subtitle' => ':count tickets have been assigned to you.',
         'search_placeholder' => 'Search tickets, title, or service…',
         'all_service' => 'All Services',
-        'showing' => 'Showing :shown of :total tickets',
         'empty' => 'No tickets match these filters.',
         'periods' => [
             'last_30_days' => 'Last 30 days',

@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { t as trans } from '../../lib/i18n';
 import { StatusBadge } from '../StatusBadge';
 import SelectMenu from '../SelectMenu';
+import { clampPage, pageSlice } from '../../lib/pagination';
+import Pagination from '../Pagination';
 
 const DECISION_STYLES = {
     approved: 'text-emerald-600 dark:text-ok-text',
@@ -82,6 +84,7 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
     const [layanan, setLayanan] = useState(ALL_SERVICE);
     const [periodDays, setPeriodDays] = useState(366);
     const [periodLabel, setPeriodLabel] = useState('this_year');
+    const [page, setPage] = useState(1);
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
 
@@ -138,6 +141,14 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
 
         return list;
     }, [rows, activeStatus, incomingFilter, layanan, periodDays, search, sortKey, sortDir]);
+
+    // Lihat MyTicketsPage: setiap perubahan tampilan mengembalikan pembaca ke halaman 1.
+    useEffect(() => {
+        setPage(1);
+    }, [activeStatus, incomingFilter, layanan, periodDays, search, sortKey, sortDir]);
+
+    const currentPage = clampPage(page, filtered.length);
+    const visible = useMemo(() => pageSlice(filtered, currentPage), [filtered, currentPage]);
 
     return (
         <div className="flex flex-col gap-7">
@@ -238,7 +249,7 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((row) => (
+                            {visible.map((row) => (
                                 <tr
                                     key={row.id}
                                     onClick={() => (window.location.href = row.href)}
@@ -266,9 +277,7 @@ export default function ApprovalHistoryPage({ counts = {}, rows = [] }) {
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between px-5 py-3">
-                    <span className="text-xs text-gray-400 dark:text-ink-3">Menampilkan {filtered.length} dari {rows.length} tiket</span>
-                </div>
+                <Pagination page={currentPage} total={filtered.length} onPageChange={setPage} />
             </div>
         </div>
     );

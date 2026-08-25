@@ -15,9 +15,9 @@ function withMessages(messages) {
 }
 
 test('mengganti placeholder biasa', () => {
-    withMessages({ requester: { showing: 'Menampilkan :shown dari :total tiket' } });
+    withMessages({ support: { dashboard: { showing: 'Menampilkan :shown dari :total tiket' } } });
 
-    assert.equal(t('requester.showing', { shown: 5, total: 20 }), 'Menampilkan 5 dari 20 tiket');
+    assert.equal(t('support.dashboard.showing', { shown: 5, total: 20 }), 'Menampilkan 5 dari 20 tiket');
 });
 
 test('placeholder yang namanya awalan dari placeholder lain tidak saling memakan', () => {

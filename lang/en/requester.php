@@ -16,7 +16,6 @@ return [
     'subtitle' => 'Track the history and progress of every ticket you have submitted.',
 
     'search_placeholder' => 'Search tickets, title, or service…',
-    'showing' => 'Showing :shown of :total tickets',
     'empty' => 'No tickets match these filters.',
 
     'auto_close' => [

@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PriorityBadge, StatusBadge } from '../StatusBadge';
 import SelectMenu from '../SelectMenu';
 import { t as trans } from '../../lib/i18n';
+import { clampPage, pageSlice } from '../../lib/pagination';
+import Pagination from '../Pagination';
 
 // Sentinel for "no service filter" — must not be a translated label, or
 // switching language would turn it into a service name that matches nothing.
@@ -66,6 +68,7 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
     const [search, setSearch] = useState('');
     const [layanan, setLayanan] = useState(ALL_SERVICE);
     const [period, setPeriod] = useState('this_year');
+    const [page, setPage] = useState(1);
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
 
@@ -118,6 +121,14 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
 
         return list;
     }, [rows, activeStatus, incomingFilter, layanan, period, search, sortKey, sortDir]);
+
+    // Lihat MyTicketsPage: setiap perubahan tampilan mengembalikan pembaca ke halaman 1.
+    useEffect(() => {
+        setPage(1);
+    }, [activeStatus, incomingFilter, layanan, period, search, sortKey, sortDir]);
+
+    const currentPage = clampPage(page, filtered.length);
+    const visible = useMemo(() => pageSlice(filtered, currentPage), [filtered, currentPage]);
 
     return (
         <div className="flex flex-col gap-7">
@@ -217,7 +228,7 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((row) => (
+                            {visible.map((row) => (
                                 <tr
                                     key={row.id}
                                     onClick={() => (window.location.href = row.href)}
@@ -242,9 +253,7 @@ export default function SupportHistoryPage({ counts = {}, rows = [] }) {
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between px-5 py-3">
-                    <span className="text-xs text-gray-400 dark:text-ink-3">{trans('support.history.showing', { shown: filtered.length, total: rows.length })}</span>
-                </div>
+                <Pagination page={currentPage} total={filtered.length} onPageChange={setPage} />
             </div>
         </div>
     );

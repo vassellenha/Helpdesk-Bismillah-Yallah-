@@ -19,7 +19,6 @@ return [
     'subtitle' => 'Lacak riwayat dan progres setiap tiket yang Anda kirim.',
 
     'search_placeholder' => 'Cari tiket, judul, atau layanan…',
-    'showing' => 'Menampilkan :shown dari :total tiket',
     'empty' => 'Tidak ada tiket yang cocok dengan filter ini.',
 
     'auto_close' => [

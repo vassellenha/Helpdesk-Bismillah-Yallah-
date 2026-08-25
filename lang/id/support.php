@@ -58,7 +58,6 @@ return [
         'subtitle' => ':count tiket pernah ditugaskan ke Anda.',
         'search_placeholder' => 'Cari tiket, judul, atau layanan…',
         'all_service' => 'Semua Layanan',
-        'showing' => 'Menampilkan :shown dari :total tiket',
         'empty' => 'Tidak ada tiket yang cocok dengan filter ini.',
         'periods' => [
             'last_30_days' => '30 Hari Terakhir',
