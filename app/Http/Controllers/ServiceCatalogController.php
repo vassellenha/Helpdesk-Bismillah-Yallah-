@@ -242,7 +242,24 @@ class ServiceCatalogController extends Controller
 
     public function destroy(ServiceCatalogSubject $subject): JsonResponse
     {
-        $subject->delete();
+        $actor = CurrentActor::admin();
+
+        DB::transaction(function () use ($subject, $actor) {
+            // Dicatat SEBELUM baris hilang: setelah dihapus, old_value ini
+            // satu-satunya jejak isi subjek yang tersisa.
+            AuditTrail::record($actor, [
+                'module' => 'service_catalog',
+                'action' => 'delete',
+                'target_type' => 'subject',
+                'target_id' => $subject->id,
+                'target_name' => $subject->name,
+                'old_value' => $this->displaySnapshot($subject),
+                'new_value' => null,
+                'description' => "{$actor->name} menghapus subject \"{$subject->name}\".",
+            ]);
+
+            $subject->delete();
+        });
 
         return response()->json(['deleted' => true]);
     }
