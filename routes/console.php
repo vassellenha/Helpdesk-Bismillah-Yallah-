@@ -57,6 +57,21 @@ Schedule::command('eva:purge-expired-logs')
     ->withoutOverlapping();
 
 /*
+ | Penyapu notifikasi lonceng yang sudah lewat masa simpan.
+ |
+ | Pukul 02:30, setelah penyapu log EVA dan sebelum jam kerja. Harian, bukan
+ | tiap jam: yang disapu berumur puluhan hari, jadi menyapunya 24 kali sehari
+ | tidak membuat satu baris pun hilang lebih cepat dalam ukuran yang berarti.
+ |
+ | Ambangnya di config/helpdesk.php dan bisa dimatikan dengan menyetelnya 0 —
+ | jadi perintahnya tetap terdaftar dan tetap terlihat di `schedule:list`,
+ | bukan disembunyikan di balik saklar.
+ */
+Schedule::command('notifications:purge')
+    ->dailyAt('02:30')
+    ->withoutOverlapping();
+
+/*
  | Sinkronisasi data pegawai dari API perusahaan.
  |
  | Terdaftar hanya kalau saklarnya menyala (config

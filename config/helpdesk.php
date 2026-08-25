@@ -48,6 +48,27 @@ return [
     */
     'auto_close_resolved_after_days' => (int) env('HELPDESK_AUTO_CLOSE_DAYS', 3),
 
+    /*
+    | Masa simpan notifikasi lonceng.
+    |
+    | Dua ambang, bukan satu. Yang sudah dibaca adalah mayoritas dan sudah
+    | selesai tugasnya, jadi dibuang lebih cepat. Yang belum dibaca masih
+    | berupa sinyal yang belum sempat dilihat orangnya — pegawai yang cuti
+    | sebulan tidak boleh pulang ke lonceng bersih padahal ada yang terlewat —
+    | jadi ditahan lebih lama.
+    |
+    | Menghapusnya tidak menghilangkan informasi: catatan permanennya ada di
+    | Audit Trail dan pada tiketnya sendiri. Notifikasi hanya pemberitahuan.
+    |
+    | Angka 0 (atau negatif) MEMATIKAN penyapuan untuk kelompok itu, sama
+    | seperti auto_close di atas — nilai yang salah ketik lebih baik membuat
+    | penyapu diam daripada mengosongkan lonceng seluruh perusahaan.
+    */
+    'notification_retention' => [
+        'read_days' => (int) env('HELPDESK_NOTIFICATION_READ_DAYS', 30),
+        'unread_days' => (int) env('HELPDESK_NOTIFICATION_UNREAD_DAYS', 90),
+    ],
+
     // Centralized role metadata used by the role-select portal and the
     // sidebar navigation. Swap the dummy `route` targets for real
     // controller actions as each workspace is wired to the database.
