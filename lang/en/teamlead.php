@@ -23,8 +23,6 @@ return [
         'escalation' => 'Escalation',
         'reporting' => 'Reporting',
         'riwayat' => 'History',
-        'notifications' => 'Notifications',
-        'no_notifications' => 'No notifications yet.',
         'mark_all' => 'Mark all as read',
         'role' => 'Team Lead',
     ],

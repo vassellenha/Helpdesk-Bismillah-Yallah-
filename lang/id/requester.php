@@ -61,11 +61,6 @@ return [
     'returned_banner' => ':count tiket dikembalikan Tim Support untuk diperbaiki.',
     'returned_hint' => 'Buka tiketnya, baca catatan Support, lalu tekan “Edit & Resubmit” untuk mengirim ulang.',
 
-    'nav' => [
-        'notifications' => 'Notifikasi',
-        'no_notifications' => 'Belum ada notifikasi.',
-    ],
-
     'dashboard' => [
         'summary' => 'Ringkasan :period',
         'periods' => [

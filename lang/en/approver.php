@@ -11,11 +11,6 @@
 */
 
 return [
-    'nav' => [
-        'notifications' => 'Notifications',
-        'no_notifications' => 'No notifications yet.',
-    ],
-
     'inbox' => [
         'summary' => ':period Summary',
         'periods' => [

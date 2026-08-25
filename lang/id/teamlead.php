@@ -26,8 +26,6 @@ return [
         'escalation' => 'Eskalasi',
         'reporting' => 'Reporting',
         'riwayat' => 'Riwayat',
-        'notifications' => 'Notifikasi',
-        'no_notifications' => 'Belum ada notifikasi.',
         'mark_all' => 'Tandai semua dibaca',
         'role' => 'Team Lead',
     ],

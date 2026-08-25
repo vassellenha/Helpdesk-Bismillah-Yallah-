@@ -58,11 +58,6 @@ return [
     'returned_banner' => ':count ticket(s) returned by the Support team for revision.',
     'returned_hint' => 'Open the ticket, read the Support note, then press “Edit & Resubmit” to send it again.',
 
-    'nav' => [
-        'notifications' => 'Notifications',
-        'no_notifications' => 'No notifications yet.',
-    ],
-
     'dashboard' => [
         'summary' => ':period Summary',
         'periods' => [

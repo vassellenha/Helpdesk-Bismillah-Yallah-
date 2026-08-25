@@ -16,6 +16,14 @@ declare(strict_types=1);
 return [
     'close' => 'Tutup',
 
+    // Lonceng notifikasi dipasang di layout Approver, Support, dan Support BPO
+    // lewat komponen yang sama. Labelnya harus ada di 'common', bukan di grup
+    // salah satu peran, kalau tidak dua layout lain menampilkan kunci mentah.
+    'notifications' => [
+        'title' => 'Notifikasi',
+        'empty' => 'Belum ada notifikasi.',
+    ],
+
     // Dipakai komponen Pagination bersama pada daftar tiket tiap peran.
     'pagination' => [
         'prev' => '← Sebelumnya',

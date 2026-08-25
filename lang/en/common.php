@@ -7,6 +7,11 @@ declare(strict_types=1);
 return [
     'close' => 'Close',
 
+    'notifications' => [
+        'title' => 'Notifications',
+        'empty' => 'No notifications yet.',
+    ],
+
     'pagination' => [
         'prev' => '← Previous',
         'next' => 'Next →',

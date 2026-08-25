@@ -15,11 +15,6 @@
 */
 
 return [
-    'nav' => [
-        'notifications' => 'Notifikasi',
-        'no_notifications' => 'Belum ada notifikasi.',
-    ],
-
     'inbox' => [
         'summary' => 'Ringkasan :period',
         'periods' => [
