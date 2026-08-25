@@ -34,8 +34,9 @@ export function t(key, replacements = {}, fallback = null) {
         return fallback ?? key;
     }
 
-    return Object.entries(replacements).reduce(
-        (text, [token, replacement]) => text.replaceAll(`:${token}`, String(replacement)),
-        value,
-    );
+    // Longest token first: `:to` is a prefix of `:total`, so replacing it first
+    // would turn ":total" into "15tal" and swallow the number entirely.
+    return Object.entries(replacements)
+        .sort(([a], [b]) => b.length - a.length)
+        .reduce((text, [token, replacement]) => text.replaceAll(`:${token}`, String(replacement)), value);
 }
