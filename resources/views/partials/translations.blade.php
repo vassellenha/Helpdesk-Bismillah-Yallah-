@@ -15,7 +15,13 @@
     Page:    @include('partials.translations', ['groups' => ['requester']])
 --}}
 @php
+    // 'common' selalu ikut. Isinya label komponen React BERSAMA — popup, tombol
+    // tutup — yang muncul di layar peran mana pun. Tanpa ini komponen bersama
+    // harus meminjam grup milik satu peran, dan di layar peran lain labelnya
+    // terbaca sebagai kunci mentah. Berkasnya sengaja dijaga tetap kecil.
     $localeMessages = collect($groups ?? [])
+        ->push('common')
+        ->unique()
         ->mapWithKeys(fn (string $group) => [$group => trans($group)])
         ->all();
 @endphp

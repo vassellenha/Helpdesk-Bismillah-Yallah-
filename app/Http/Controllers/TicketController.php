@@ -19,24 +19,63 @@ use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    /**
+     * Aturan kelengkapan tiket — dipakai bersama oleh pembuatan dan penyuntingan.
+     *
+     * Kolom yang diwajibkan di sini sama persis dengan yang diwajibkan layar
+     * Requester. Sebelumnya hanya `title` dan `sla_policy_id` yang wajib,
+     * sehingga tiket tanpa layanan, sub kategori, maupun subjek bisa lahir
+     * lewat pemanggilan langsung ke endpoint — tombol yang dimatikan di layar
+     * hanya menutupi jalan yang lewat tampilan, bukan menutup aturannya.
+     *
+     * Draf dikecualikan dengan sengaja. Draf ADALAH pekerjaan yang belum
+     * selesai; satu-satunya yang tetap dituntut darinya adalah Layanan, karena
+     * dari situlah nomor tiket dan penyalurannya nanti diturunkan.
+     *
+     * @return array<string, mixed>
+     */
+    private function ticketRules(Request $request): array
     {
-        $data = $request->validate([
+        $isDraft = $request->boolean('is_draft');
+        $requiredUnlessDraft = Rule::requiredIf(fn (): bool => ! $isDraft);
+
+        return [
             'title' => 'required|string|max:255',
             'category' => 'nullable|string|max:255',
             'requester_name' => 'nullable|string|max:255',
             'sla_policy_id' => 'required|integer|exists:sla_policies,id',
-            'service_name' => 'nullable|string|max:255',
+            // Layanan dituntut lewat NAMANYA, bukan lewat kunci asingnya.
+            // `service_catalog_service_id` boleh kosong pada tiket yang sah —
+            // tiket lama maupun tiket yang layanannya sudah tidak ada lagi di
+            // katalog tetap menyimpan namanya. Mewajibkan kunci asing di sini
+            // akan menolak pengiriman ulang tiket Returned yang sepenuhnya sah.
+            'service_name' => 'required|string|max:255',
             'service_id' => 'nullable|integer|exists:service_catalog_services,id',
-            'subcategory_name' => 'nullable|string|max:255',
-            'subject_name' => 'nullable|string|max:255',
-            'issue_category' => 'nullable|string|max:255',
+            'subcategory_name' => [$requiredUnlessDraft, 'string', 'max:255'],
+            'subject_name' => [$requiredUnlessDraft, 'string', 'max:255'],
+            'issue_category' => [$requiredUnlessDraft, 'string', 'max:255'],
             'description' => 'nullable|string|max:5000',
-            'approver_id' => 'nullable|integer|exists:users,id',
+            'approver_id' => [
+                Rule::requiredIf(fn (): bool => ! $isDraft && $request->boolean('requires_approval')),
+                'nullable',
+                'integer',
+                'exists:users,id',
+            ],
             'requires_approval' => 'nullable|boolean',
             'is_draft' => 'nullable|boolean',
             'catalog_subject_id' => ['nullable', 'integer', Rule::exists('service_catalog_subjects', 'id')->where('is_active', true)],
-        ]);
+        ];
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        // Aktornya ditetapkan SEBELUM validasi, bukan sesudah. Urutan sebaliknya
+        // membuat akun yang aksesnya dicabut dijawab 422 berisi rincian kolom —
+        // menjawab isi formulir kepada orang yang seharusnya sudah dihentikan di
+        // depan pintu, dan membuat gerbangnya bergantung pada muatan permintaan.
+        $requester = CurrentActor::requester();
+
+        $data = $request->validate($this->ticketRules($request));
 
         /** @var SlaPolicy $policy */
         $policy = SlaPolicy::findOrFail($data['sla_policy_id']);
@@ -49,7 +88,6 @@ class TicketController extends Controller
 
         $isDraft = (bool) ($data['is_draft'] ?? false);
         $requiresApproval = (bool) ($data['requires_approval'] ?? false);
-        $requester = CurrentActor::requester();
 
         $now = Carbon::now();
         $resolutionDueAt = $now->clone()->addMinutes($policy->resolution_time_minutes);
@@ -124,21 +162,11 @@ class TicketController extends Controller
         abort_unless($ticket->requester_id === $requester->id, 403);
         abort_unless(in_array($ticket->status, ['Draft', 'Returned'], true), 422, 'Only draft or returned tickets can be edited.');
 
-        $data = $request->validate([
-            'title' => 'required|string|max:255',
-            'category' => 'nullable|string|max:255',
-            'sla_policy_id' => 'required|integer|exists:sla_policies,id',
-            'service_name' => 'nullable|string|max:255',
-            'service_id' => 'nullable|integer|exists:service_catalog_services,id',
-            'subcategory_name' => 'nullable|string|max:255',
-            'subject_name' => 'nullable|string|max:255',
-            'issue_category' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:5000',
-            'approver_id' => 'nullable|integer|exists:users,id',
-            'requires_approval' => 'nullable|boolean',
-            'is_draft' => 'nullable|boolean',
-            'catalog_subject_id' => ['nullable', 'integer', Rule::exists('service_catalog_subjects', 'id')->where('is_active', true)],
-        ]);
+        // Aturan yang sama persis dengan pembuatan tiket. Inilah jalur yang
+        // mengubah draf menjadi tiket terkirim, jadi kelengkapannya harus
+        // dituntut di sini juga — kalau tidak, draf setengah jadi tetap bisa
+        // dikirim lewat jalur ini dan lubangnya sekadar berpindah tempat.
+        $data = $request->validate($this->ticketRules($request));
 
         /** @var SlaPolicy $policy */
         $policy = SlaPolicy::findOrFail($data['sla_policy_id']);

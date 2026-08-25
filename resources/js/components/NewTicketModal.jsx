@@ -465,22 +465,61 @@ export default function NewTicketModal({
         return priorityList().map((p) => p.name);
     }, [policies]);
 
-    const canSubmit =
-        form.serviceId !== '' &&
-        form.subcategoryId !== '' &&
-        (isOtherSubcategory ? form.subjectText.trim() !== '' && form.issueCategoryId !== '' : form.subjectId !== '') &&
-        (!requiresApproval || form.approverId !== '');
+    /**
+     * Kolom wajib yang masih kosong, dipetakan ke pesannya.
+     *
+     * Objek kosong berarti formulir sudah lengkap. Dipakai untuk dua hal
+     * sekaligus: memutuskan boleh-tidaknya mengirim, dan menggambar pesan di
+     * bawah isian yang bersangkutan.
+     */
+    const missing = useMemo(() => {
+        const result = {};
+
+        if (form.serviceId === '') result.service = 'Layanan wajib dipilih.';
+        if (form.subcategoryId === '') result.subcategory = 'Sub Kategori wajib dipilih.';
+
+        if (isOtherSubcategory) {
+            if (form.subjectText.trim() === '') result.subject = 'Jelaskan kebutuhan Anda terlebih dahulu.';
+            if (form.issueCategoryId === '') result.issueCategory = 'Kategori Masalah wajib dipilih.';
+        } else if (form.subjectId === '') {
+            result.subject = 'Subjek wajib dipilih.';
+        }
+
+        if (requiresApproval && form.approverId === '') result.approver = 'Pilih approver yang akan menyetujui tiket ini.';
+
+        return result;
+    }, [form, isOtherSubcategory, requiresApproval]);
+
+    const canSubmit = Object.keys(missing).length === 0;
+
+    /**
+     * Pesan baru muncul setelah pengguna benar-benar mencoba mengirim.
+     *
+     * Formulir yang baru dibuka sudah pasti kosong; menyalakan semua pesan
+     * merah sejak detik pertama membuatnya terlihat seolah pengguna berbuat
+     * salah padahal belum menyentuh apa pun.
+     */
+    const [showErrors, setShowErrors] = useState(false);
+    const errors = showErrors ? missing : {};
 
     async function submit(isDraft) {
         setError('');
-        if (!isDraft && !canSubmit) {
-            setError('Lengkapi semua kolom wajib sebelum mengirim.');
+
+        // Draf memang boleh setengah jadi, tapi Layanan tetap dituntut — dari
+        // situlah nomor tiketnya diturunkan.
+        if (isDraft) {
+            if (!form.serviceId) {
+                setShowErrors(true);
+                setError('Silakan pilih Layanan terlebih dahulu.');
+                return;
+            }
+        } else if (!canSubmit) {
+            setShowErrors(true);
+            setError('Lengkapi kolom yang ditandai di bawah ini sebelum mengirim.');
             return;
         }
-        if (!form.serviceId) {
-            setError('Silakan pilih Layanan terlebih dahulu.');
-            return;
-        }
+
+        setShowErrors(false);
 
         setSubmitting(true);
         try {
@@ -528,6 +567,10 @@ export default function NewTicketModal({
 
     function close() {
         setOpen(false);
+        // Formulir yang dibuka lagi harus mulai bersih; tanda merah sisa
+        // percobaan sebelumnya akan menyambut pengguna tanpa sebab.
+        setShowErrors(false);
+        setError('');
     }
 
     return (
@@ -562,7 +605,7 @@ export default function NewTicketModal({
                             <>
                                 {error && <p className="rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
 
-                                <Field label="Layanan">
+                                <Field label="Layanan" required error={errors.service}>
                                     <SearchableSelect
                                         value={form.serviceId}
                                         placeholder={catalog ? 'Pilih Layanan' : 'Memuat…'}
@@ -573,7 +616,7 @@ export default function NewTicketModal({
                                     />
                                 </Field>
 
-                                <Field label="Sub Kategori">
+                                <Field label="Sub Kategori" required error={errors.subcategory}>
                                     <SearchableSelect
                                         value={form.subcategoryId}
                                         placeholder={form.serviceId ? 'Pilih Sub Kategori' : 'Pilih Layanan terlebih dahulu'}
@@ -585,7 +628,7 @@ export default function NewTicketModal({
                                 </Field>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <Field label="Subjek">
+                                    <Field label="Subjek" required error={errors.subject}>
                                         {isOtherSubcategory ? (
                                             <input
                                                 value={form.subjectText}
@@ -604,7 +647,7 @@ export default function NewTicketModal({
                                             />
                                         )}
                                     </Field>
-                                    <Field label="Kategori Masalah">
+                                    <Field label="Kategori Masalah" required={isOtherSubcategory} error={errors.issueCategory}>
                                         {isOtherSubcategory ? (
                                             <SelectMenu
                                                 value={form.issueCategoryId}
@@ -631,7 +674,11 @@ export default function NewTicketModal({
                                             <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">Memerlukan Approval</span>
                                         </div>
 
-                                        <p className="mb-1.5 mt-3 text-[13px] font-semibold text-gray-700 dark:text-ink-2">Minta approval kepada :</p>
+                                        <p className="mb-1.5 mt-3 text-[13px] font-semibold text-gray-700 dark:text-ink-2">
+                                            Minta approval kepada :
+                                            <span aria-hidden="true" className="ml-0.5 text-red-600 dark:text-bad-text">*</span>
+                                            <span className="sr-only"> (wajib)</span>
+                                        </p>
                                         <div ref={approverRef} className="relative">
                                             {form.approverId ? (
                                                 <div className="flex items-center justify-between rounded-[10px] border border-blue-200 bg-white dark:bg-panel-2 px-3.5 py-2.5 text-[13px]">
@@ -680,7 +727,11 @@ export default function NewTicketModal({
                                                 </ul>
                                             )}
                                         </div>
-                                        <p className="mt-1.5 text-[11px] text-gray-400 dark:text-ink-3">Ketik nama manager dituju baru dipilih.</p>
+                                        {errors.approver ? (
+                                            <p role="alert" className="mt-1.5 text-[12px] font-semibold text-red-600 dark:text-bad-text">{errors.approver}</p>
+                                        ) : (
+                                            <p className="mt-1.5 text-[11px] text-gray-400 dark:text-ink-3">Ketik nama manager dituju baru dipilih.</p>
+                                        )}
                                     </div>
                                 )}
 
@@ -814,10 +865,19 @@ export default function NewTicketModal({
                                         Save as Draft
                                     </button>
                                 )}
+                                {/*
+                                    Tombolnya sengaja TIDAK dimatikan saat formulir belum lengkap.
+                                    Tombol mati menahan pengiriman tanpa pernah mengatakan apa yang
+                                    kurang; dibiarkan hidup, sekali klik memunculkan tanda dan pesan
+                                    pada setiap isian yang masih kosong. `aria-disabled` memberi
+                                    tahu pembaca layar bahwa aksinya belum bisa dijalankan, tanpa
+                                    ikut membuang kliknya seperti `disabled`.
+                                */}
                                 <button
                                     onClick={() => submit(false)}
-                                    disabled={submitting || !canSubmit}
-                                    className="flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={submitting}
+                                    aria-disabled={!canSubmit}
+                                    className={`flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm hover:bg-blue-700 dark:hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50 ${canSubmit ? '' : 'opacity-60'}`}
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 14-7-4 14-4-5z"/><path d="m11 14 8-9"/></svg>
                                     {submitting ? 'Mengirim…' : 'Kirim Tiket'}
@@ -833,11 +893,39 @@ export default function NewTicketModal({
     );
 }
 
-function Field({ label, children }) {
+/**
+ * `required` menggambar tanda wajib di sebelah label, `error` menggambar
+ * pesannya di bawah isian.
+ *
+ * Keduanya ditambahkan setelah UAT test case 7 (FR-R05): sebelumnya formulir
+ * ini sama sekali tidak menandai isian wajib dan tidak pernah memberi pesan
+ * per isian — pengiriman hanya dicegah dengan mematikan tombolnya, sehingga
+ * pengguna melihat tombol mati tanpa tahu bagian mana yang masih kurang.
+ *
+ * Tanda bintang disertai teks "wajib" yang hanya terbaca pembaca layar;
+ * bintang sendirian tidak berarti apa-apa bila tidak terlihat.
+ */
+function Field({ label, children, required = false, error = null, htmlFor = null }) {
     return (
         <div>
-            <label className="mb-1.5 block text-[13px] font-bold text-gray-800 dark:text-ink-1">{label}</label>
+            <label htmlFor={htmlFor ?? undefined} className="mb-1.5 block text-[13px] font-bold text-gray-800 dark:text-ink-1">
+                {label}
+                {required && (
+                    <>
+                        <span aria-hidden="true" className="ml-0.5 text-red-600 dark:text-bad-text">*</span>
+                        <span className="sr-only"> (wajib)</span>
+                    </>
+                )}
+            </label>
             {children}
+            {error && (
+                <p role="alert" className="mt-1.5 flex items-start gap-1 text-[12px] font-semibold text-red-600 dark:text-bad-text">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="mt-px shrink-0" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" /><path d="M12 7v6" /><path d="M12 16.5v.5" />
+                    </svg>
+                    {error}
+                </p>
+            )}
         </div>
     );
 }

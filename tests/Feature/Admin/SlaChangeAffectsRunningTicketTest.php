@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Models\ServiceCatalogService;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Support\PriorityRegistry;
@@ -126,10 +127,16 @@ final class SlaChangeAffectsRunningTicketTest extends TestCase
         // dipakai aplikasi saat tiket lahir.
         $this->actingAsRole('requester');
 
+        $service = ServiceCatalogService::create(['name' => 'SAP', 'is_active' => true]);
+
         $response = $this->postJson('/api/tickets', [
             'title' => 'Tiket sesudah SLA diperketat',
             'sla_policy_id' => $policy->id,
             'issue_category' => 'Incident',
+            'service_id' => $service->id,
+            'service_name' => $service->name,
+            'subcategory_name' => 'PERFORMANCE',
+            'subject_name' => 'Lambat sesudah perubahan target',
         ])->assertCreated();
 
         $baru = Ticket::find($response->json('id'));
