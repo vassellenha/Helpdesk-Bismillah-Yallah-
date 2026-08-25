@@ -46,6 +46,7 @@ return [
         'all_subcategory' => 'All Sub Categories',
         'all_category' => 'All Issue Categories',
         'all_priority' => 'All Priorities',
+        'reset' => 'Reset Filters',
     ],
 
     'periods' => [

@@ -16,6 +16,7 @@ const SLA_COLOR = { ontrack: '#10b981', warning: '#d97706', breach: '#dc2626', n
 // language switch, so state holds the key and only its label is translated.
 const PERIOD_DAYS = { last_30_days: 30, last_3_months: 92, last_6_months: 183, this_year: 366 };
 const ALL = 'all';
+const DEFAULT_PERIOD = 'last_6_months';
 
 const COLUMNS = [
     { key: 'id', labelKey: 'requester.columns.id' },
@@ -117,7 +118,7 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
     const [service, setService] = useState(ALL);
     const [subcategory, setSubcategory] = useState(ALL);
     const [priority, setPriority] = useState(ALL);
-    const [period, setPeriod] = useState('last_6_months');
+    const [period, setPeriod] = useState(DEFAULT_PERIOD);
     const [sortKey, setSortKey] = useState('createdAt');
     const [sortDir, setSortDir] = useState('desc');
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -128,6 +129,31 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
     function clearIncomingFilter() {
         setIncomingFilter(null);
         window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    // Five controls plus the search box: resetting them one by one is tedious
+    // enough that the requester gives up and reloads the page instead.
+    const filtersApplied =
+        search !== '' ||
+        tab !== 'Semua' ||
+        service !== ALL ||
+        subcategory !== ALL ||
+        category !== ALL ||
+        priority !== ALL ||
+        period !== DEFAULT_PERIOD ||
+        incomingFilter !== null;
+
+    function resetFilters() {
+        setSearch('');
+        setTab('Semua');
+        setService(ALL);
+        setSubcategory(ALL);
+        setCategory(ALL);
+        setPriority(ALL);
+        setPeriod(DEFAULT_PERIOD);
+        if (incomingFilter) {
+            clearIncomingFilter();
+        }
     }
 
     // Picking a pill by hand is the user overriding the dashboard's filter —
@@ -304,6 +330,15 @@ export default function MyTicketsPage({ tickets: initialTickets = [], catalogUrl
                     <SelectMenu value={category} onChange={setCategory} options={options(categories, 'requester.filters.all_category')} />
                     <SelectMenu value={priority} onChange={setPriority} options={options(priorityNames(), 'requester.filters.all_priority')} />
                     <SelectMenu value={period} onChange={setPeriod} options={Object.keys(PERIOD_DAYS).map((p) => ({ value: p, label: trans(`requester.periods.${p}`) }))} />
+                    {filtersApplied && (
+                        <button
+                            type="button"
+                            onClick={resetFilters}
+                            className="text-[13px] font-semibold text-blue-700 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300"
+                        >
+                            {trans('requester.filters.reset')}
+                        </button>
+                    )}
                 </div>
             </div>
 

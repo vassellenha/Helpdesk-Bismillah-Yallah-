@@ -49,6 +49,7 @@ return [
         'all_subcategory' => 'Semua Sub Kategori',
         'all_category' => 'Semua Kategori Masalah',
         'all_priority' => 'Semua Prioritas',
+        'reset' => 'Reset Filter',
     ],
 
     'periods' => [
