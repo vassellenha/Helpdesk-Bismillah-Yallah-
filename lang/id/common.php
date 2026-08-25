@@ -22,6 +22,7 @@ return [
     'notifications' => [
         'title' => 'Notifikasi',
         'empty' => 'Belum ada notifikasi.',
+        'mark_all' => 'Tandai semua dibaca',
     ],
 
     // Dipakai komponen Pagination bersama pada daftar tiket tiap peran.

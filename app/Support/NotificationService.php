@@ -219,6 +219,13 @@ class NotificationService
      * every page under a role layout so the unread count and list never
      * drift between screens. $ticketRoute/$readRoute let each role point
      * the feed at its own ticket-detail and mark-read endpoints.
+     *
+     * Returns the newest $limit notifications under 'items' plus the FULL
+     * unread total under 'unreadCount'. The two are counted separately on
+     * purpose: the panel stays short, but the badge must not be capped by
+     * the panel's window or a busy requester reads 16 where 57 are waiting.
+     *
+     * @return array{items: array<int, array<string, mixed>>, unreadCount: int}
      */
     public static function present(
         User $user,
@@ -227,7 +234,12 @@ class NotificationService
         string $ticketRoute = 'requester.tickets.show',
         string $readRoute = 'requester.notifications.read'
     ): array {
-        return TicketNotification::where('user_id', $user->id)
+        $unreadCount = TicketNotification::where('user_id', $user->id)
+            ->where('role', $role)
+            ->whereNull('read_at')
+            ->count();
+
+        $items = TicketNotification::where('user_id', $user->id)
             // Inti perbaikannya. Tanpa baris ini, pemegang dua peran melihat
             // notifikasi approval-nya di lonceng Requester dan sebaliknya.
             ->where('role', $role)
@@ -247,5 +259,7 @@ class NotificationService
             ])
             ->values()
             ->all();
+
+        return ['items' => $items, 'unreadCount' => $unreadCount];
     }
 }

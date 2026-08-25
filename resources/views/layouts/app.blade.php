@@ -50,7 +50,7 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <div data-react="ThemeToggle"></div>
-                    <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications ?? []]) }}"></div>
+                    <div data-react="NotificationBell" data-props="{{ json_encode(['notifications' => $notifications['items'] ?? [], 'unreadCount' => $notifications['unreadCount'] ?? 0]) }}"></div>
                     @if(isset($currentUser) && isset($profileUrl))
                         <div
                             data-react="UserMenu"

@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function NotificationBell({ notifications = [] }) {
+export default function NotificationBell({ notifications = [], unreadCount = 0 }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
-    const unreadCount = notifications.filter((n) => n.unread).length;
 
     useEffect(() => {
         function onClickOutside(e) {

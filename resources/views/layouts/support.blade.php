@@ -38,7 +38,7 @@
 
             <div
                 data-react="ApproverTopNav"
-                data-props="{{ json_encode(['notifications' => $notifications ?? [], 'user' => $currentUser ?? [], 'inboxUrl' => route('dashboard.support'), 'ticketsUrl' => route('support.tickets'), 'markAllReadUrl' => route('support.notifications.read-all'), 'profileUrl' => route('support.profile')]) }}"
+                data-props="{{ json_encode(['notifications' => $notifications['items'] ?? [], 'unreadCount' => $notifications['unreadCount'] ?? 0, 'user' => $currentUser ?? [], 'inboxUrl' => route('dashboard.support'), 'ticketsUrl' => route('support.tickets'), 'markAllReadUrl' => route('support.notifications.read-all'), 'profileUrl' => route('support.profile')]) }}"
             ></div>
         </header>
 

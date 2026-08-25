@@ -12,7 +12,7 @@ const ICON_STYLES = {
     history_updated: { bg: 'bg-gray-100 dark:bg-panel-3', color: 'text-gray-500 dark:text-ink-2' },
 };
 
-export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl = '/', ticketsUrl = '/', markAllReadUrl, profileUrl }) {
+export default function ApproverTopNav({ notifications = [], unreadCount: unreadFromServer = 0, user = {}, inboxUrl = '/', ticketsUrl = '/', markAllReadUrl, profileUrl }) {
     const [items, setItems] = useState(notifications);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -30,10 +30,13 @@ export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl
         return () => document.removeEventListener('mousedown', onClickOutside);
     }, []);
 
-    const unreadCount = items.filter((n) => n.unread).length;
+    // Dihitung server dari SELURUH notifikasi, bukan dari `items` yang
+    // dibatasi 20 terbaru — daftar boleh pendek, angkanya tidak boleh ikut terpotong.
+    const [unreadCount, setUnreadCount] = useState(unreadFromServer);
 
     async function markAllRead() {
         setItems((prev) => prev.map((n) => ({ ...n, unread: false })));
+        setUnreadCount(0);
         try {
             await apiFetch(markAllReadUrl, { method: 'POST', body: JSON.stringify({}) });
         } catch {
@@ -43,6 +46,9 @@ export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl
 
     async function openNotification(n) {
         setItems((prev) => prev.map((it) => (it.id === n.id ? { ...it, unread: false } : it)));
+        if (n.unread) {
+            setUnreadCount((c) => Math.max(0, c - 1));
+        }
         if (n.unread && n.markReadUrl) {
             apiFetch(n.markReadUrl, { method: 'POST', body: JSON.stringify({}) }).catch(() => {});
         }
@@ -75,7 +81,7 @@ export default function ApproverTopNav({ notifications = [], user = {}, inboxUrl
                         <div className="flex items-center justify-between border-b border-gray-100 dark:border-edge px-4 py-3.5">
                             <span className="text-sm font-bold text-gray-900 dark:text-ink-1">{trans('common.notifications.title')}</span>
                             <button onClick={markAllRead} className="text-[11px] font-semibold text-blue-600 dark:text-accent-text hover:text-blue-800 dark:hover:text-blue-300">
-                                Tandai semua dibaca
+                                {trans('common.notifications.mark_all')}
                             </button>
                         </div>
                         <div className="max-h-[348px] overflow-y-auto">

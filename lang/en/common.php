@@ -10,6 +10,7 @@ return [
     'notifications' => [
         'title' => 'Notifications',
         'empty' => 'No notifications yet.',
+        'mark_all' => 'Mark all as read',
     ],
 
     'pagination' => [

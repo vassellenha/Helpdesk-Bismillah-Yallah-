@@ -26,7 +26,6 @@ return [
         'escalation' => 'Eskalasi',
         'reporting' => 'Reporting',
         'riwayat' => 'Riwayat',
-        'mark_all' => 'Tandai semua dibaca',
         'role' => 'Team Lead',
     ],
 

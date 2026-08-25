@@ -56,7 +56,8 @@ final class RoleScopedNotificationTest extends TestCase
 
         $feedRequester = NotificationService::present($user, 'requester');
 
-        $this->assertCount(0, $feedRequester);
+        $this->assertCount(0, $feedRequester['items']);
+        $this->assertSame(0, $feedRequester['unreadCount']);
     }
 
     public function test_notifikasi_approver_muncul_di_lonceng_approver(): void
@@ -67,8 +68,8 @@ final class RoleScopedNotificationTest extends TestCase
 
         $feedApprover = NotificationService::present($user, 'approver', 20, 'approver.tickets.show', 'approver.notifications.read');
 
-        $this->assertCount(1, $feedApprover);
-        $this->assertSame('Ada tiket menunggu persetujuan Anda.', $feedApprover[0]['text']);
+        $this->assertCount(1, $feedApprover['items']);
+        $this->assertSame('Ada tiket menunggu persetujuan Anda.', $feedApprover['items'][0]['text']);
     }
 
     public function test_tiap_peran_hanya_melihat_miliknya_sendiri(): void
@@ -81,10 +82,10 @@ final class RoleScopedNotificationTest extends TestCase
         $requester = NotificationService::present($user, 'requester');
         $approver = NotificationService::present($user, 'approver', 20, 'approver.tickets.show', 'approver.notifications.read');
 
-        $this->assertCount(1, $requester);
-        $this->assertCount(1, $approver);
-        $this->assertSame('Tiket Anda berhasil dibuat.', $requester[0]['text']);
-        $this->assertSame('Ada tiket menunggu persetujuan Anda.', $approver[0]['text']);
+        $this->assertCount(1, $requester['items']);
+        $this->assertCount(1, $approver['items']);
+        $this->assertSame('Tiket Anda berhasil dibuat.', $requester['items'][0]['text']);
+        $this->assertSame('Ada tiket menunggu persetujuan Anda.', $approver['items'][0]['text']);
     }
 
     /**
@@ -97,8 +98,8 @@ final class RoleScopedNotificationTest extends TestCase
 
         NotificationService::notify($user, 'approver', null, 'waiting_decision', 'Menunggu Keputusan', 'Ada tiket menunggu persetujuan Anda.');
 
-        $this->assertCount(0, NotificationService::present($user, 'support', 20, 'support.tickets.show', 'support.notifications.read'));
-        $this->assertCount(0, NotificationService::present($user, 'support-bpo', 20, 'support-bpo.tickets.show', 'support-bpo.notifications.read'));
+        $this->assertCount(0, NotificationService::present($user, 'support', 20, 'support.tickets.show', 'support.notifications.read')['items']);
+        $this->assertCount(0, NotificationService::present($user, 'support-bpo', 20, 'support-bpo.tickets.show', 'support-bpo.notifications.read')['items']);
     }
 
     public function test_peran_ikut_tersimpan_di_basis_data(): void
