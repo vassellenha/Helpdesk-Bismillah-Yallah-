@@ -174,4 +174,10 @@ return [
         'breach' => 'The resolution deadline has passed. The ticket is still being worked on, but it is now recorded as late.',
     ],
 
+    'attachment_error' => [
+        'too_many' => 'You can attach up to :count files.',
+        'bad_type' => 'Only PNG, JPG, PDF, or video (MP4, MOV, WEBM) files are supported.',
+        'too_large' => 'File size exceeds 30MB.',
+    ],
+
 ];

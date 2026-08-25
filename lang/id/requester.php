@@ -177,4 +177,10 @@ return [
         'breach' => 'Batas waktu penyelesaian sudah terlampaui. Tiketnya tetap dikerjakan, tapi sudah tercatat lewat target.',
     ],
 
+    'attachment_error' => [
+        'too_many' => 'Maksimal :count berkas per tiket.',
+        'bad_type' => 'Hanya berkas PNG, JPG, PDF, atau video (MP4, MOV, WEBM) yang bisa dilampirkan.',
+        'too_large' => 'Ukuran berkas melebihi 30MB.',
+    ],
+
 ];

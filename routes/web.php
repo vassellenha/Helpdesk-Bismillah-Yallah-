@@ -33,12 +33,29 @@ use App\Http\Controllers\SsoController;
 use App\Http\Controllers\SupportBpoController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TeamLeadController;
+use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketDetailController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PortalController::class, 'index'])->middleware('auth')->name('portal.index');
+
+/*
+| Lampiran tiket. SATU rute untuk semua peran, bukan satu per layar: berkas
+| yang sama sah dibuka Requester pemiliknya, Approver-nya, dan petugas Support
+| yang menanganinya. TicketAttachmentAccess yang memutuskan siapa boleh apa.
+|
+| Berkasnya duduk di disk privat, jadi rute ini bukan sekadar lapisan tambahan
+| di atas berkas yang tetap terbuka — ia satu-satunya jalan menuju berkas itu.
+*/
+Route::middleware('auth')->group(function () {
+    Route::get('/tickets/{ticket}/attachments/{attachment}', [TicketAttachmentController::class, 'show'])
+        ->name('tickets.attachment.show');
+
+    Route::get('/tickets/{ticket}/comments/{comment}/attachment', [TicketAttachmentController::class, 'showComment'])
+        ->name('tickets.comment.attachment.show');
+});
 
 /*
 | Login pengembangan (email ATAU nomor telepon, tanpa password) — dua pintu,

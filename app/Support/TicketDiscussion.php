@@ -58,7 +58,7 @@ class TicketDiscussion
         ];
 
         if ($file) {
-            $attributes['attachment_path'] = $file->store(self::STORAGE_DIR, 'public');
+            $attributes['attachment_path'] = $file->store(self::STORAGE_DIR, 'local');
             $attributes['attachment_name'] = $file->getClientOriginalName();
             $attributes['attachment_mime_type'] = $file->getMimeType();
             $attributes['attachment_size_bytes'] = $file->getSize();
@@ -84,7 +84,7 @@ class TicketDiscussion
             'at' => $c->created_at->translatedFormat('j M · H:i'),
             'attachment' => $c->attachment_path ? [
                 'name' => $c->attachment_name,
-                'url' => Storage::disk('public')->url($c->attachment_path),
+                'url' => route('tickets.comment.attachment.show', [$c->ticket_id, $c]),
                 'sizeBytes' => $c->attachment_size_bytes,
             ] : null,
         ];

@@ -232,7 +232,7 @@ class TicketController extends Controller
         abort_unless(in_array($ticket->status, ['Draft', 'Returned'], true), 422, 'Only draft or returned tickets can be deleted.');
 
         foreach ($ticket->attachments as $attachment) {
-            Storage::disk('public')->delete($attachment->path);
+            Storage::disk('local')->delete($attachment->path);
         }
         $ticket->delete();
 

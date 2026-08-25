@@ -83,7 +83,7 @@ class TicketDetailController extends Controller
             ], 422);
         }
 
-        $path = $request->file('file')->store('ticket-attachments', 'public');
+        $path = $request->file('file')->store('ticket-attachments', 'local');
 
         $attachment = $ticket->attachments()->create([
             'name' => $request->file('file')->getClientOriginalName(),
@@ -106,7 +106,7 @@ class TicketDetailController extends Controller
         abort_unless($ticket->requester_id === $requester->id, 403);
         abort_unless($attachment->ticket_id === $ticket->id, 404);
 
-        Storage::disk('public')->delete($attachment->path);
+        Storage::disk('local')->delete($attachment->path);
         $attachment->delete();
 
         return response()->json(['deleted' => true]);

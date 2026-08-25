@@ -185,12 +185,15 @@ class Ticket extends Model
     public function attachmentsPayload(): array
     {
         return $this->attachments->map(function (TicketAttachment $a) {
-            $exists = $a->path && Storage::disk('public')->exists($a->path);
+            $exists = $a->path && Storage::disk('local')->exists($a->path);
 
             return [
                 'id' => $a->id,
                 'name' => $a->name,
-                'url' => $exists ? Storage::disk('public')->url($a->path) : null,
+                // Rute ber-otorisasi, bukan URL /storage langsung: berkasnya
+                // ada di disk privat dan hanya keluar lewat gerbang yang
+                // memeriksa siapa yang meminta.
+                'url' => $exists ? route('tickets.attachment.show', [$this, $a]) : null,
                 'missing' => ! $exists,
             ];
         })->values()->all();

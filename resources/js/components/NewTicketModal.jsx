@@ -405,15 +405,15 @@ export default function NewTicketModal({
             const next = [...current];
             for (const file of files) {
                 if (existingAttachments.length + next.length >= MAX_ATTACHMENTS) {
-                    setAttachmentError(`You can attach up to ${MAX_ATTACHMENTS} files.`);
+                    setAttachmentError(trans('requester.attachment_error.too_many', { count: MAX_ATTACHMENTS }));
                     break;
                 }
                 if (!ACCEPTED_ATTACHMENT_TYPES.includes(file.type)) {
-                    setAttachmentError('Only PNG, JPG, PDF, or video (MP4, MOV, WEBM) files are supported.');
+                    setAttachmentError(trans('requester.attachment_error.bad_type'));
                     continue;
                 }
                 if (file.size > MAX_ATTACHMENT_BYTES) {
-                    setAttachmentError('Ukuran berkas melebihi 30MB.');
+                    setAttachmentError(trans('requester.attachment_error.too_large'));
                     continue;
                 }
                 next.push(file);
