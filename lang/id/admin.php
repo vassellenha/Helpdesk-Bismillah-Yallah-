@@ -317,6 +317,7 @@ return [
 
         'action' => [
             'login' => 'Login',
+            'login_failed' => 'Login Ditolak',
             'logout' => 'Logout',
             'auto_close' => 'Tutup Otomatis',
             'start' => 'Mulai Kerjakan',

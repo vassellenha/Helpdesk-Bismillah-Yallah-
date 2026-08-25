@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\RefusedLoginAudit;
 use App\Support\RoleRegistry;
 use App\Support\Sso\SsoAuthenticator;
 use Illuminate\Http\RedirectResponse;
@@ -129,6 +130,8 @@ class DevLoginController extends Controller
         }
 
         if (! $user->isActive()) {
+            RefusedLoginAudit::record($user, $isAdminPortal ? 'admin_login' : 'login');
+
             throw ValidationException::withMessages([
                 'email' => "Akun {$user->name} tidak dapat mengakses Helpdesk: "
                     .lcfirst((string) $user->inactiveReason()).'.',

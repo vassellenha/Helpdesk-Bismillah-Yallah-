@@ -41,6 +41,7 @@ const ACTION_KEYS = {
     return: 'returned',
     sync: 'sync',
     login: 'login',
+    login_failed: 'login_failed',
     logout: 'logout',
     auto_close: 'auto_close',
     start: 'start',

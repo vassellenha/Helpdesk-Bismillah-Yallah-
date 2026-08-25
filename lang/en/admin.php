@@ -312,6 +312,7 @@ return [
 
         'action' => [
             'login' => 'Login',
+            'login_failed' => 'Login Refused',
             'logout' => 'Logout',
             'auto_close' => 'Auto-Closed',
             'start' => 'Started Work',

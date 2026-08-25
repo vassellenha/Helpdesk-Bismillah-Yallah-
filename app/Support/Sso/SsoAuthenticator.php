@@ -3,6 +3,7 @@
 namespace App\Support\Sso;
 
 use App\Models\User;
+use App\Support\Auth\RefusedLoginAudit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -132,6 +133,8 @@ class SsoAuthenticator
         }
 
         if (! $user->isActive()) {
+            RefusedLoginAudit::record($user, 'sso');
+
             return [null, "Akun {$user->name} nonaktif: ".strtolower((string) $user->inactiveReason()).'.'];
         }
 
