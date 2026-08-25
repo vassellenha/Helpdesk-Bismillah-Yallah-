@@ -35,7 +35,7 @@ class TicketManagementController extends Controller
 {
     public function index(): View
     {
-        $tickets = Ticket::with(['requester', 'approver', 'attachments', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
+        $tickets = Ticket::with(['requester', 'approver', 'attachments', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
             ->whereNotNull('requester_id')
             ->latest('created_at')
             ->get();
@@ -88,7 +88,7 @@ class TicketManagementController extends Controller
             'ids' => 'nullable|string',
         ]);
 
-        $query = Ticket::with(['requester', 'approver', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])->whereNotNull('requester_id');
+        $query = Ticket::with(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])->whereNotNull('requester_id');
 
         if (! empty($data['ids'])) {
             $ids = array_values(array_filter(explode(',', $data['ids'])));
@@ -286,22 +286,23 @@ class TicketManagementController extends Controller
     private function picNames(Ticket $t): array
     {
         $subject = $t->catalogSubject;
-        if (! $subject) {
-            return [];
+
+        $names = collect([$subject?->supportAgent?->name, $subject?->itAgent?->name])
+            ->filter()->unique()->values();
+
+        // Tiket boleh dibuat tanpa subjek katalog — lihat layanan "Lainnya
+        // (belum ada di katalog)". Tanpa cadangan ini tiket seperti itu selalu
+        // terbaca "Menunggu Assignment" walau petugasnya sudah menutup tiket.
+        if ($names->isEmpty() && $t->assignedAgent?->name) {
+            $names = collect([$t->assignedAgent->name]);
         }
 
-        return collect([$subject->supportAgent?->name, $subject->itAgent?->name])
-            ->filter()->unique()->values()->all();
+        return $names->all();
     }
 
     private function picLabel(Ticket $t): ?string
     {
-        $subject = $t->catalogSubject;
-        if (! $subject) {
-            return null;
-        }
-
-        $names = collect([$subject->supportAgent?->name, $subject->itAgent?->name])->filter()->values();
+        $names = collect($this->picNames($t));
 
         return $names->isEmpty() ? null : $names->implode(' & ');
     }
