@@ -14,6 +14,7 @@
         'dashboardUrl' => route('dashboard.team-lead'),
         'dashboardDataUrl' => $dashboardDataUrl,
         'profileUrl' => route('team-lead.profile'),
+        'allNotificationsUrl' => route('team-lead.notifications'),
         'markAllReadUrl' => route('team-lead.notifications.read-all'),
         'metrics' => $metrics,
         'opStats' => $opStats,

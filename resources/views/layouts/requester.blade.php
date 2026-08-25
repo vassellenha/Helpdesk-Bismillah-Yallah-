@@ -38,7 +38,7 @@
 
             <div
                 data-react="RequesterTopNav"
-                data-props="{{ json_encode(['notifications' => $notifications['items'] ?? [], 'unreadCount' => $notifications['unreadCount'] ?? 0, 'user' => $currentUser ?? [], 'ticketsUrl' => route('requester.tickets'), 'markAllReadUrl' => route('requester.notifications.read-all'), 'profileUrl' => route('requester.profile')]) }}"
+                data-props="{{ json_encode(['notifications' => $notifications['items'] ?? [], 'unreadCount' => $notifications['unreadCount'] ?? 0, 'user' => $currentUser ?? [], 'ticketsUrl' => route('requester.tickets'), 'allNotificationsUrl' => route('requester.notifications'), 'markAllReadUrl' => route('requester.notifications.read-all'), 'profileUrl' => route('requester.profile')]) }}"
             ></div>
         </header>
 

@@ -23,6 +23,8 @@ return [
         'title' => 'Notifikasi',
         'empty' => 'Belum ada notifikasi.',
         'mark_all' => 'Tandai semua dibaca',
+        'subtitle' => ':total pemberitahuan · :unread belum dibaca',
+        'see_all' => 'Lihat semua notifikasi',
     ],
 
     // Dipakai komponen Pagination bersama pada daftar tiket tiap peran.

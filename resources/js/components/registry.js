@@ -1,5 +1,6 @@
 import RoleSwitcher from './RoleSwitcher';
 import NotificationBell from './NotificationBell';
+import NotificationHistoryPage from './NotificationHistoryPage';
 import ThemeToggle from './ThemeToggle';
 import TicketWorkspace from './TicketWorkspace';
 import AgentsPanel from './AgentsPanel';
@@ -56,6 +57,7 @@ import TeamLeadTicketDetail from './teamlead/TeamLeadTicketDetail';
 export const registry = {
     RoleSwitcher,
     NotificationBell,
+    NotificationHistoryPage,
     ThemeToggle,
     TicketWorkspace,
     AgentsPanel,

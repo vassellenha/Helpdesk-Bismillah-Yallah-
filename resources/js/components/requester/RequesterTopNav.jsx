@@ -15,7 +15,7 @@ const ICON_STYLES = {
     ticket_rejected: { bg: 'bg-red-50 dark:bg-bad-soft', color: 'text-red-600 dark:text-bad-text' },
 };
 
-export default function RequesterTopNav({ notifications = [], unreadCount: unreadFromServer = 0, user = {}, ticketsUrl = '/', markAllReadUrl, profileUrl }) {
+export default function RequesterTopNav({ notifications = [], unreadCount: unreadFromServer = 0, allNotificationsUrl, user = {}, ticketsUrl = '/', markAllReadUrl, profileUrl }) {
     const [items, setItems] = useState(notifications);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -109,6 +109,14 @@ export default function RequesterTopNav({ notifications = [], unreadCount: unrea
                             })}
                             {items.length === 0 && <p className="px-4 py-8 text-center text-sm text-gray-400 dark:text-ink-3">{trans('common.notifications.empty')}</p>}
                         </div>
+                        {allNotificationsUrl && (
+                            <a
+                                href={allNotificationsUrl}
+                                className="block border-t border-gray-100 dark:border-edge px-4 py-2.5 text-center text-[12.5px] font-bold text-blue-700 dark:text-accent-text hover:bg-blue-50 dark:hover:bg-panel-hover"
+                            >
+                                {trans('common.notifications.see_all')}
+                            </a>
+                        )}
                     </div>
                 )}
             </div>

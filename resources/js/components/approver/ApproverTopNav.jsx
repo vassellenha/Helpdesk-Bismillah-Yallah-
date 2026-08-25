@@ -12,7 +12,7 @@ const ICON_STYLES = {
     history_updated: { bg: 'bg-gray-100 dark:bg-panel-3', color: 'text-gray-500 dark:text-ink-2' },
 };
 
-export default function ApproverTopNav({ notifications = [], unreadCount: unreadFromServer = 0, user = {}, inboxUrl = '/', ticketsUrl = '/', markAllReadUrl, profileUrl }) {
+export default function ApproverTopNav({ notifications = [], unreadCount: unreadFromServer = 0, allNotificationsUrl, user = {}, inboxUrl = '/', ticketsUrl = '/', markAllReadUrl, profileUrl }) {
     const [items, setItems] = useState(notifications);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -106,6 +106,14 @@ export default function ApproverTopNav({ notifications = [], unreadCount: unread
                             })}
                             {items.length === 0 && <p className="px-4 py-8 text-center text-sm text-gray-400 dark:text-ink-3">{trans('common.notifications.empty')}</p>}
                         </div>
+                        {allNotificationsUrl && (
+                            <a
+                                href={allNotificationsUrl}
+                                className="block border-t border-gray-100 dark:border-edge px-4 py-2.5 text-center text-[12.5px] font-bold text-blue-700 dark:text-accent-text hover:bg-blue-50 dark:hover:bg-panel-hover"
+                            >
+                                {trans('common.notifications.see_all')}
+                            </a>
+                        )}
                     </div>
                 )}
             </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\NotificationHistoryController;
 use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\TicketManagementController;
 use App\Http\Controllers\AdminController;
@@ -117,6 +118,7 @@ Route::prefix('approver')->name('approver.')->middleware(['auth', 'role:approver
     Route::get('/tickets/{ticket}/data', [ApprovalController::class, 'data'])->name('tickets.data');
     Route::post('/tickets/{ticket}/comments', [ApprovalController::class, 'addComment'])->name('tickets.comments.store');
     Route::post('/tickets/{ticket}/decide', [ApprovalController::class, 'decide'])->name('tickets.decide');
+    Route::get('/notifications', [NotificationHistoryController::class, 'approver'])->name('notifications');
     Route::post('/notifications/{notification}/read', [ApprovalController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [ApprovalController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
@@ -130,6 +132,7 @@ Route::prefix('support')->name('support.')->middleware(['auth', 'role:support'])
     Route::post('/tickets/{ticket}/start', [SupportController::class, 'start'])->name('tickets.start');
     Route::post('/tickets/{ticket}/resolve', [SupportController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/tickets/{ticket}/return', [SupportController::class, 'returnTicket'])->name('tickets.return');
+    Route::get('/notifications', [NotificationHistoryController::class, 'support'])->name('notifications');
     Route::post('/notifications/{notification}/read', [SupportController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
@@ -144,6 +147,7 @@ Route::prefix('support-bpo')->name('support-bpo.')->middleware(['auth', 'role:su
     Route::post('/tickets/{ticket}/resolve', [SupportBpoController::class, 'resolve'])->name('tickets.resolve');
     Route::post('/tickets/{ticket}/escalate', [SupportBpoController::class, 'escalate'])->name('tickets.escalate');
     Route::post('/tickets/{ticket}/return', [SupportBpoController::class, 'returnTicket'])->name('tickets.return');
+    Route::get('/notifications', [NotificationHistoryController::class, 'supportBpo'])->name('notifications');
     Route::post('/notifications/{notification}/read', [SupportBpoController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [SupportBpoController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
@@ -161,6 +165,7 @@ Route::prefix('team-lead')->name('team-lead.')->middleware(['auth', 'role:team-l
     Route::post('/escalation/raise', [TeamLeadController::class, 'escalateGroup'])->name('escalation.raise');
     Route::get('/reports/preview', [TeamLeadController::class, 'previewReport'])->name('reports.preview');
     Route::get('/reports/export', [TeamLeadController::class, 'exportReport'])->name('reports.export');
+    Route::get('/notifications', [NotificationHistoryController::class, 'teamLead'])->name('notifications');
     Route::post('/notifications/{notification}/read', [TeamLeadController::class, 'markNotificationRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [TeamLeadController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
@@ -177,6 +182,7 @@ Route::prefix('requester')->name('requester.')->middleware(['auth', 'role:reques
     Route::post('/tickets/{ticket}/close', [TicketDetailController::class, 'close'])->name('tickets.close');
     Route::post('/tickets/{ticket}/attachment', [TicketDetailController::class, 'uploadAttachment'])->name('tickets.attachment');
     Route::delete('/tickets/{ticket}/attachment/{attachment}', [TicketDetailController::class, 'destroyAttachment'])->name('tickets.attachment.destroy');
+    Route::get('/notifications', [NotificationHistoryController::class, 'requester'])->name('notifications');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 });

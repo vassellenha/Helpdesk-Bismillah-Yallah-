@@ -227,6 +227,9 @@ class NotificationService
      *
      * @return array{items: array<int, array<string, mixed>>, unreadCount: int}
      */
+    /** Sama dengan daftar tiket, supaya panjang halaman terasa seragam. */
+    public const HISTORY_PER_PAGE = 20;
+
     public static function present(
         User $user,
         string $role,
@@ -247,19 +250,58 @@ class NotificationService
             ->latest('created_at')
             ->take($limit)
             ->get()
-            ->map(fn (TicketNotification $n) => [
-                'id' => $n->id,
-                'type' => $n->type,
-                'text' => $n->message,
-                'time' => $n->created_at->diffForHumans(),
-                'unread' => $n->read_at === null,
-                'icon' => self::ICONS[$n->type] ?? self::ICONS['ticket_created'],
-                'href' => $n->ticket ? route($ticketRoute, $n->ticket) : null,
-                'markReadUrl' => route($readRoute, $n),
-            ])
+            ->map(fn (TicketNotification $n) => self::item($n, $ticketRoute, $readRoute))
             ->values()
             ->all();
 
         return ['items' => $items, 'unreadCount' => $unreadCount];
+    }
+
+    /**
+     * Halaman riwayat notifikasi — seluruh pemberitahuan satu peran, dipecah
+     * per halaman. Lonceng sengaja hanya memuat yang terbaru; tanpa halaman
+     * ini pemberitahuan yang lebih tua tidak bisa dijangkau sama sekali.
+     *
+     * @return array{items: array<int, array<string, mixed>>, page: int, lastPage: int, total: int, perPage: int}
+     */
+    public static function history(
+        User $user,
+        string $role,
+        int $page = 1,
+        int $perPage = self::HISTORY_PER_PAGE,
+        string $ticketRoute = 'requester.tickets.show',
+        string $readRoute = 'requester.notifications.read'
+    ): array {
+        $query = TicketNotification::where('user_id', $user->id)->where('role', $role);
+
+        $total = (clone $query)->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min(max(1, $page), $lastPage);
+
+        $items = $query
+            ->with('ticket:id,ticket_no')
+            ->latest('created_at')
+            ->forPage($page, $perPage)
+            ->get()
+            ->map(fn (TicketNotification $n) => self::item($n, $ticketRoute, $readRoute))
+            ->values()
+            ->all();
+
+        return ['items' => $items, 'page' => $page, 'lastPage' => $lastPage, 'total' => $total, 'perPage' => $perPage];
+    }
+
+    /** Bentuk satu pemberitahuan, dipakai lonceng maupun halaman riwayat. */
+    private static function item(TicketNotification $n, string $ticketRoute, string $readRoute): array
+    {
+        return [
+            'id' => $n->id,
+            'type' => $n->type,
+            'text' => $n->message,
+            'time' => $n->created_at->diffForHumans(),
+            'unread' => $n->read_at === null,
+            'icon' => self::ICONS[$n->type] ?? self::ICONS['ticket_created'],
+            'href' => $n->ticket ? route($ticketRoute, $n->ticket) : null,
+            'markReadUrl' => route($readRoute, $n),
+        ];
     }
 }

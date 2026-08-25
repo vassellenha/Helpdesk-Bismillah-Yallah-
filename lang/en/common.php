@@ -11,6 +11,8 @@ return [
         'title' => 'Notifications',
         'empty' => 'No notifications yet.',
         'mark_all' => 'Mark all as read',
+        'subtitle' => ':total notifications · :unread unread',
+        'see_all' => 'See all notifications',
     ],
 
     'pagination' => [
