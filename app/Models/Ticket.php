@@ -294,7 +294,13 @@ class Ticket extends Model
             return (int) $this->first_response_at->diffInMinutes($this->response_due_at, false);
         }
 
-        return (int) Carbon::now()->diffInMinutes($this->response_due_at, false);
+        // A ticket that finished without a recorded first response has nothing
+        // left to wait for, so the overrun freezes where the work stopped. Left
+        // on now() it keeps growing, and a ticket closed months ago still reads
+        // as running further behind every day someone opens it.
+        $stoppedAt = $this->sla_ended_at ?? Carbon::now();
+
+        return (int) $stoppedAt->diffInMinutes($this->response_due_at, false);
     }
 
     /** met | breach | warning | ontrack | none */

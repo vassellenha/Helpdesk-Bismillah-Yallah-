@@ -63,7 +63,6 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
     const [step, setStep] = useState('choice');
     const [note, setNote] = useState('');
     const [rating, setRating] = useState(0);
-    const [ratingTouched, setRatingTouched] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -82,7 +81,6 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
     }
 
     async function submitClose() {
-        setRatingTouched(true);
         if (rating < 1) return;
         setSubmitting(true);
         setError('');
@@ -160,12 +158,8 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                     {step === 'rate' && (
                         <>
                             <p className="mb-2.5 text-[14px] font-semibold text-gray-800 dark:text-ink-1">{trans('requester.detail.rate_question')}</p>
-                            <StarRating value={rating} onChange={(n) => { setRating(n); setRatingTouched(false); }} />
-                            {ratingTouched && rating < 1 ? (
-                                <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-bad-text">{trans('requester.detail.rate_hint')}</p>
-                            ) : (
-                                <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-3">{trans('requester.detail.rate_hint')}</p>
-                            )}
+                            <StarRating value={rating} onChange={setRating} />
+                            <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-3">{trans('requester.detail.rate_hint')}</p>
 
                             <label className="mb-1.5 mt-4 block text-[13px] font-bold text-gray-800 dark:text-ink-1">{trans('requester.detail.note_optional')}</label>
                             <textarea
@@ -199,7 +193,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                         ) : (
                             <button
                                 onClick={submitClose}
-                                disabled={submitting}
+                                disabled={submitting || rating < 1}
                                 className="flex items-center gap-2 rounded-full bg-gray-900 dark:bg-panel-selected px-5 py-2.5 text-[13px] font-bold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M20 6 9 17l-5-5" /></svg>
