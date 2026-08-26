@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Eva;
 
 use App\Http\Controllers\Controller;
 use App\Models\Knowledge\Article;
+use App\Services\Knowledge\DocumentIndexer;
 use App\Services\Knowledge\KnowledgeStats;
 use App\Services\Knowledge\TagRegistry;
 use App\Support\Eva\CatalogOptions;
@@ -25,6 +26,7 @@ class ArticleController extends Controller
     public function __construct(
         private readonly KnowledgeStats $stats,
         private readonly TagRegistry $tags,
+        private readonly DocumentIndexer $indexer,
     ) {}
 
     public function index(): View
@@ -85,6 +87,13 @@ class ArticleController extends Controller
 
         if (array_key_exists('subject_ids', $data)) {
             $article->subjects()->sync($this->extraSubjectIds($data['subject_ids'], $article->catalog_subject_id));
+        }
+
+        // Isi artikel adalah yang dibaca manusia; potongan dokumen adalah yang
+        // dibaca EVA. Keduanya harus bergerak bersama, kalau tidak suntingan
+        // di sini tidak pernah sampai ke jawaban.
+        if ($article->wasChanged('body')) {
+            $this->indexer->syncFromArticle($article);
         }
 
         return response()->json($this->present(

@@ -176,6 +176,44 @@ final class DocumentIndexer
         return $chunks;
     }
 
+    /**
+     * Menyalurkan isi artikel hasil suntingan ke potongan yang benar-benar
+     * dibaca EVA.
+     *
+     * Artikel dan dokumen menyimpan dua salinan teks yang sama, dan yang
+     * dikutip EVA adalah salinan milik dokumen (FulltextKnowledgeSearch
+     * mengambil jawaban dari potongan). Tanpa jalur ini, menyunting artikel
+     * hanya mengubah salinan yang tidak pernah dibaca siapa pun: tombol Simpan
+     * sukses, artikelnya tetap dikutip, keyakinannya tetap tinggi — dan
+     * kalimat yang sampai ke pengguna tetap yang lama. Seorang penyunting yang
+     * membetulkan nominal biaya atau langkah keamanan tidak punya cara tahu
+     * koreksinya tidak pernah tayang.
+     *
+     * `extracted_text` ikut ditulis, bukan hanya potongannya. Indeks ulang
+     * memotong dari kolom itu, jadi kalau ia dibiarkan memuat teks lama,
+     * tombol Indeks ulang akan diam-diam mengembalikan versi lama — jebakan
+     * kedua yang persis sesulit dilihat seperti yang pertama. Berkas aslinya
+     * tidak disentuh dan tetap tersimpan apa adanya sebagai bukti unggahan.
+     *
+     * Artikel tanpa dokumen sumber tidak punya potongan sama sekali; di sana
+     * `body` memang sudah dibaca langsung sebagai jawaban, jadi tidak ada yang
+     * perlu dikerjakan.
+     */
+    public function syncFromArticle(Article $article): void
+    {
+        $document = $article->sourceDocument;
+        $text = trim((string) $article->body);
+
+        if ($document === null || $text === '') {
+            return;
+        }
+
+        DB::transaction(function () use ($document, $text) {
+            $document->update(['extracted_text' => $text]);
+            $this->rebuildChunks($document, $text);
+        });
+    }
+
     private function summarize(string $text): string
     {
         $firstParagraph = trim(preg_split('/\n\s*\n/u', $text)[0] ?? $text);
