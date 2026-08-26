@@ -745,10 +745,20 @@ class TeamLeadController extends Controller
 
         $lead = CurrentActor::teamLead();
 
+        /*
+         | Alasan wajib, sejalan dengan Panel Keputusan Approver yang juga
+         | menolak keputusan tanpa catatan. Pemindahan PIC mengambil pekerjaan
+         | dari satu orang dan menyerahkannya ke orang lain; tanpa alasan
+         | tertulis, yang tersisa bagi keduanya hanya perubahan nama tanpa
+         | keterangan — dan itulah yang membedakan pemerataan beban dari
+         | pengalihan sepihak.
+         */
         $data = $request->validate([
             'agent_id' => 'required|integer|exists:support_agents,id',
+            'reason' => 'required|string|max:1000',
         ]);
 
+        $reason = trim($data['reason']);
         $newAgent = SupportAgent::findOrFail($data['agent_id']);
         $oldAgent = $ticket->assignedAgent;
 
@@ -757,6 +767,21 @@ class TeamLeadController extends Controller
 
         $ticket->update(['assigned_agent_id' => $newAgent->id]);
 
+        $namaAsal = $oldAgent?->name ?? 'tanpa PIC';
+
+        /*
+         | Riwayat tiket, bukan cuma Audit Trail. Audit Trail hanya bisa dibuka
+         | Administrator, sedangkan yang paling perlu tahu kenapa tiket ini
+         | berpindah justru kedua petugasnya dan requester — dan mereka semua
+         | membaca blok riwayat pada tiket itu sendiri.
+         */
+        TicketComment::create([
+            'ticket_id' => $ticket->id,
+            'author_name' => $lead->name,
+            'author_role' => 'Team Lead',
+            'message' => "Tiket dialihkan dari {$namaAsal} ke {$newAgent->name}. Alasan: {$reason}",
+        ]);
+
         if ($newAgent->user) {
             NotificationService::notify(
                 $newAgent->user,
@@ -764,7 +789,23 @@ class TeamLeadController extends Controller
                 $ticket,
                 'ticket_created',
                 'Tiket Dialihkan ke Anda',
-                "Tiket {$ticket->ticket_no} \"{$ticket->title}\" dialihkan ke Anda oleh {$lead->name}.",
+                "Tiket {$ticket->ticket_no} \"{$ticket->title}\" dialihkan ke Anda oleh {$lead->name}. Alasan: {$reason}",
+            );
+        }
+
+        /*
+         | Petugas asal. Tanpa ini tiket lenyap dari daftar kerjanya tanpa satu
+         | pun penjelasan, dan satu-satunya jejaknya ada di layar yang tidak
+         | bisa ia buka.
+         */
+        if ($oldAgent?->user) {
+            NotificationService::notify(
+                $oldAgent->user,
+                NotificationService::roleForAgent($oldAgent),
+                $ticket,
+                'history_updated',
+                'Tiket Dialihkan ke Petugas Lain',
+                "Tiket {$ticket->ticket_no} \"{$ticket->title}\" dialihkan dari Anda ke {$newAgent->name} oleh {$lead->name}. Alasan: {$reason}",
             );
         }
 
@@ -775,8 +816,8 @@ class TeamLeadController extends Controller
             'target_id' => $ticket->id,
             'target_name' => $ticket->ticket_no,
             'old_value' => ['agent' => $oldAgent?->name],
-            'new_value' => ['agent' => $newAgent->name],
-            'description' => "{$lead->name} mengalihkan tiket \"{$ticket->ticket_no}\" dari ".($oldAgent?->name ?? 'tanpa PIC')." ke {$newAgent->name}.",
+            'new_value' => ['agent' => $newAgent->name, 'reason' => $reason],
+            'description' => "{$lead->name} mengalihkan tiket \"{$ticket->ticket_no}\" dari {$namaAsal} ke {$newAgent->name}. Alasan: {$reason}",
         ]);
 
         return response()->json([

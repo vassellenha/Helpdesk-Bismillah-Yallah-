@@ -432,6 +432,9 @@ return [
         'load_light' => 'Light',
         'load_medium' => 'Medium',
         'load_heavy' => 'Heavy',
+        'reason_label' => 'Reassignment Reason',
+        'reason_placeholder' => 'Required — explain why this ticket is being moved',
+        'reason_hint' => 'The reason is saved to the ticket history and sent to both the previous and the new agent.',
         'failed' => 'Failed to reassign the ticket.',
     ],
 

@@ -435,6 +435,9 @@ return [
         'load_light' => 'Ringan',
         'load_medium' => 'Sedang',
         'load_heavy' => 'Padat',
+        'reason_label' => 'Alasan Pemindahan',
+        'reason_placeholder' => 'Wajib diisi — jelaskan kenapa tiket ini dialihkan',
+        'reason_hint' => 'Alasan ikut tersimpan di riwayat tiket dan dikirim ke petugas asal maupun tujuan.',
         'failed' => 'Gagal mengalihkan tiket.',
     ],
 

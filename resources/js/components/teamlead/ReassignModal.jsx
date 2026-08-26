@@ -25,7 +25,7 @@ function loadState(load) {
     return { labelKey: 'teamlead.reassign.load_heavy', text: 'text-red-600 dark:text-bad-text', bar: 'bg-red-500', pill: 'bg-red-50 dark:bg-bad-soft text-red-600 dark:text-bad-text' };
 }
 
-function AgentCard({ a, onPick, saving, recommended }) {
+function AgentCard({ a, onPick, saving, disabled, recommended }) {
     const ls = loadState(a.load);
     return (
         <div className={`rounded-2xl border bg-white dark:bg-panel-2 p-4 ${recommended ? 'border-emerald-400' : 'border-gray-200 dark:border-edge-strong'}`}>
@@ -59,7 +59,7 @@ function AgentCard({ a, onPick, saving, recommended }) {
                     {a.subjects.slice(0, 4).join(', ')}{a.subjects.length > 4 ? ', …' : ''}
                 </p>
             )}
-            <button onClick={() => onPick(a.id)} disabled={saving} className="mt-3 w-full rounded-xl bg-blue-600 dark:bg-blue-500 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-60">{trans('teamlead.reassign.assign_to', { name: a.name.split(' ')[0] })}</button>
+            <button onClick={() => onPick(a.id)} disabled={saving || disabled} className="mt-3 w-full rounded-xl bg-blue-600 dark:bg-blue-500 py-2.5 text-[13px] font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-60">{trans('teamlead.reassign.assign_to', { name: a.name.split(' ')[0] })}</button>
         </div>
     );
 }
@@ -68,8 +68,13 @@ export default function ReassignModal({ ticket, agents = [], remindUrlBase, onCl
     useLockBodyScroll();
     const [tab, setTab] = useState('sub');
     const [search, setSearch] = useState('');
+    const [reason, setReason] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    // Server menolak pemindahan tanpa alasan; tombolnya dimatikan lebih dulu
+    // supaya Team Lead tahu syaratnya sebelum memilih agen, bukan sesudahnya.
+    const reasonFilled = reason.trim().length > 0;
 
     const pool = useMemo(() => agents.filter((a) => a.id !== ticket.agentId), [agents, ticket.agentId]);
 
@@ -90,10 +95,11 @@ export default function ReassignModal({ ticket, agents = [], remindUrlBase, onCl
     }, [pool, tab, ticket, search]);
 
     async function pick(agentId) {
+        if (!reasonFilled) return;
         setSaving(true);
         setError('');
         try {
-            const res = await apiFetch(`${remindUrlBase}/${ticket.id}/reassign`, { method: 'POST', body: JSON.stringify({ agent_id: agentId }) });
+            const res = await apiFetch(`${remindUrlBase}/${ticket.id}/reassign`, { method: 'POST', body: JSON.stringify({ agent_id: agentId, reason: reason.trim() }) });
             onReassigned?.(res);
         } catch (e) {
             setError(e.message || trans('teamlead.reassign.failed'));
@@ -110,6 +116,20 @@ export default function ReassignModal({ ticket, agents = [], remindUrlBase, onCl
                         <p className="mt-0.5 text-[12.5px] text-gray-400 dark:text-ink-3">{trans('teamlead.reassign.subtitle', { id: ticket.id })}</p>
                     </div>
                     <button onClick={onClose} className="rounded-lg p-1 text-gray-400 dark:text-ink-3 hover:bg-gray-100 dark:hover:bg-panel-hover"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+
+                <div className="border-b border-gray-100 dark:border-edge px-6 py-3">
+                    <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3" htmlFor="reassign-reason">{trans('teamlead.reassign.reason_label')}</label>
+                    <textarea
+                        id="reassign-reason"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        rows={2}
+                        maxLength={1000}
+                        placeholder={trans('teamlead.reassign.reason_placeholder')}
+                        className="mt-1.5 w-full resize-y rounded-xl border border-gray-200 dark:border-edge-strong px-3 py-2 text-[13px] outline-none focus:border-blue-400"
+                    />
+                    <p className="mt-1 text-[11.5px] text-gray-400 dark:text-ink-3">{trans('teamlead.reassign.reason_hint')}</p>
                 </div>
 
                 <div className="border-b border-gray-100 dark:border-edge px-6 py-3">
@@ -134,7 +154,7 @@ export default function ReassignModal({ ticket, agents = [], remindUrlBase, onCl
                                     <p className="text-[11px] text-gray-400 dark:text-ink-3">{trans('teamlead.reassign.rec_meta', { subjects: recommended.subjects.length, load: recommended.load })}</p>
                                 </div>
                                 <RatingBadge rating={recommended.rating} count={recommended.ratingCount} size={13} />
-                                <button onClick={() => pick(recommended.id)} disabled={saving} className="rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white hover:bg-emerald-700 disabled:opacity-60">{trans('teamlead.reassign.submit')}</button>
+                                <button onClick={() => pick(recommended.id)} disabled={saving || !reasonFilled} className="rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white hover:bg-emerald-700 disabled:opacity-60">{trans('teamlead.reassign.submit')}</button>
                             </div>
                         </div>
                     )}
@@ -151,7 +171,7 @@ export default function ReassignModal({ ticket, agents = [], remindUrlBase, onCl
                     {error && <p className="mb-3 rounded-lg bg-red-50 dark:bg-bad-soft px-3 py-2 text-[12px] font-medium text-red-600 dark:text-bad-text">{error}</p>}
 
                     <div className="flex flex-col gap-3">
-                        {list.map((a) => <AgentCard key={a.id} a={a} onPick={pick} saving={saving} recommended={recommended && a.id === recommended.id} />)}
+                        {list.map((a) => <AgentCard key={a.id} a={a} onPick={pick} saving={saving} disabled={!reasonFilled} recommended={recommended && a.id === recommended.id} />)}
                         {list.length === 0 && <p className="rounded-xl bg-gray-50 dark:bg-panel-3 py-8 text-center text-[12.5px] text-gray-400 dark:text-ink-3">{trans('teamlead.reassign.empty')}</p>}
                     </div>
                 </div>
