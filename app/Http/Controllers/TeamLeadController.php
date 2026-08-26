@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditTrail;
 use App\Models\ServiceCatalogSubject;
+use App\Models\SlaPolicy;
 use App\Models\SupportAgent;
 use App\Models\Ticket;
 use App\Models\TicketComment;
@@ -846,7 +847,50 @@ class TeamLeadController extends Controller
         $old = $ticket->priority;
         abort_if($old === $data['priority'], 422, 'Prioritas tiket sudah sama.');
 
-        $ticket->update(['priority' => $data['priority']]);
+        /*
+         | Target SLA ikut berpindah ke policy prioritas baru. Tanpa ini yang
+         | berubah cuma labelnya: tiket yang dinaikkan ke Urgent tetap memakai
+         | tenggat Medium, sehingga tindakan korektif yang justru bertujuan
+         | mempercepat penanganan tidak mengubah apa pun yang dihitung SLA.
+         |
+         | Tenggatnya dihitung dari sla_started_at, bukan dari sekarang. Kalau
+         | dari sekarang, menaikkan prioritas malah memberi tim jam kerja baru
+         | dan menyembunyikan keterlambatan yang sudah terjadi.
+         |
+         | Ini tidak bertentangan dengan aturan "tiket berjalan tetap memakai
+         | target lamanya" saat SLA Policy diubah: di sana yang berubah
+         | aturannya bagi semua tiket, di sini yang berubah penggolongan satu
+         | tiket ini saja, atas keputusan sadar Team Lead.
+         */
+        $policy = SlaPolicy::where('priority', $data['priority'])
+            ->where('status', 'active')
+            ->orderBy('resolution_time_minutes')
+            ->first();
+
+        abort_unless($policy, 422, 'Prioritas itu belum punya SLA Policy aktif.');
+
+        $mulai = $ticket->sla_started_at ?? $ticket->created_at;
+        $warningMinutes = (int) round($policy->resolution_time_minutes * $policy->warning_threshold_percent / 100);
+
+        $ticket->update([
+            'priority' => $data['priority'],
+            'sla_policy_id' => $policy->id,
+            'response_time_minutes' => $policy->response_time_minutes,
+            'resolution_time_minutes' => $policy->resolution_time_minutes,
+            'warning_threshold_percent' => $policy->warning_threshold_percent,
+            'response_due_at' => $mulai->clone()->addMinutes($policy->response_time_minutes),
+            'resolution_due_at' => $mulai->clone()->addMinutes($policy->resolution_time_minutes),
+            'warning_at' => $mulai->clone()->addMinutes($warningMinutes),
+        ]);
+
+        // Riwayat tiket, bukan hanya Audit Trail — alasan yang sama seperti
+        // pada reassign(): yang perlu tahu justru PIC dan requester.
+        TicketComment::create([
+            'ticket_id' => $ticket->id,
+            'author_name' => $lead->name,
+            'author_role' => 'Team Lead',
+            'message' => "Prioritas tiket diubah dari {$old} ke {$data['priority']}. Target penyelesaian kini {$policy->resolution_time_minutes} menit sejak tiket masuk.",
+        ]);
 
         AuditTrail::record($lead, [
             'module' => 'team_lead',
