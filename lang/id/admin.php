@@ -322,6 +322,8 @@ return [
             'auto_close' => 'Tutup Otomatis',
             'start' => 'Mulai Kerjakan',
             'create' => 'Tambah',
+            'delete' => 'Hapus',
+            'claim' => 'Klaim Tiket',
             'update_role' => 'Ubah Role',
             'update_level' => 'Ubah Level',
             'update_support' => 'Ubah Support',

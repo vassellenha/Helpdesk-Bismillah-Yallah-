@@ -163,6 +163,8 @@ class AuditTrailController extends Controller
         $key = match ($action) {
             'create' => 'create',
             'update' => 'edit',
+            'delete' => 'delete',
+            'claim' => 'claim',
             'activate' => 'activate',
             'deactivate' => 'deactivate',
             'assign_support' => 'update_support',

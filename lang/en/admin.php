@@ -317,6 +317,8 @@ return [
             'auto_close' => 'Auto-Closed',
             'start' => 'Started Work',
             'create' => 'Create',
+            'delete' => 'Delete',
+            'claim' => 'Claim Ticket',
             'update_role' => 'Change Role',
             'update_level' => 'Change Level',
             'update_support' => 'Change Support',

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { humanizeKey, humanizeValue } from '../../lib/auditValues';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import SelectMenu from '../SelectMenu';
 import { t as trans } from '../../lib/i18n';
@@ -24,6 +25,8 @@ const moduleLabel = (code) => trans(`admin.audit.module_name.${MODULE_KEYS[code]
 const ACTION_KEYS = {
     create: 'create',
     update: 'edit',
+    delete: 'delete',
+    claim: 'claim',
     activate: 'activate',
     deactivate: 'deactivate',
     assign_support: 'update_support',
@@ -237,17 +240,6 @@ export default function AuditTrailConsole({ logs: initialLogs, logsMeta, listUrl
     );
 }
 
-function humanizeKey(key) {
-    return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function humanizeValue(value) {
-    if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (value === null || value === undefined || value === '') return '—';
-    return String(value);
-}
-
 function DetailModal({ log, onClose }) {
     useLockBodyScroll();
     const oldValue = log.old_value ?? {};
@@ -295,8 +287,8 @@ function DetailModal({ log, onClose }) {
                                     {keys.map((key) => (
                                         <tr key={key} className="dark:even:bg-white/[0.03]">
                                             <td className="py-2.5 pr-4 align-top font-medium text-gray-700 dark:text-ink-2">{humanizeKey(key)}</td>
-                                            {hasBefore && <td className="py-2.5 pr-4 align-top text-gray-500 dark:text-ink-2">{humanizeValue(oldValue[key])}</td>}
-                                            <td className="py-2.5 align-top font-medium text-gray-900 dark:text-ink-1">{humanizeValue(newValue[key])}</td>
+                                            {hasBefore && <td className="whitespace-pre-line py-2.5 pr-4 align-top text-gray-500 dark:text-ink-2">{humanizeValue(oldValue[key])}</td>}
+                                            <td className="whitespace-pre-line py-2.5 align-top font-medium text-gray-900 dark:text-ink-1">{humanizeValue(newValue[key])}</td>
                                         </tr>
                                     ))}
                                 </tbody>
