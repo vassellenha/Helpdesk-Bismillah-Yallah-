@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Modal, { ModalFooter, ModalHeader } from './admin/Modal';
 import SelectMenu from './SelectMenu';
 import { apiFetch, uploadFile } from '../lib/api';
+import { attachmentFailureNotice } from '../lib/attachmentUpload';
 import { t as trans } from '../lib/i18n';
 import { priorityGlyph, priorityList } from '../lib/priority';
 
@@ -218,6 +219,8 @@ export default function NewTicketModal({
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [created, setCreated] = useState(null);
+    // Lampiran yang ditolak server SESUDAH tiket tersimpan. Dulu ditelan diam-diam.
+    const [attachmentNotice, setAttachmentNotice] = useState('');
     const approverRef = useRef(null);
     // Draf EVA sekali pakai. Kalau karyawan menutup form lalu membukanya lagi,
     // yang mereka maksud adalah tiket BARU — bukan mengulang draf yang tadi
@@ -547,16 +550,25 @@ export default function NewTicketModal({
                 ? await apiFetch(editUrl, { method: 'PUT', body: JSON.stringify(payload) })
                 : await apiFetch(submitUrl, { method: 'POST', body: JSON.stringify(payload) });
 
+            const gagalUnggah = [];
+
             if (attachments.length > 0 && ticket.ticket_no) {
                 for (const file of attachments) {
                     try {
                         await uploadFile(`/requester/tickets/${ticket.ticket_no}/attachment`, file);
-                    } catch {
-                        // Ticket is already saved — a failed attachment upload shouldn't block the confirmation.
+                    } catch (e) {
+                        /*
+                         | Tiketnya sudah sah tersimpan, jadi kegagalan di sini
+                         | tidak boleh menahan konfirmasi — tapi harus disebut.
+                         | Ditelan diam-diam, pengguna pergi mengira buktinya
+                         | ikut terkirim padahal tiketnya kosong.
+                         */
+                        gagalUnggah.push({ name: file.name, reason: e?.message || '' });
                     }
                 }
             }
 
+            setAttachmentNotice(attachmentFailureNotice(gagalUnggah));
             setCreated(ticket);
         } catch (e) {
             setError(e.message || 'Gagal menyimpan tiket.');
@@ -571,6 +583,7 @@ export default function NewTicketModal({
         // percobaan sebelumnya akan menyambut pengguna tanpa sebab.
         setShowErrors(false);
         setError('');
+        setAttachmentNotice('');
     }
 
     return (
@@ -600,6 +613,11 @@ export default function NewTicketModal({
                                     {created.is_draft ? `Draft ${created.ticket_no} saved.` : `Ticket ${created.ticket_no} submitted.`}
                                 </p>
                                 <p className="mt-1">Status: <strong>{created.status}</strong></p>
+                            </div>
+                        ) : null}
+                        {created && attachmentNotice ? (
+                            <div className="rounded-xl bg-amber-50 dark:bg-warn-soft p-4 text-sm text-amber-800 dark:text-warn-text">
+                                {attachmentNotice}
                             </div>
                         ) : (
                             <>
