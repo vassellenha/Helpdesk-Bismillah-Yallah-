@@ -128,7 +128,7 @@ export default function EvaPreview({ endpoints, thresholds }) {
         <div style={PAGE}>
             <PageHeader
                 title="EVA Preview"
-                subtitle={`Percakapan di sini tampil dan berperilaku sama persis dengan widget di portal. Di bawah keyakinan ${thresholds.min_confidence}, EVA menyatakan belum memiliki jawaban.`}
+                subtitle={`Percakapan di sini tampil dan berperilaku sama persis dengan widget di portal. Kandidat dengan keyakinan ${thresholds.min_confidence} ke atas pasti dikutip; di bawah itu EVA hanya menjawab bila potongan yang ada berhasil dirangkum, dan selebihnya menawarkan draf tiket.`}
             />
 
             <ErrorBanner message={error} onDismiss={() => setError(null)} />

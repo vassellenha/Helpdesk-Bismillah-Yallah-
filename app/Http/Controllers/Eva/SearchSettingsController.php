@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Eva;
 
 use App\Http\Controllers\Controller;
 use App\Models\Knowledge\Synonym;
+use App\Services\Knowledge\AnswerReach;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\SynonymExpander;
 use Illuminate\Http\JsonResponse;
@@ -76,17 +77,23 @@ class SearchSettingsController extends Controller
     {
         $data = $request->validate(['question' => 'required|string|max:500']);
 
-        $hits = collect($this->search->cari($data['question'], 5))
-            ->map(fn ($hit) => [
-                ...$hit->toArray(),
-                'passes_threshold' => $hit->confidence >= KnowledgeSearch::MIN_CONFIDENCE,
-                'type' => class_basename($hit->sourceType),
-            ]);
+        $hits = $this->search->cari($data['question'], 5);
+
+        $rows = collect($hits)->map(fn ($hit) => [
+            ...$hit->toArray(),
+            'passes_threshold' => $hit->confidence >= KnowledgeSearch::MIN_CONFIDENCE,
+            'type' => class_basename($hit->sourceType),
+        ]);
+
+        $reach = AnswerReach::for($hits);
 
         return response()->json([
             'question' => $data['question'],
-            'hits' => $hits->all(),
-            'would_answer' => $hits->isNotEmpty() && $hits->first()['passes_threshold'],
+            'hits' => $rows->all(),
+            'reach' => $reach,
+            // Dipertahankan untuk klien lama; `reach` yang menyimpan seluruh
+            // kebenarannya, termasuk pita rangkuman di bawah ambang.
+            'would_answer' => $reach === AnswerReach::ANSWER,
         ]);
     }
 

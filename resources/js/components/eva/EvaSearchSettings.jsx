@@ -15,6 +15,33 @@ import {
 
 const emptyDraft = { terms: '', note: '', is_active: true };
 
+/*
+ | Tiga keadaan, bukan dua.
+ |
+ | Ambang bukan satu-satunya jalan EVA menjawab: di bawahnya, jawaban masih
+ | bisa lahir dari rangkuman beberapa potongan. Selama layar ini hanya
+ | mengenal "ya" dan "tidak", ia menyatakan "EVA belum akan menjawab" untuk
+ | pertanyaan yang nyatanya dijawab — dan itulah kalimat yang dipakai
+ | Pengelola EVA memutuskan materi mana yang perlu ditulis.
+ */
+const REACH = {
+    answer: {
+        label: 'EVA akan menjawab pertanyaan ini',
+        color: 'var(--green-500)',
+        background: 'var(--green-soft)',
+    },
+    maybe_synthesis: {
+        label: 'Tidak ada kandidat yang melewati ambang. EVA masih mungkin menjawab bila potongan-potongan ini berhasil dirangkum menjadi satu jawaban.',
+        color: 'var(--amber-600, #d97706)',
+        background: 'var(--amber-soft, #fffbeb)',
+    },
+    none: {
+        label: 'EVA belum akan menjawab. Tidak ada kandidat yang cukup dekat dengan pertanyaannya.',
+        color: 'var(--red-600)',
+        background: 'var(--red-soft-weak)',
+    },
+};
+
 export default function EvaSearchSettings({ synonyms: initial, threshold, endpoints }) {
     const [synonyms, setSynonyms] = useState(initial);
     const [draft, setDraft] = useState(null);
@@ -230,11 +257,11 @@ function LiveTest({ endpoint, threshold }) {
                                 fontWeight: 600,
                                 padding: '9px 12px',
                                 borderRadius: 'var(--r-md)',
-                                color: result.would_answer ? 'var(--green-500)' : 'var(--red-600)',
-                                background: result.would_answer ? 'var(--green-soft)' : 'var(--red-soft-weak)',
+                                color: REACH[result.reach].color,
+                                background: REACH[result.reach].background,
                             }}
                         >
-                            {result.would_answer ? 'EVA akan menjawab pertanyaan ini' : 'EVA belum akan menjawab. Seluruh kandidat berada di bawah ambang.'}
+                            {REACH[result.reach].label}
                         </div>
 
                         {result.hits.length === 0 ? (

@@ -31,13 +31,12 @@ final class EvaResponder
      */
     private const SYNTHESIS_CANDIDATES = 8;
 
-    /**
-     * Keyakinan seadanya masih boleh ikut dibaca — justru di situ gunanya
-     * merangkum: potongan yang sendirian tidak meyakinkan bisa jadi keping yang
-     * melengkapi. Di bawah ambang ini isinya sudah tidak nyambung, dan
-     * menyodorkannya hanya memancing jawaban karangan.
+    /*
+     | Lantai rangkuman dulu ditulis di sini juga. Sekarang tinggal di
+     | AnswerReach, karena angka itulah yang membedakan "EVA tidak menjawab"
+     | dari "EVA mungkin menjawab" pada alat ukur di layar — dan selama ia
+     | disalin di dua tempat, keduanya akan berpisah pada perubahan pertama.
      */
-    private const SYNTHESIS_FLOOR = 20;
 
     public function __construct(
         private readonly KnowledgeSearch $search,
@@ -168,7 +167,7 @@ final class EvaResponder
     {
         return array_values(array_map(
             fn (SearchHit $h) => ['title' => $h->title, 'text' => $h->answer],
-            array_filter($hits, fn (SearchHit $h) => $h->confidence >= self::SYNTHESIS_FLOOR),
+            array_filter($hits, fn (SearchHit $h) => $h->confidence >= AnswerReach::SYNTHESIS_FLOOR),
         ));
     }
 
