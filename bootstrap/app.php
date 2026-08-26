@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\NoStoreWhenAuthenticated;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,6 +16,19 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => EnsureRole::class,
+        ]);
+
+        /*
+        | Halaman milik pengguna yang login tidak boleh disimpan browser.
+        |
+        | Logout sudah mematikan sesinya, tapi Chrome memulihkan halaman
+        | terakhir apa adanya dari back-forward cache saat tombol Back ditekan
+        | — dan `no-cache` bawaan Laravel tidak menyentuh cache itu sama
+        | sekali. Di komputer bersama, orang berikutnya cukup menekan Back
+        | untuk membaca daftar tiket orang sebelumnya.
+        */
+        $middleware->web(append: [
+            NoStoreWhenAuthenticated::class,
         ]);
 
         // Ke mana tamu diantar saat menyentuh rute ber-`auth`. Defaultnya
