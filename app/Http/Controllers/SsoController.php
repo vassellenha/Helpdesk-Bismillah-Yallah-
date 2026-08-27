@@ -27,7 +27,7 @@ class SsoController extends Controller
             'isMock' => SsoAuthenticator::isMock(),
             'redirectUrl' => route('sso.redirect'),
             'employees' => SsoAuthenticator::isMock()
-                // Cukup nama dan email. Jabatan dan role sengaja tidak lagi
+                // Cukup email. Nama, jabatan, dan role sengaja tidak
                 // dikirim: yang menentukan bisa-tidaknya masuk hanyalah email
                 // yang cocok dengan akun helpdesk, jadi menampilkan atribut
                 // lain di layar login memberi kesan keliru bahwa ia ikut
@@ -35,7 +35,6 @@ class SsoController extends Controller
                 // halaman yang belum terautentikasi.
                 ? MockSsoProvider::selectableUsers()->map(fn ($u) => [
                     'email' => $u->email,
-                    'name' => $u->name,
                 ])->values()
                 : collect(),
             'currentUser' => SsoAuthenticator::user()?->only(['name', 'email']),

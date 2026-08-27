@@ -18,14 +18,17 @@ import SelectMenu from './SelectMenu';
  *
  * Emailnya yang jadi kunci, bukan NIP: itu satu-satunya identitas yang dikirim
  * portal ADHI sungguhan, jadi simulasi ini memakai jalur pencocokan yang sama
- * persis. Jabatan dan role tidak ditampilkan — keduanya tidak menentukan
- * bisa-tidaknya seseorang masuk, dan mencantumkannya hanya membuat orang
- * mengira sebaliknya.
+ * persis. Nama, jabatan, dan role tidak ditampilkan — ketiganya tidak
+ * menentukan bisa-tidaknya seseorang masuk, dan mencantumkannya hanya membuat
+ * orang mengira sebaliknya.
  */
 export default function MockSsoPicker({ employees, redirectUrl }) {
     const options = employees.map((e) => ({
         value: e.email,
-        label: `${e.name} — ${e.email}`,
+        // Email saja, tanpa nama: email adalah satu-satunya yang menentukan
+        // akun mana yang cocok, jadi menampilkan nama di sebelahnya cuma bikin
+        // orang mengira nama itu ikut dicocokkan.
+        label: e.email,
     }));
     const [value, setValue] = useState(options[0]?.value ?? '');
 
