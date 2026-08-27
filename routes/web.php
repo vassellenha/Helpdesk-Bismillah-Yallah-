@@ -87,7 +87,13 @@ Route::post('/logout', [DevLoginController::class, 'logout'])->name('logout');
 
 // SINTA portal SSO — jalur masuk yang berlaku di produksi.
 Route::prefix('auth/sso')->name('sso.')->group(function () {
-    Route::get('/login', [SsoController::class, 'login'])->name('login');
+    // GET dan POST di satu alamat. SINTA mendaftarkan alamat ini sebagai
+    // "Login URL" dengan Auth Type REMOTE_LOGIN, yang berarti portal
+    // mengirimkan identitas pegawai lewat form POST. Orang yang membukanya
+    // langsung dari browser tetap datang lewat GET, dan begitu pula setiap
+    // redirect kegagalan di controller — jadi keduanya harus diterima, kalau
+    // tidak salah satunya selalu berakhir 405.
+    Route::match(['get', 'post'], '/login', [SsoController::class, 'login'])->name('login');
     Route::get('/redirect', [SsoController::class, 'redirect'])->name('redirect');
     Route::get('/callback', [SsoController::class, 'callback'])->name('callback');
     // Portal-initiated: SINTA sends the employee straight here with a signed

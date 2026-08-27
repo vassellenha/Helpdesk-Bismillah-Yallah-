@@ -133,6 +133,50 @@ class SsoEntryPlainTest extends TestCase
         $this->assertGuest();
     }
 
+    /**
+     * Bentuk yang sebenarnya dipakai portal SINTA: Auth Type REMOTE_LOGIN,
+     * form POST ke Login URL dengan User Param "email" dan Pass Param
+     * "password". Sebelum ini rutenya GET saja, jadi POST-nya dijawab 405.
+     */
+    public function test_post_dari_portal_sinta_langsung_masuk(): void
+    {
+        config(['integrations.sso.entry.driver' => 'plain']);
+        $user = $this->user('budi@adhi.co.id');
+
+        $this->post('/auth/sso/login', [
+            'email' => 'budi@adhi.co.id',
+            'password' => 'apa-pun-diabaikan',
+        ])->assertRedirect(route('portal.index'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    /**
+     * Password yang ikut dikirim portal tidak menentukan apa pun — helpdesk
+     * tidak menyimpan kata sandi siapa pun. Dikunci di sini supaya tidak ada
+     * yang kelak menambahkan pemeriksaan yang mustahil dipenuhi.
+     */
+    public function test_password_dari_portal_diabaikan(): void
+    {
+        config(['integrations.sso.entry.driver' => 'plain']);
+        $user = $this->user('budi@adhi.co.id');
+
+        $this->post('/auth/sso/login', ['email' => 'budi@adhi.co.id'])
+            ->assertRedirect(route('portal.index'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    /** POST tanpa identitas tetap menampilkan halaman, bukan 405 atau 500. */
+    public function test_post_tanpa_email_tidak_meledak(): void
+    {
+        config(['integrations.sso.entry.driver' => 'plain']);
+
+        $this->post('/auth/sso/login', [])->assertOk();
+
+        $this->assertGuest();
+    }
+
     public function test_jalur_ini_mati_saat_driver_tidak_disetel(): void
     {
         config(['integrations.sso.entry.driver' => 'disabled']);

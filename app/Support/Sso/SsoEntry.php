@@ -100,7 +100,14 @@ class SsoEntry
      */
     private static function verifyPlain(Request $request): ?array
     {
-        $email = trim((string) $request->query('email', ''));
+        // input(), bukan query(): SINTA mengirimkannya lewat body POST
+        // (Auth Type REMOTE_LOGIN, User Param "email"), sementara tautan biasa
+        // membawanya di query string. input() membaca keduanya.
+        //
+        // Password yang ikut dikirim portal (Pass Param) sengaja diabaikan —
+        // helpdesk tidak pernah menyimpan kata sandi siapa pun, dan tidak punya
+        // apa pun untuk membandingkannya.
+        $email = trim((string) $request->input('email', ''));
 
         if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return null;

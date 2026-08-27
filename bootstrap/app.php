@@ -31,6 +31,25 @@ return Application::configure(basePath: dirname(__DIR__))
             NoStoreWhenAuthenticated::class,
         ]);
 
+        /*
+        | Portal SINTA masuk lewat POST, dan POST-nya datang dari luar.
+        |
+        | Pendaftaran aplikasi di SINTA memakai Auth Type REMOTE_LOGIN: portal
+        | mengirimkan identitas pegawai sebagai form POST ke Login URL kita.
+        | Permintaan itu lahir di server SINTA, bukan di halaman kita, jadi ia
+        | tidak mungkin membawa token CSRF milik sesi kita — dan tanpa
+        | pengecualian ini setiap percobaan masuk dari portal berakhir 419.
+        |
+        | Aman dikecualikan karena rute ini memang tidak mengubah apa pun milik
+        | sesi yang sedang berjalan: yang dilakukannya hanya MEMULAI sesi baru,
+        | dan identitas yang dibawanya tetap harus lolos SsoEntry::verify()
+        | serta pencocokan akun di SsoAuthenticator::resolve().
+        */
+        $middleware->validateCsrfTokens(except: [
+            'auth/sso/login',
+            'auth/sso/entry',
+        ]);
+
         // Ke mana tamu diantar saat menyentuh rute ber-`auth`. Defaultnya
         // `route('login')` — yang memang selalu terdaftar (lihat
         // Auth\LoginController) — tapi permintaan JSON tidak boleh dialihkan
