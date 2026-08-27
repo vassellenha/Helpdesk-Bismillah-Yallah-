@@ -195,6 +195,11 @@ class TicketBroadcast
             'escalated_by_agent_id' => $bpoAgent->id,
         ]);
 
+        // Setelah escalated_at terisi — urutannya penting: startItResponseClock()
+        // dan markFirstResponse() sama-sama membaca kolom itu untuk tahu tahap
+        // mana yang sedang berjalan.
+        $ticket->startItResponseClock();
+
         AuditTrail::record($bpoUser, [
             'module' => 'ticket_support',
             'action' => 'escalate',

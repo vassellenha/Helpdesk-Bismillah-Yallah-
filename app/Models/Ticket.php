@@ -92,6 +92,7 @@ class Ticket extends Model
         'response_time_minutes', 'resolution_time_minutes', 'warning_threshold_percent',
         'response_due_at', 'resolution_due_at', 'warning_at',
         'sla_started_at', 'first_response_at', 'sla_extension_minutes',
+        'it_response_due_at', 'it_first_response_at',
         'status', 'is_draft', 'resolved_at', 'satisfaction_rating', 'rating_active', 'feedback_note',
         'escalated_at', 'escalation_note', 'escalated_by_agent_id',
         'reopen_note', 'reopen_at',
@@ -99,6 +100,7 @@ class Ticket extends Model
 
     protected $casts = [
         'response_due_at' => 'datetime',
+        'it_response_due_at' => 'datetime',
         'resolution_due_at' => 'datetime',
         'warning_at' => 'datetime',
         'reopen_at' => 'datetime',
@@ -106,6 +108,7 @@ class Ticket extends Model
         'escalated_at' => 'datetime',
         'sla_started_at' => 'datetime',
         'first_response_at' => 'datetime',
+        'it_first_response_at' => 'datetime',
         'sla_extension_minutes' => 'integer',
         'is_draft' => 'boolean',
         'rating_active' => 'boolean',
@@ -283,15 +286,43 @@ class Ticket extends Model
     |
     */
 
+    /**
+     * Jam respons TAHAP YANG SEDANG BERJALAN.
+     *
+     * Tiket berpindah tangan sekali: BPO dulu, IT setelah dieskalasi. Keduanya
+     * punya pertanyaan yang sama ("ada yang menanggapi tepat waktu?") tapi
+     * jawabannya beda orang dan beda jendela waktu, jadi jamnya juga dua.
+     * \`escalated_at\` yang memilih — kosong berarti masih jam BPO, terisi
+     * berarti jam IT (lihat migrasi add_it_response_clock_to_tickets_table).
+     *
+     * Kolom BPO tidak pernah ditimpa: \`first_response_at\` tetap berarti
+     * "respons pertama atas tiket ini", yang dibaca TeamLeadController untuk
+     * rata-rata waktu respons tim.
+     */
+    public function getActiveResponseDueAtAttribute(): ?Carbon
+    {
+        return $this->escalated_at !== null ? $this->it_response_due_at : $this->response_due_at;
+    }
+
+    /** Pasangan dari activeResponseDueAt — respons tahap yang sedang berjalan. */
+    public function getActiveFirstResponseAtAttribute(): ?Carbon
+    {
+        return $this->escalated_at !== null ? $this->it_first_response_at : $this->first_response_at;
+    }
+
     /** Signed minutes to the response deadline; frozen once Support has replied. */
     public function getResponseMinutesRemainingAttribute(): ?int
     {
-        if (in_array($this->status, self::NO_SLA_STATUSES, true) || $this->response_due_at === null) {
+        $dueAt = $this->active_response_due_at;
+
+        if (in_array($this->status, self::NO_SLA_STATUSES, true) || $dueAt === null) {
             return null;
         }
 
-        if ($this->first_response_at !== null) {
-            return (int) $this->first_response_at->diffInMinutes($this->response_due_at, false);
+        $respondedAt = $this->active_first_response_at;
+
+        if ($respondedAt !== null) {
+            return (int) $respondedAt->diffInMinutes($dueAt, false);
         }
 
         // A ticket that finished without a recorded first response has nothing
@@ -300,7 +331,9 @@ class Ticket extends Model
         // as running further behind every day someone opens it.
         $stoppedAt = $this->sla_ended_at ?? Carbon::now();
 
-        return (int) $stoppedAt->diffInMinutes($this->response_due_at, false);
+        // $dueAt, bukan $this->response_due_at: tenggat yang dipakai adalah
+        // milik tahap yang sedang berjalan — BPO sebelum eskalasi, IT sesudahnya.
+        return (int) $stoppedAt->diffInMinutes($dueAt, false);
     }
 
     /** met | breach | warning | ontrack | none */
@@ -312,7 +345,7 @@ class Ticket extends Model
             return 'none';
         }
 
-        if ($this->first_response_at !== null) {
+        if ($this->active_first_response_at !== null) {
             return $minutes >= 0 ? 'met' : 'breach';
         }
 
@@ -336,7 +369,7 @@ class Ticket extends Model
             return '—';
         }
 
-        if ($this->first_response_at !== null) {
+        if ($this->active_first_response_at !== null) {
             return $minutes >= 0
                 ? 'Direspons '.self::formatDuration($minutes).' sebelum batas'
                 : 'Terlambat respons '.self::formatDuration(abs($minutes));
@@ -498,18 +531,47 @@ class Ticket extends Model
     }
 
     /**
-     * Stamps the moment Support first replied, which stops the response clock.
-     * Idempotent — only the first reply counts, later ones must not reset it.
+     * Stamps the moment Support first replied, which stops the response clock
+     * OF THE STAGE THE TICKET IS IN. Idempotent per stage — only the first
+     * reply counts, later ones must not reset it.
+     *
+     * Setelah eskalasi, stempelnya jatuh ke kolom IT. Tanpa pemisahan itu
+     * metode ini akan langsung mengembalikan false selamanya (kolom BPO-nya
+     * sudah terisi sejak BPO menekan Eskalasi), dan tahap IT tidak akan pernah
+     * tercatat kapan ditanggapi.
      */
     public function markFirstResponse(?Carbon $at = null): bool
     {
-        if ($this->first_response_at !== null) {
+        $kolom = $this->escalated_at !== null ? 'it_first_response_at' : 'first_response_at';
+
+        if ($this->{$kolom} !== null) {
             return false;
         }
 
-        $this->forceFill(['first_response_at' => $at ?? Carbon::now()])->save();
+        $this->forceFill([$kolom => $at ?? Carbon::now()])->save();
 
         return true;
+    }
+
+    /**
+     * Memulai jam respons tahap IT, dihitung dari sekarang memakai
+     * \`response_time_minutes\` tiket ini — angka yang sama dengan yang dipakai
+     * tahap BPO, jadi policy Critical tetap lebih ketat daripada Low tanpa
+     * perlu kolom konfigurasi baru.
+     *
+     * Dipanggil SETELAH \`escalated_at\` terisi, dan hanya sekali: eskalasi
+     * kedua (kalau suatu saat ada) tidak boleh memberi IT jendela baru dengan
+     * menghapus keterlambatan yang sudah terjadi.
+     */
+    public function startItResponseClock(?Carbon $from = null): void
+    {
+        if ($this->it_response_due_at !== null || $this->response_time_minutes <= 0) {
+            return;
+        }
+
+        $this->forceFill([
+            'it_response_due_at' => ($from ?? Carbon::now())->clone()->addMinutes($this->response_time_minutes),
+        ])->save();
     }
 
     /**
@@ -535,8 +597,31 @@ class Ticket extends Model
                 'label' => $this->response_label,
                 'kind' => $this->response_kind,
                 'pct' => $this->response_elapsed_percent,
-                'at' => optional($this->first_response_at)->format('d M Y · H:i'),
-                'dueAt' => optional($this->response_due_at)->format('d M Y · H:i'),
+                'at' => optional($this->active_first_response_at)->format('d M Y · H:i'),
+                'dueAt' => optional($this->active_response_due_at)->format('d M Y · H:i'),
+                // Tahap mana yang sedang diukur — dipakai UI untuk memberi label
+                // "Respons BPO" atau "Respons IT" alih-alih "Respons" polos,
+                // supaya angkanya tidak terbaca sebagai satu jam yang sama.
+                'stage' => $this->escalated_at !== null ? 'it' : 'bpo',
+            ],
+            // Rekam jejak kedua tahap, ditampilkan berdampingan begitu tiket
+            // dieskalasi. Tahap BPO tidak hilang hanya karena giliran sudah
+            // berpindah — justru di situ terlihat siapa yang lambat.
+            'responseStages' => $this->escalated_at === null ? null : [
+                [
+                    'label' => 'BPO',
+                    'at' => optional($this->first_response_at)->format('d M Y · H:i'),
+                    'dueAt' => optional($this->response_due_at)->format('d M Y · H:i'),
+                    'late' => $this->first_response_at !== null && $this->response_due_at !== null
+                        && $this->first_response_at->greaterThan($this->response_due_at),
+                ],
+                [
+                    'label' => 'IT',
+                    'at' => optional($this->it_first_response_at)->format('d M Y · H:i'),
+                    'dueAt' => optional($this->it_response_due_at)->format('d M Y · H:i'),
+                    'late' => $this->it_first_response_at !== null && $this->it_response_due_at !== null
+                        && $this->it_first_response_at->greaterThan($this->it_response_due_at),
+                ],
             ],
             'extensionMinutes' => $this->sla_extension_minutes,
             'extensionLabel' => $this->sla_extension_minutes > 0

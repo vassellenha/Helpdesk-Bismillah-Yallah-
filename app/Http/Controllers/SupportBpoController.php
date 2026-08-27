@@ -368,12 +368,18 @@ class SupportBpoController extends Controller
 
         abort_if($itAgent === null, 422, 'Tidak ada agent IT aktif untuk menerima eskalasi ini.');
 
+        // status kembali "Open" dan jam respons IT mulai dari nol — alasan
+        // lengkapnya di TicketBroadcast::escalateBroadcast(). Berlaku sama di
+        // sini: yang berpindah bukan cuma pemiliknya, tapi tahapnya.
         $ticket->update([
             'assigned_agent_id' => $itAgent->id,
+            'status' => 'Open',
             'escalated_at' => Carbon::now(),
             'escalation_note' => $data['note'],
             'escalated_by_agent_id' => $agent->id,
         ]);
+
+        $ticket->startItResponseClock();
 
         // Support IT starts this case from scratch, so the resolution clock is
         // extended rather than left to breach on time they never had.

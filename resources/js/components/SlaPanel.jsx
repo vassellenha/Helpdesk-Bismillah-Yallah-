@@ -65,7 +65,13 @@ export default function SlaPanel({ sla, rating, feedbackNote, ratingActive = tru
                 once it had been answered. */}
             <div className="mt-4 border-t border-gray-100 dark:border-edge pt-3.5">
                 <div className="mb-3 flex items-center justify-between gap-3">
-                    <span className="text-[13px] text-gray-500 dark:text-ink-2">Respons</span>
+                    {/* Diberi label tahapnya, bukan "Respons" polos: setelah tiket
+                        dieskalasi, angka di sebelahnya adalah jam IT — bukan lanjutan
+                        jam BPO. Tanpa label ini keduanya terbaca sebagai satu jam yang
+                        sama, dan tenggat IT tampak seolah mundur sendiri. */}
+                    <span className="text-[13px] text-gray-500 dark:text-ink-2">
+                        {response.stage === 'it' ? 'Respons IT' : response.stage === 'bpo' ? 'Respons BPO' : 'Respons'}
+                    </span>
                     <span className={`text-right text-[13px] font-bold ${RESPONSE_TONE[response.kind] ?? RESPONSE_TONE.none}`}>
                         {response.label ?? '—'}
                     </span>
@@ -88,6 +94,22 @@ export default function SlaPanel({ sla, rating, feedbackNote, ratingActive = tru
                     />
                     <Row label="Target Respons" value={sla.responseTarget} />
                 </div>
+
+                {/* Rekam jejak kedua tahap, muncul hanya setelah tiket dieskalasi.
+                    Tahap BPO tidak hilang begitu giliran berpindah — justru di sinilah
+                    terlihat siapa yang lambat menanggapi. */}
+                {sla.responseStages && (
+                    <div className="mt-4 space-y-2 border-t border-dashed border-gray-100 dark:border-edge pt-3 text-[13px]">
+                        {sla.responseStages.map((tahap) => (
+                            <Row
+                                key={tahap.label}
+                                label={`Respons ${tahap.label}`}
+                                value={tahap.at ? `${tahap.at}${tahap.late ? ' · terlambat' : ''}` : `Belum · target ${tahap.dueAt ?? '—'}`}
+                                tone={tahap.late ? 'text-red-600 dark:text-bad-text' : tahap.at ? 'text-emerald-600 dark:text-ok-text' : undefined}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
             {sla.extensionLabel && (
