@@ -8,7 +8,6 @@ import SlaChart from './SlaChart';
 import CategoryChart from './CategoryChart';
 import KnowledgeConsole from './KnowledgeConsole';
 import UserMenu from './UserMenu';
-import MockSsoPicker from './MockSsoPicker';
 import TicketCategoryDonut from './charts/TicketCategoryDonut';
 import SlaTrendChart from './charts/SlaTrendChart';
 import TicketTrendChart from './charts/TicketTrendChart';
@@ -65,7 +64,6 @@ export const registry = {
     CategoryChart,
     KnowledgeConsole,
     UserMenu,
-    MockSsoPicker,
     TicketCategoryDonut,
     SlaTrendChart,
     TicketTrendChart,

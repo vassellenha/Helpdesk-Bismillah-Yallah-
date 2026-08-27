@@ -22,48 +22,24 @@ class SsoAuthenticator
 
     public const SESSION_NAME = 'sso_user_name';
 
-    /** Resolves the configured provider. */
+    /**
+     * Resolves the configured provider — OIDC, satu-satunya yang ada.
+     *
+     * Provider tiruan yang dulu menemani ini sudah dihapus begitu helpdesk
+     * masuk ke portal SINTA, dan bersamanya hilang pula seluruh penjagaan yang
+     * dibutuhkannya: penolakan di environment production, bendera isMock(),
+     * dan layar pemilih pegawai. Identitas yang dikarang sendiri tidak punya
+     * tempat lagi di sini, jadi tidak ada lagi yang perlu dijaga.
+     *
+     * Konfigurasi yang belum lengkap TIDAK dilempar sebagai exception —
+     * melakukannya akan menjatuhkan setiap halaman yang sekadar menampilkan
+     * tombol masuk. OidcSsoProvider dengan konfigurasi kosong menjawab false
+     * pada isConfigured(), dan pemanggilnya sudah punya jalur pesan
+     * "Konfigurasi SSO belum lengkap" untuk kasus itu.
+     */
     public static function provider(): SsoProvider
     {
-        $config = config('integrations.sso');
-
-        if (self::mockRefusedInProduction()) {
-            // Not an exception: throwing here would take down every page that
-            // merely renders a login button. Handing back an unconfigured OIDC
-            // provider routes into the "Konfigurasi SSO belum lengkap" path
-            // that already exists, so nobody gets in and the screen explains
-            // itself.
-            Log::critical('[SSO] SSO_DRIVER=mock ditolak di environment production. Login SSO dimatikan sampai driver diperbaiki.');
-
-            return new OidcSsoProvider([]);
-        }
-
-        return match ($config['driver'] ?? 'mock') {
-            'oidc' => new OidcSsoProvider($config['oidc'] ?? []),
-            default => new MockSsoProvider,
-        };
-    }
-
-    public static function isMock(): bool
-    {
-        if (self::mockRefusedInProduction()) {
-            return false;
-        }
-
-        return (config('integrations.sso.driver') ?? 'mock') !== 'oidc';
-    }
-
-    /**
-     * Mock SSO fabricates identities — the login screen lets you pick any
-     * employee and become them, with no password. That is exactly what makes
-     * it useful for demos and catastrophic in production, and a wrong .env or
-     * a forgotten default is all it takes to ship it. So production refuses
-     * it outright rather than trusting the deploy to be careful.
-     */
-    private static function mockRefusedInProduction(): bool
-    {
-        return (config('integrations.sso.driver') ?? 'mock') !== 'oidc'
-            && app()->isProduction();
+        return new OidcSsoProvider(config('integrations.sso.oidc') ?? []);
     }
 
     /**

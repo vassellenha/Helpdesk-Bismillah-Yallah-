@@ -47,28 +47,15 @@
                     </div>
                 @endif
 
-                @if ($isMock)
-                    <div class="mt-5 rounded-lg bg-amber-50 dark:bg-warn-soft p-3 text-[12px] leading-relaxed text-amber-800 dark:text-warn-text">
-                        <span class="font-bold">Mode MOCK.</span> Portal SINTA belum tersambung, jadi login disimulasikan
-                        lokal — pilih pegawai di bawah. Set <code class="rounded bg-white/60 dark:bg-panel-2 px-1">SSO_DRIVER=oidc</code>
-                        di <code class="rounded bg-white/60 dark:bg-panel-2 px-1">.env</code> untuk memakai SINTA sungguhan.
-                    </div>
-
-                    <div
-                        data-react="MockSsoPicker"
-                        data-props="{{ json_encode(['employees' => $employees, 'redirectUrl' => route('sso.redirect')]) }}"
-                    ></div>
-                @else
-                    <a
-                        href="{{ $redirectUrl }}"
-                        class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800 dark:hover:bg-blue-400"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" />
-                        </svg>
-                        Masuk dengan Portal SINTA
-                    </a>
-                @endif
+                <a
+                    href="{{ $redirectUrl }}"
+                    class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800 dark:hover:bg-blue-400"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" />
+                    </svg>
+                    Masuk dengan Portal SINTA
+                </a>
 
                 <p class="mt-5 border-t border-gray-100 dark:border-edge pt-4 text-[12px] leading-relaxed text-gray-400 dark:text-ink-3">
                     Akun helpdesk dibuat lewat sinkronisasi data pegawai, bukan saat login. Kalau akun Anda belum ada,

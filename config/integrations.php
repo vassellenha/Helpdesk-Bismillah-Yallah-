@@ -189,7 +189,7 @@ return [
     */
     'sso' => [
 
-        'driver' => env('SSO_DRIVER', 'mock'),
+        'driver' => env('SSO_DRIVER', 'oidc'),
 
         'oidc' => [
             'client_id' => env('SSO_CLIENT_ID'),
