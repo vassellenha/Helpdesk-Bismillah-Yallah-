@@ -3,6 +3,7 @@
 namespace App\Support\Sso;
 
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 
 /**
@@ -40,8 +41,16 @@ class MockSsoProvider implements SsoProvider
             return null;
         }
 
-        $nip = substr($code, strlen(self::CODE_PREFIX));
-        $user = User::where('nip', $nip)->first();
+        // EMAIL, bukan NIP: email adalah satu-satunya identitas yang dikirim
+        // portal ADHI (lihat SsoEntry::SIGNED), jadi simulasi ini memakai kunci
+        // yang sama dengan jalur sungguhan — kalau pencocokan lewat email
+        // bermasalah, ketahuannya di sini, bukan nanti di produksi.
+        //
+        // LOWER() di kedua sisi: MySQL umumnya sudah case-insensitive tapi
+        // SQLite tidak, jadi tanpa ini tes hijau di lokal bisa merah di server
+        // (atau sebaliknya) hanya karena beda besar-kecil huruf.
+        $email = substr($code, strlen(self::CODE_PREFIX));
+        $user = User::whereRaw('LOWER(email) = ?', [Str::lower($email)])->first();
 
         if (! $user) {
             return null;
@@ -66,8 +75,8 @@ class MockSsoProvider implements SsoProvider
     public static function selectableUsers()
     {
         return User::with('roles')
-            ->whereNotNull('nip')
-            ->where('nip', '!=', '')
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
             ->active()
             ->orderBy('name')
             ->get();

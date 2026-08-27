@@ -12,14 +12,20 @@ import SelectMenu from './SelectMenu';
  * kasus persis ini — lihat catatan di SelectMenu.jsx), bukan komponen baru.
  *
  * Navigasi lewat `window.location.href`, bukan submit form: MockSsoProvider
- * membaca NIP terpilih dari query string `?as=` request GET ke redirectUrl
+ * membaca EMAIL terpilih dari query string `?as=` request GET ke redirectUrl
  * itu sendiri (lihat MockSsoProvider::authorizeUrl()), jadi berpindah halaman
  * langsung ke URL itu sudah cukup — tidak ada body yang perlu dikirim.
+ *
+ * Emailnya yang jadi kunci, bukan NIP: itu satu-satunya identitas yang dikirim
+ * portal ADHI sungguhan, jadi simulasi ini memakai jalur pencocokan yang sama
+ * persis. Jabatan dan role tidak ditampilkan — keduanya tidak menentukan
+ * bisa-tidaknya seseorang masuk, dan mencantumkannya hanya membuat orang
+ * mengira sebaliknya.
  */
 export default function MockSsoPicker({ employees, redirectUrl }) {
     const options = employees.map((e) => ({
-        value: e.nip,
-        label: `${e.name} — ${e.jabatan || 'tanpa jabatan'} (${e.roles.length ? e.roles.join(', ') : 'tanpa role'})`,
+        value: e.email,
+        label: `${e.name} — ${e.email}`,
     }));
     const [value, setValue] = useState(options[0]?.value ?? '');
 
@@ -31,7 +37,7 @@ export default function MockSsoPicker({ employees, redirectUrl }) {
     return (
         <div className="mt-4">
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-ink-2">Masuk sebagai</label>
-            <SelectMenu value={value} onChange={setValue} options={options} searchable searchPlaceholder="Cari nama pegawai…" />
+            <SelectMenu value={value} onChange={setValue} options={options} searchable searchPlaceholder="Cari nama atau email…" />
 
             <button
                 type="button"
