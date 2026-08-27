@@ -84,7 +84,7 @@ class TicketDiscussion
             'at' => $c->created_at->translatedFormat('j M · H:i'),
             'attachment' => $c->attachment_path ? [
                 'name' => $c->attachment_name,
-                'url' => route('tickets.comment.attachment.show', [$c->ticket_id, $c]),
+                'url' => route('tickets.comment.attachment.show', [$c->ticket, $c]),
                 'sizeBytes' => $c->attachment_size_bytes,
             ] : null,
         ];
