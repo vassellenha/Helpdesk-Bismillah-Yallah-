@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\Auth\RefusedLoginAudit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * The bridge between "SINTA says this is who they are" and "this is their
@@ -81,6 +82,11 @@ class SsoAuthenticator
         $columns = collect((array) config('integrations.sso.match_by', 'username'))
             ->push(config('integrations.sso.fallback_match_by'))
             ->filter()
+            // Daftar putih. Nama kolom ini ikut disusun ke dalam SQL mentah di
+            // bawah (LOWER($column)), dan walau sumbernya config dan bukan
+            // request, satu salah ketik di .env yang lolos ke sana jauh lebih
+            // mahal daripada satu baris penyaring di sini.
+            ->intersect(['email', 'username', 'nip'])
             ->unique()
             ->values();
 
@@ -94,7 +100,13 @@ class SsoAuthenticator
                 continue;
             }
 
-            $user = User::where($column, $mapped[$column])->first();
+            // LOWER() di kedua sisi, bukan where() polos. MySQL umumnya sudah
+            // case-insensitive tapi SQLite tidak, jadi tanpa ini "Budi@adhi"
+            // cocok di server dan gagal di tes — atau sebaliknya, portal
+            // mengirim email berkapital dan orangnya ditolak padahal akunnya
+            // ada. Nama kolomnya berasal dari config, bukan dari request, dan
+            // tetap dibatasi daftar putih di bawah sebelum masuk ke SQL.
+            $user = User::whereRaw('LOWER('.$column.') = ?', [Str::lower((string) $mapped[$column])])->first();
 
             if ($user) {
                 break;

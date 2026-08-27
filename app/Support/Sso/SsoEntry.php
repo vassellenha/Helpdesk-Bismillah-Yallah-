@@ -73,8 +73,45 @@ class SsoEntry
     {
         return match (self::driver()) {
             'hmac' => self::verifyHmac($request),
+            'plain' => self::verifyPlain($request),
             default => null,
         };
+    }
+
+    /**
+     * TANPA PEMBUKTIAN APA PUN — email diambil apa adanya dari URL.
+     *
+     * Ini bukan skema keamanan, ini penundaan. Siapa pun yang bisa menebak
+     * alamat email rekannya bisa mengetik ulang URL-nya dan menjadi orang itu:
+     * tidak ada tanda tangan yang bisa gagal dicocokkan, tidak ada tenggat
+     * yang bisa lewat, tidak ada nonce yang bisa habis. Satu-satunya yang
+     * masih menahan adalah pemeriksaan sesudahnya — email harus punya akun
+     * helpdesk dan akunnya harus aktif.
+     *
+     * Ada di sini karena portal SINTA belum menandatangani tautannya, dan
+     * integrasinya perlu bisa diuji lebih dulu. Begitu mereka siap, pindah ke
+     * SSO_ENTRY_DRIVER=hmac — jalurnya sudah ada di bawah dan tidak menuntut
+     * satu baris pun perubahan di luar berkas ini.
+     *
+     * Setiap pemakaian dicatat sebagai warning, sengaja berisik: jalur ini
+     * tidak boleh diam-diam ikut terbawa ke produksi tanpa ada yang sadar.
+     *
+     * @return array<string,mixed>|null
+     */
+    private static function verifyPlain(Request $request): ?array
+    {
+        $email = trim((string) $request->query('email', ''));
+
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+
+        Log::warning('[SSO entry] Masuk lewat parameter TANPA tanda tangan — identitas tidak dibuktikan.', [
+            'email' => $email,
+            'ip' => $request->ip(),
+        ]);
+
+        return ['email' => $email];
     }
 
     /**
