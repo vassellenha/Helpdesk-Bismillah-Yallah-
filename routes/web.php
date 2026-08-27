@@ -87,7 +87,7 @@ Route::post('/logout', [DevLoginController::class, 'logout'])->name('logout');
 
 // SINTA portal SSO — jalur masuk yang berlaku di produksi.
 Route::prefix('auth/sso')->name('sso.')->group(function () {
-    Route::get('/login', [SsoController::class, 'login'])->name('login');
+    Route::post('/login', [SsoController::class, 'login'])->name('login');
     Route::get('/redirect', [SsoController::class, 'redirect'])->name('redirect');
     Route::get('/callback', [SsoController::class, 'callback'])->name('callback');
     // Portal-initiated: SINTA sends the employee straight here with a signed
