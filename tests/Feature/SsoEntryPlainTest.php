@@ -93,6 +93,46 @@ class SsoEntryPlainTest extends TestCase
         }
     }
 
+    /**
+     * Portal SINTA mendaftarkan /auth/sso/login sebagai alamat tile, bukan
+     * /auth/sso/entry. Alamat itu harus menerima identitas juga.
+     */
+    public function test_alamat_login_ikut_menerima_identitas_dari_portal(): void
+    {
+        config(['integrations.sso.entry.driver' => 'plain']);
+        $user = $this->user('budi@adhi.co.id');
+
+        $this->get('/auth/sso/login?email=budi@adhi.co.id')
+            ->assertRedirect(route('portal.index'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    /** Tanpa identitas, alamat yang sama tetap menampilkan halaman masuk biasa. */
+    public function test_alamat_login_tanpa_identitas_tetap_menampilkan_halaman(): void
+    {
+        config(['integrations.sso.entry.driver' => 'plain']);
+
+        $this->get('/auth/sso/login')->assertOk()->assertViewIs('auth.login');
+
+        $this->assertGuest();
+    }
+
+    /** Email tak dikenal tidak boleh memantul bolak-balik antara dua alamat. */
+    public function test_email_tak_dikenal_di_alamat_login_tidak_bikin_loop(): void
+    {
+        config(['integrations.sso.entry.driver' => 'plain']);
+
+        $this->get('/auth/sso/login?email=orangasing@adhi.co.id')
+            ->assertRedirect(route('sso.login'))
+            ->assertSessionHas('sso_error');
+
+        // Percobaan kedua sudah tanpa query string -> berhenti di halaman.
+        $this->get(route('sso.login'))->assertOk();
+
+        $this->assertGuest();
+    }
+
     public function test_jalur_ini_mati_saat_driver_tidak_disetel(): void
     {
         config(['integrations.sso.entry.driver' => 'disabled']);

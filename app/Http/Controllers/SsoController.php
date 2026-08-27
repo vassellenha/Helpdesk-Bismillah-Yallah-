@@ -20,8 +20,25 @@ class SsoController extends Controller
 {
     private const STATE_KEY = 'sso_state';
 
-    public function login()
+    /**
+     * Halaman masuk — DAN, kalau tautannya membawa identitas, jalur masuk itu
+     * sendiri.
+     *
+     * Portal SINTA terlanjur mendaftarkan /auth/sso/login sebagai alamat tile
+     * Helpdesk, bukan /auth/sso/entry. Daripada menuntut mereka mengubah
+     * pendaftaran yang sudah berjalan, alamat ini menerima keduanya: datang
+     * membawa identitas berarti masuk, datang polos berarti melihat halaman.
+     *
+     * Aman dari loop: entry() yang gagal mengalihkan ke route('sso.login')
+     * TANPA query string, jadi percobaan kedua tidak lagi membawa identitas
+     * dan berhenti di halaman yang menjelaskan kenapa ia ditolak.
+     */
+    public function login(Request $request)
     {
+        if (SsoEntry::enabled() && $request->hasAny(['email', 'sig'])) {
+            return $this->entry($request);
+        }
+
         // Tidak ada lagi daftar pegawai untuk dipilih: identitas datang dari
         // portal SINTA, bukan dari layar ini. Yang tersisa hanya tombol yang
         // melempar browser ke sana.
