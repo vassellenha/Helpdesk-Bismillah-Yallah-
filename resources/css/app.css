@@ -230,6 +230,43 @@
  * Black di atasnya. Kalau perlu lebih tebal lagi, jalannya bukan menaikkan
  * angka — nilai di atas 800 akan disintesis browser dan hurufnya jadi gepeng.
  */
+/*
+ | Instrument Sans — huruf utama antarmuka.
+ |
+ | Disimpan sendiri, bukan diunduh saat build. Sebelumnya ia datang lewat opsi
+ | `fonts:` di vite.config.js, yang mengunduhnya dari fonts.bunny.net setiap
+ | build tanpa cache — dan itu membuat deploy gagal total ketika server tidak
+ | bisa menjangkau alamat IPv6 penyedianya. Isinya tidak pernah berubah, jadi
+ | tidak ada alasan mengambilnya lewat jaringan berulang kali.
+ |
+ | Hanya subset latin: latin-ext tidak dipakai teks berbahasa Indonesia maupun
+ | Inggris di aplikasi ini, dan menyertakannya menggandakan ukuran unduhan
+ | pengguna tanpa satu huruf pun yang terpakai.
+*/
+@font-face {
+    font-family: 'Instrument Sans';
+    src: url('/fonts/instrument-sans/instrument-sans-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Instrument Sans';
+    src: url('/fonts/instrument-sans/instrument-sans-500.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Instrument Sans';
+    src: url('/fonts/instrument-sans/instrument-sans-600.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
 @font-face {
     font-family: 'Plus Jakarta Sans';
     src: url('/fonts/plus-jakarta-sans/PlusJakartaSans-ExtraBold.woff') format('woff');
