@@ -317,6 +317,12 @@ Route::prefix('eva')->name('eva.')->middleware(['auth', 'role:eva'])->group(func
         // berstatus `processing` — indexing berjalan di antrean, jadi hasilnya
         // tidak ikut di balasan unggah.
         Route::get('/{document}', [EvaDocumentController::class, 'show'])->name('show');
+        // Isi dokumen berikut keterangan berkasnya — dibaca saat admin menekan
+        // Pratinjau atau Sunting, BUKAN saat polling status.
+        Route::get('/{document}/content', [EvaDocumentController::class, 'content'])->name('content');
+        // Berkas aslinya. Kembaran endpoint karyawan di grup assistant, dengan
+        // gerbang berbeda: di sini dokumen draf dan yang gagal pun boleh dibuka.
+        Route::get('/{document}/file', [EvaDocumentController::class, 'file'])->name('file');
         Route::put('/{document}', [EvaDocumentController::class, 'update'])->name('update');
         Route::post('/{document}/reindex', [EvaDocumentController::class, 'reindex'])->name('reindex');
         Route::delete('/{document}', [EvaDocumentController::class, 'destroy'])->name('destroy');
@@ -383,6 +389,23 @@ Route::prefix('assistant/api')->name('eva.assistant.')->middleware('auth')->grou
         ->where(['type' => 'article|faq', 'id' => '[0-9]+'])
         ->middleware('throttle:60,1')
         ->name('material');
+
+    /*
+    | Berkas ASLI dokumen yang dikutip — yang dibuka popup rujukan.
+    |
+    | Satu-satunya jalan keluar berkas Knowledge Base: unggahannya disimpan di
+    | disk privat, di luar document root. Gerbangnya (Document::scopeQuotable)
+    | ada di controller, bukan di sini — yang dijaga baris ini hanya bentuk
+    | alamatnya.
+    |
+    | Throttle-nya lebih ketat daripada /material: satu permintaan di sini
+    | mengalirkan berkas utuh, bukan satu baris database, dan pratinjau PDF di
+    | browser bisa meminta berkas yang sama beberapa kali.
+    */
+    Route::get('/document/{document}/file', [EvaAssistantController::class, 'documentFile'])
+        ->where('document', '[0-9]+')
+        ->middleware('throttle:40,1')
+        ->name('document-file');
 });
 
 /*

@@ -919,6 +919,16 @@ html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
     overflow: hidden;
 }
 
+/*
+   Pratinjau berkas butuh ruang yang jauh lebih lega daripada teks: halaman A4
+   yang diperas ke lebar 560px membuat hurufnya tidak terbaca, dan orang menutup
+   popup lalu mengunduh — persis yang ingin dihindari fitur ini.
+*/
+.eva-src-modal[data-wide='yes'] {
+    width: min(900px, 100%);
+    max-height: min(90vh, 900px);
+}
+
 .eva-src-head {
     display: flex;
     align-items: flex-start;
@@ -1001,6 +1011,107 @@ html.eva-sidebar-collapsed .eva-sidebar-toggle svg {
 
 .eva-src-muted { font-size: 12.5px; color: var(--slate-500); }
 .eva-src-error { font-size: 12.5px; color: var(--red-600); }
+
+/* ---- Dokumen asli --------------------------------------------------------- */
+
+/* Judul boleh panjang; tombol tutup di sebelahnya tidak boleh ikut terdorong. */
+.eva-src-heading { min-width: 0; }
+
+.eva-src-meta {
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--slate-500);
+}
+
+/*
+   Bingkai berkasnya. Tingginya dipatok viewport, BUKAN isi berkas: iframe tidak
+   pernah melaporkan tinggi dokumen lintas-dokumen, jadi tinggi otomatis akan
+   runtuh jadi beberapa piksel dan menyisakan garis kosong.
+*/
+.eva-src-frame {
+    display: block;
+    width: 100%;
+    height: min(70vh, 720px);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--surface-muted);
+}
+
+/*
+   Gambar rujukan. `contain` di dalam tinggi yang dipatok viewport, bukan lebar
+   100% apa adanya: foto surat edaran dari ponsel kerap 3000px lebih tinggi
+   daripada lebarnya, dan dibiarkan apa adanya ia mendorong seluruh isi popup
+   — termasuk tombol unduh — jauh ke bawah layar.
+*/
+.eva-src-image {
+    display: block;
+    width: 100%;
+    max-height: min(70vh, 720px);
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--surface-muted);
+}
+
+.eva-src-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.eva-src-action {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--blue-ink);
+    background: var(--blue-050);
+    border: 1px solid var(--blue-050-alt);
+    border-radius: 999px;
+    padding: 6px 12px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.eva-src-action:hover,
+.eva-src-action:focus-visible {
+    background: var(--blue-050-alt);
+}
+
+/* Format yang tidak bisa dirender browser: nama berkas + satu tombol unduh. */
+.eva-src-file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+}
+
+.eva-src-file-name {
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/*
+   Keterangan bahwa yang terbaca di bawah BUKAN berkas aslinya.
+   Warnanya amber, bukan abu-abu: ini bukan basa-basi, melainkan syarat supaya
+   orang tidak mengira dokumen resminya memang setipis teks yang tampil.
+*/
+.eva-src-notice {
+    margin: 12px 0;
+    padding: 9px 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--amber-ink);
+    background: var(--amber-soft-weak);
+    border: 1px solid var(--amber-soft);
+    border-radius: var(--r-sm);
+}
 
 .eva-widget .eva-w-muted { font-size: 11px; color: var(--slate-500); }
 .eva-widget .eva-w-error { font-size: 11px; color: var(--red-600); margin-top: 5px; }

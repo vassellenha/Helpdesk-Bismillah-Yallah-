@@ -160,9 +160,10 @@ function AnswerBubble({ message, thresholds, onRate, onNote, onOpenSource }) {
             <div className="eva-w-source">
                 {/*
                   | Judul sumber adalah TOMBOL, bukan label — menekannya membuka
-                  | materi utuhnya. Tetap dirender sebagai <button> walau
-                  | tampilannya chip, supaya keyboard dan pembaca layar
-                  | memperlakukannya sebagai sesuatu yang bisa ditekan.
+                  | DOKUMEN aslinya, bukan artikel hasil ekstraksinya. Tetap
+                  | dirender sebagai <button> walau tampilannya chip, supaya
+                  | keyboard dan pembaca layar memperlakukannya sebagai sesuatu
+                  | yang bisa ditekan.
                   |
                   | Kalau pemasangnya tidak memberi onOpenSource, ia kembali jadi
                   | label mati seperti dulu — bukan tombol yang diam saat ditekan.
@@ -172,7 +173,7 @@ function AnswerBubble({ message, thresholds, onRate, onNote, onOpenSource }) {
                         type="button"
                         className="eva-w-source-tag eva-w-source-link"
                         onClick={() => onOpenSource(message.hit)}
-                        title="Buka materi selengkapnya"
+                        title="Buka dokumen sumbernya"
                     >
                         {message.hit.title}
                     </button>

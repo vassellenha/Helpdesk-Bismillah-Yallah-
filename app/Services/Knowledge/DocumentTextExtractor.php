@@ -17,6 +17,14 @@ use ZipArchive;
  * tidak dibutuhkan sama sekali — `pdftotext` sudah ikut poppler yang memang
  * harus dipasang demi OCR.
  *
+ * GAMBAR (PNG/JPG) dibaca lewat ImageTextReader — Tesseract yang sama, tanpa
+ * poppler. Foto surat edaran yang dijepret di ponsel adalah bentuk paling
+ * umum "dokumen" yang beredar di grup kerja, dan sebelumnya tidak ada satu pun
+ * jalan memasukkannya ke Knowledge Base.
+ *
+ * SVG SENGAJA TIDAK ikut. Ia bukan gambar raster melainkan markup yang bisa
+ * memuat skrip, dan berkas rujukan disajikan inline ke layar setiap karyawan.
+ *
  * XLSX tetap mengembalikan null. Bisa saja dibongkar seperti DOCX, tapi
  * deretan nilai sel menghasilkan artikel yang buruk. Biarkan sampai ada
  * kebutuhan nyata.
@@ -29,6 +37,17 @@ final class DocumentTextExtractor
 {
     /** Format yang selalu terbaca, tanpa bergantung binari apa pun. */
     private const ALWAYS_READABLE = ['TXT', 'MD', 'DOCX'];
+
+    /**
+     * Gambar raster yang boleh di-OCR.
+     *
+     * Publik karena dua tempat lain menurunkan perilakunya dari daftar ini:
+     * DocumentController (format yang boleh diunggah) dan SourceDocument
+     * (rujukan yang bisa ditampilkan apa adanya di popup). Ditulis ulang di
+     * sana, cepat atau lambat salah satunya melenceng — dan gejalanya adalah
+     * berkas yang bisa diunggah tapi tidak bisa dibuka lagi.
+     */
+    public const IMAGE_EXTENSIONS = ['PNG', 'JPG', 'JPEG'];
 
     /**
      * Batas ukuran document.xml setelah dibuka.
@@ -45,7 +64,15 @@ final class DocumentTextExtractor
      * Documents ikut berhenti menjanjikannya, karena daftar format terbaca
      * diturunkan dari canRead() yang sama.
      */
-    public function __construct(private readonly ?PdfTextReader $pdf = null) {}
+    public function __construct(
+        private readonly ?PdfTextReader $pdf = null,
+        private readonly ?ImageTextReader $image = null,
+    ) {}
+
+    public static function isImage(string $extension): bool
+    {
+        return in_array(mb_strtoupper($extension), self::IMAGE_EXTENSIONS, true);
+    }
 
     public function canRead(string $extension): bool
     {
@@ -53,6 +80,10 @@ final class DocumentTextExtractor
 
         if ($extension === 'PDF') {
             return $this->pdf?->isAvailable() ?? false;
+        }
+
+        if (self::isImage($extension)) {
+            return $this->image?->isAvailable() ?? false;
         }
 
         return in_array($extension, self::ALWAYS_READABLE, true);
@@ -72,10 +103,13 @@ final class DocumentTextExtractor
      */
     public function extract(string $path, string $extension): ?string
     {
-        $text = match (mb_strtoupper($extension)) {
-            'TXT', 'MD' => $this->plainText($path),
-            'DOCX' => $this->docx($path),
-            'PDF' => $this->pdf?->read($path),
+        $extension = mb_strtoupper($extension);
+
+        $text = match (true) {
+            in_array($extension, ['TXT', 'MD'], true) => $this->plainText($path),
+            $extension === 'DOCX' => $this->docx($path),
+            $extension === 'PDF' => $this->pdf?->read($path),
+            self::isImage($extension) => $this->image?->read($path),
             default => null,
         };
 

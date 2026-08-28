@@ -3,6 +3,7 @@
 namespace Tests\Unit\Knowledge;
 
 use App\Services\Knowledge\DocumentTextExtractor;
+use App\Services\Knowledge\ImageTextReader;
 use PHPUnit\Framework\TestCase;
 use ZipArchive;
 
@@ -159,5 +160,89 @@ final class DocumentTextExtractorTest extends TestCase
         $path = $this->docx($this->paragraph('   '));
 
         $this->assertNull($this->extractor->extract($path, 'DOCX'));
+    }
+
+    // ---- gambar ------------------------------------------------------------
+
+    /**
+     * Pembaca gambar palsu — tesnya tentang PENYALURAN, bukan tentang kualitas
+     * OCR. Tesseract sungguhan diuji di ImageOcrTest, yang melewati dirinya
+     * sendiri bila binarinya belum terpasang; unit ini harus tetap berjalan di
+     * mesin mana pun.
+     */
+    private function imageReader(?string $result, bool $available = true): ImageTextReader
+    {
+        return new class($result, $available) implements ImageTextReader
+        {
+            public function __construct(
+                private readonly ?string $result,
+                private readonly bool $available,
+            ) {}
+
+            public function isAvailable(): bool
+            {
+                return $this->available;
+            }
+
+            public function read(string $imagePath): ?string
+            {
+                return $this->result;
+            }
+        };
+    }
+
+    public function test_gambar_disalurkan_ke_pembaca_gambar(): void
+    {
+        $extractor = new DocumentTextExtractor(null, $this->imageReader('Isi surat edaran hasil OCR.'));
+
+        foreach (['PNG', 'JPG', 'JPEG'] as $extension) {
+            $this->assertSame(
+                'Isi surat edaran hasil OCR.',
+                $extractor->extract($this->upload('bukan teks', 'foto'), $extension),
+            );
+        }
+    }
+
+    /** Huruf kecil dari nama berkas tidak boleh membuat gambar jadi tak dikenal. */
+    public function test_ekstensi_gambar_tidak_peduli_huruf_besar_kecil(): void
+    {
+        $extractor = new DocumentTextExtractor(null, $this->imageReader('terbaca'));
+
+        $this->assertSame('terbaca', $extractor->extract($this->upload('x', 'foto'), 'png'));
+        $this->assertTrue($extractor->canRead('jpeg'));
+    }
+
+    /**
+     * Tanpa pembaca gambar — server yang Tesseract-nya belum terpasang —
+     * hasilnya null, BUKAN string kosong: dokumennya harus berakhir `failed`
+     * yang meminta teks ketik, bukan artikel kosong yang tampak berhasil.
+     */
+    public function test_gambar_tanpa_mesin_ocr_tidak_terbaca(): void
+    {
+        $extractor = new DocumentTextExtractor;
+
+        $this->assertNull($extractor->extract($this->upload('x', 'foto'), 'PNG'));
+        $this->assertFalse($extractor->canRead('PNG'));
+    }
+
+    /** Mesinnya ada tapi gambarnya tidak berisi tulisan apa pun. */
+    public function test_gambar_yang_tidak_terbaca_memulangkan_null(): void
+    {
+        $extractor = new DocumentTextExtractor(null, $this->imageReader(null));
+
+        $this->assertNull($extractor->extract($this->upload('x', 'foto'), 'PNG'));
+    }
+
+    public function test_gambar_diumumkan_terbaca_mengikuti_mesinnya(): void
+    {
+        $this->assertTrue((new DocumentTextExtractor(null, $this->imageReader('x')))->canRead('PNG'));
+        $this->assertFalse((new DocumentTextExtractor(null, $this->imageReader('x', available: false)))->canRead('PNG'));
+    }
+
+    /** SVG tidak pernah jadi urusan OCR — ia markup, bukan gambar raster. */
+    public function test_svg_bukan_gambar_yang_bisa_dibaca(): void
+    {
+        $this->assertFalse(DocumentTextExtractor::isImage('SVG'));
+        $this->assertFalse((new DocumentTextExtractor(null, $this->imageReader('x')))->canRead('SVG'));
     }
 }

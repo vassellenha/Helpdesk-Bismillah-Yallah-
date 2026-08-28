@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiFetch, uploadFile } from '../../lib/api';
 import {
     PAGE, PageHeader, Card, CardTitle, StatTile, StatRow, Badge, Button,
-    EmptyState, ErrorBanner, Modal, Pagination, usePagination,
+    EmptyState, ErrorBanner, Modal, Pagination, Toggle, usePagination,
     inputStyle, labelStyle, thStyle, tdStyle,
 } from './ui';
 import SearchableSelect from './SearchableSelect';
+import { DocumentBody, describeDocument, fileMeta } from './documentView';
 
 /** Baris per halaman. Cukup panjang untuk dipindai, cukup pendek untuk dimuat. */
 const PER_PAGE = 15;
@@ -50,6 +51,53 @@ const extensionOf = (filename) => (filename.split('.').pop() ?? '').toUpperCase(
 const needsPastedText = (draft, readable) =>
     draft.file !== null && !readable.includes(draft.extension);
 
+/**
+ * Berkas yang dipilih berupa FOTO.
+ *
+ * Dipisah dari needsPastedText karena keadaannya berbeda: teksnya tidak wajib
+ * diketik — Tesseract akan mencobanya — tapi hasilnya bergantung ketajaman
+ * gambar, dan admin perlu tahu ia boleh mengetiknya sendiri sejak awal. Foto
+ * kertas miring atau kurang cahaya menghasilkan artikel penuh salah ketik, dan
+ * artikel itulah yang nanti dikutip EVA sebagai jawaban.
+ */
+const isImageDraft = (draft, images) =>
+    draft.file !== null && images.includes(draft.extension);
+
+/**
+ * Kalimat di dalam kotak isi dokumen.
+ *
+ * Tiga keadaan, tiga kalimat — dan yang membedakannya bukan gaya bahasa
+ * melainkan apa yang harus dikerjakan admin: WAJIB mengetik (format tak
+ * terbaca), BOLEH mengetik (foto), atau tidak perlu menyentuhnya sama sekali.
+ */
+function placeholderFor(draft, readable, images) {
+    if (needsPastedText(draft, readable)) {
+        return `Isi berkas ${draft.extension} belum dapat dibaca otomatis. Silakan salin teksnya ke sini.`;
+    }
+
+    if (isImageDraft(draft, images)) {
+        return 'Boleh dikosongkan — tulisan di gambar akan dibaca otomatis. Ketik sendiri isinya bila hasil bacaannya meleset.';
+    }
+
+    return 'Tempel isi dokumen di sini, atau biarkan kosong bila berkas di atas sudah terbaca sendiri.';
+}
+
+function hintFor(draft, readable, images) {
+    if (needsPastedText(draft, readable)) {
+        return `Berkas ${draft.extension} tetap tersimpan, jadi bisa dibaca ulang bila ekstraksi otomatisnya diaktifkan nanti.`;
+    }
+
+    if (isImageDraft(draft, images)) {
+        // Kalimat terakhir bukan basa-basi: IndexDocument memang mendahulukan
+        // teks yang diketik dan tidak menjalankan OCR sama sekali bila kolom
+        // ini terisi. Admin berhak tahu bahwa ketikannya tidak akan ditimpa.
+        return 'Ketajaman foto menentukan hasil bacaannya — kertas miring atau kurang cahaya menghasilkan '
+            + 'artikel penuh salah ketik. Teks yang Anda ketik di sini dipakai apa adanya dan tidak ditimpa hasil OCR.';
+    }
+
+    return `Isi berkas ${readable.join('/')} dibaca otomatis. Pemotongan mengikuti batas paragraf, jadi pisahkan bagian dengan baris kosong.`;
+}
+
 const canSubmit = (draft, readable) => {
     if (draft.name.trim() === '') return false;
     if (draft.file === null) return draft.extracted_text.trim() !== '';
@@ -57,13 +105,16 @@ const canSubmit = (draft, readable) => {
     return !needsPastedText(draft, readable) || draft.extracted_text.trim() !== '';
 };
 
-export default function EvaDocuments({ documents: initial, subjects, extensions, readableExtensions = [], tags = [], activeTag = null }) {
+export default function EvaDocuments({ documents: initial, subjects, extensions, readableExtensions = [], imageExtensions = [], tags = [], activeTag = null }) {
     const [documents, setDocuments] = useState(initial);
     const [draft, setDraft] = useState(null);
     const [query, setQuery] = useState('');
     const [tag, setTag] = useState(activeTag ?? ALL);
     const [busyId, setBusyId] = useState(null);
     const [deleting, setDeleting] = useState(null);
+    // { mode: 'preview' | 'edit', document, content } — `content` null selagi
+    // isinya masih diambil, supaya modalnya bisa terbuka seketika.
+    const [detail, setDetail] = useState(null);
     const [busyDelete, setBusyDelete] = useState(false);
     const [error, setError] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -157,6 +208,48 @@ export default function EvaDocuments({ documents: initial, subjects, extensions,
         }
     }
 
+    /**
+     * Membuka Pratinjau atau Sunting.
+     *
+     * Isi dokumen SENGAJA diambil di sini, bukan dititipkan di daftar: satu
+     * halaman memuat lima belas baris, dan menyeret seluruh teks SOP tiap baris
+     * berarti membayar ongkos sesuatu yang dibuka satu per satu.
+     */
+    async function openDetail(document, mode) {
+        setError(null);
+        setDetail({ mode, document, content: null });
+        try {
+            const { document: content } = await apiFetch(`/eva/api/documents/${document.id}/content`);
+            setDetail({ mode, document, content });
+        } catch (e) {
+            setDetail(null);
+            setError(`Gagal membuka "${document.name}": ${e.message}`);
+        }
+    }
+
+    /**
+     * Menyimpan suntingan. Isi dokumen ikut terkirim, dan bila ia berubah server
+     * mengindeks ulang — potongan pencarian dan artikel turunannya lahir dari
+     * teks itu, jadi membiarkannya tertinggal berarti EVA menjawab memakai
+     * kalimat yang sudah tidak ada di dokumennya.
+     */
+    async function saveEdit(fields) {
+        setSaving(true);
+        setError(null);
+        try {
+            const result = await apiFetch(`/eva/api/documents/${detail.document.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(fields),
+            });
+            setDocuments((rows) => rows.map((d) => (d.id === result.id ? result : d)));
+            setDetail(null);
+        } catch (e) {
+            setError(`Gagal menyimpan "${detail.document.name}": ${e.message}`);
+        } finally {
+            setSaving(false);
+        }
+    }
+
     async function reindex(document) {
         setError(null);
         setBusyId(document.id);
@@ -247,14 +340,10 @@ export default function EvaDocuments({ documents: initial, subjects, extensions,
                                 style={{ ...inputStyle, minHeight: '200px', resize: 'vertical' }}
                                 value={draft.extracted_text}
                                 onChange={(e) => setDraft({ ...draft, extracted_text: e.target.value })}
-                                placeholder={needsPastedText(draft, readableExtensions)
-                                    ? `Isi berkas ${draft.extension} belum dapat dibaca otomatis. Silakan salin teksnya ke sini.`
-                                    : 'Tempel isi dokumen di sini, atau biarkan kosong bila berkas di atas sudah terbaca sendiri.'}
+                                placeholder={placeholderFor(draft, readableExtensions, imageExtensions)}
                             />
                             <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '5px 0 0' }}>
-                                {needsPastedText(draft, readableExtensions)
-                                    ? `Berkas ${draft.extension} tetap tersimpan, jadi bisa dibaca ulang bila ekstraksi otomatisnya diaktifkan nanti.`
-                                    : `Isi berkas ${readableExtensions.join('/')} dibaca otomatis. Pemotongan mengikuti batas paragraf, jadi pisahkan bagian dengan baris kosong.`}
+                                {hintFor(draft, readableExtensions, imageExtensions)}
                             </p>
                         </div>
 
@@ -351,6 +440,12 @@ export default function EvaDocuments({ documents: initial, subjects, extensions,
                                             : <span style={{ color: 'var(--slate-500)' }}>belum ada</span>}
                                     </td>
                                     <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                                        <Button variant="ghost" onClick={() => openDetail(document, 'preview')}>
+                                            Pratinjau
+                                        </Button>{' '}
+                                        <Button variant="ghost" onClick={() => openDetail(document, 'edit')}>
+                                            Sunting
+                                        </Button>{' '}
                                         <Button
                                             variant="ghost"
                                             onClick={() => reindex(document)}
@@ -376,6 +471,20 @@ export default function EvaDocuments({ documents: initial, subjects, extensions,
 
                 <Pagination {...pager} onPage={pager.setPage} unit="dokumen" />
             </Card>
+
+            {detail?.mode === 'preview' && (
+                <PreviewModal detail={detail} onClose={() => setDetail(null)} />
+            )}
+
+            {detail?.mode === 'edit' && (
+                <EditModal
+                    detail={detail}
+                    subjects={subjects}
+                    saving={saving}
+                    onSave={saveEdit}
+                    onClose={() => setDetail(null)}
+                />
+            )}
 
             {deleting && (
                 <Modal title="Hapus dokumen ini?" onClose={() => setDeleting(null)}>
@@ -441,6 +550,136 @@ function ActiveTagChip({ tag, onClear, shown, total }) {
  * berkas. Dokumen bertanda "PDF" tak pernah benar-benar berupa PDF, dan tidak
  * ada apa pun di layar yang mengungkap itu.
  */
+/**
+ * Pratinjau berkas asli di konsol.
+ *
+ * Memakai DocumentBody — penampil yang SAMA dengan popup rujukan yang dibuka
+ * karyawan. Itu bukan sekadar hemat kode: admin membuka layar ini untuk
+ * memastikan apa yang akan dilihat karyawan, dan pratinjau yang dirender dengan
+ * aturannya sendiri menjawab pertanyaan yang berbeda dari yang ditanyakan.
+ */
+function PreviewModal({ detail, onClose }) {
+    const { document, content } = detail;
+    const source = content ? describeDocument(content) : null;
+    const meta = content ? fileMeta(content, source.mode === 'preview') : null;
+
+    return (
+        <Modal
+            title={document.name}
+            onClose={onClose}
+            width={source?.mode === 'preview' ? '900px' : '620px'}
+        >
+            <div className="eva-src-body" style={{ maxHeight: '72vh' }}>
+                {!content && <div className="eva-src-muted">Memuat dokumen…</div>}
+                {meta && <div className="eva-src-meta" style={{ marginBottom: '12px' }}>{meta}</div>}
+                {source && <DocumentBody source={source} />}
+            </div>
+        </Modal>
+    );
+}
+
+/**
+ * Menyunting dokumen — keterangan DAN isinya.
+ *
+ * Kolom isi itulah yang selama ini hilang. Saat OCR gagal membaca sebuah
+ * berkas, dokumennya ditandai `failed` dengan kalimat "salin teksnya ke kolom
+ * isi, lalu indeks ulang" — kalimat yang menunjuk ke kolom yang tidak pernah
+ * ada, sehingga satu-satunya jalan keluar adalah menghapus dokumennya dan
+ * mengunggah ulang, membuang berkas aslinya sekalian.
+ */
+function EditModal({ detail, subjects, saving, onSave, onClose }) {
+    const { document, content } = detail;
+    const [form, setForm] = useState({
+        name: document.name,
+        catalog_subject_id: document.catalog_subject_id ?? '',
+        tags: document.tags ?? '',
+        is_eva_visible: document.is_eva_visible,
+    });
+    // Dipisah dari `form` karena nasibnya berbeda: hanya dikirim bila isinya
+    // sudah termuat, supaya menekan Simpan sebelum itu tidak mengosongkan isi
+    // dokumen — yang di server dibaca sebagai perintah membaca ulang berkasnya.
+    const [text, setText] = useState(null);
+
+    useEffect(() => {
+        if (content && text === null) setText(content.text ?? '');
+    }, [content, text]);
+
+    const set = (patch) => setForm({ ...form, ...patch });
+
+    return (
+        <Modal title={`Sunting "${document.name}"`} onClose={onClose} width="680px">
+            <div style={{ display: 'grid', gap: '14px', padding: '14px 20px 4px', maxHeight: '68vh', overflowY: 'auto' }}>
+                <div>
+                    <label style={labelStyle}>Nama dokumen</label>
+                    <input style={inputStyle} value={form.name} onChange={(e) => set({ name: e.target.value })} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '2 1 300px' }}>
+                        <label style={labelStyle}>Subject katalog</label>
+                        <SearchableSelect
+                            value={form.catalog_subject_id}
+                            onChange={(v) => set({ catalog_subject_id: v })}
+                            options={subjects.map((s) => ({ value: s.id, label: s.label }))}
+                            searchPlaceholder="Cari subject…"
+                        />
+                    </div>
+                    <div style={{ flex: '1 1 180px' }}>
+                        <label style={labelStyle}>Tag</label>
+                        <input style={inputStyle} value={form.tags} onChange={(e) => set({ tags: e.target.value })} />
+                    </div>
+                </div>
+
+                {/*
+                  | Toggle memanggil onChange TANPA argumen — nilainya dibalik di
+                  | sini, sama seperti Manage FAQ. Menerima argumen di posisi itu
+                  | berarti menyimpan objek event sebagai nilai boolean.
+                  |
+                  | Labelnya ditulis dua kali dengan sengaja: `label` hanya jadi
+                  | aria-label untuk pembaca layar, jadi tanpa teks di sebelahnya
+                  | saklar ini tak bertuliskan apa pun di layar.
+                */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                    <Toggle
+                        on={form.is_eva_visible}
+                        onChange={() => set({ is_eva_visible: !form.is_eva_visible })}
+                        label="Boleh dipakai EVA"
+                    />
+                    <span style={{ fontSize: '12.5px' }}>Boleh dipakai EVA</span>
+                </div>
+
+                <div>
+                    <label style={labelStyle}>Isi dokumen</label>
+                    <textarea
+                        style={{ ...inputStyle, minHeight: '220px', resize: 'vertical' }}
+                        value={text ?? ''}
+                        disabled={text === null}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder={text === null ? 'Memuat isi dokumen…' : 'Ketik isi dokumen di sini.'}
+                    />
+                    <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: '5px 0 0', lineHeight: 1.6 }}>
+                        Mengubah isi akan <strong>mengindeks ulang</strong> dokumen ini, dan potongan pencarian
+                        ikut diperbarui. Artikel yang sudah ada <strong>tidak ditimpa</strong> — isinya milik Anda
+                        sejak disunting di Article Library; dokumen yang belum punya artikel akan melahirkannya
+                        sekarang.
+                        {content?.has_file && ' Kosongkan kolom ini untuk membaca ulang berkas aslinya.'}
+                    </p>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px 16px' }}>
+                <Button variant="ghost" onClick={onClose} disabled={saving}>Batal</Button>
+                <Button
+                    onClick={() => onSave(text === null ? form : { ...form, extracted_text: text })}
+                    disabled={saving || form.name.trim() === ''}
+                >
+                    {saving ? 'Menyimpan…' : 'Simpan'}
+                </Button>
+            </div>
+        </Modal>
+    );
+}
+
 function FilePicker({ file, extensions, readableExtensions, onPick, onClear }) {
     const accept = extensions.map((ext) => `.${ext.toLowerCase()}`).join(',');
     const unreadable = extensions.filter((ext) => !readableExtensions.includes(ext));

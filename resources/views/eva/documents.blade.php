@@ -10,5 +10,6 @@
     'subjects' => $subjects,
     'extensions' => $extensions,
     'readableExtensions' => $readableExtensions,
+    'imageExtensions' => $imageExtensions,
 ]) }}"></div>
 @endsection

@@ -4,10 +4,12 @@ namespace Tests\Feature\Eva;
 
 use App\Models\Knowledge\Document;
 use App\Models\User;
+use App\Services\Knowledge\ImageTextReader;
 use App\Services\Knowledge\PdfTextReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\Concerns\ActsAsEvaAdmin;
 use Tests\TestCase;
 use ZipArchive;
@@ -176,6 +178,91 @@ final class DocumentUploadTest extends TestCase
     {
         $this->postJson('/eva/api/documents', [
             'file' => UploadedFile::fake()->create('jahat.exe', 4),
+        ])->assertStatus(422)->assertJsonValidationErrors('file');
+
+        $this->assertSame(0, Document::count());
+    }
+
+    // ---- gambar ------------------------------------------------------------
+
+    /**
+     * Teks yang DIKETIK admin menang atas OCR, dan OCR tidak dijalankan sama
+     * sekali.
+     *
+     * Inilah jalan keluar untuk foto yang mustahil dibaca mesin — kertas
+     * miring, tulisan tangan, cahaya kurang. Dijaga dengan pembaca gambar yang
+     * MELEDAK bila dipanggil: kalau kelak ada yang menukar urutannya sehingga
+     * OCR jalan lebih dulu, tes ini gagal dengan sebab yang jelas, bukan
+     * diam-diam menimpa ketikan admin.
+     */
+    public function test_gambar_dengan_teks_ketik_tidak_menjalankan_ocr(): void
+    {
+        $this->app->instance(ImageTextReader::class, new class implements ImageTextReader
+        {
+            public function isAvailable(): bool
+            {
+                return true;
+            }
+
+            public function read(string $imagePath): ?string
+            {
+                throw new RuntimeException('OCR tidak boleh dijalankan bila teksnya sudah diketik admin.');
+            }
+        });
+
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->image('surat-edaran.png'),
+            'extracted_text' => 'Surat Edaran 12/2026 tentang penggantian kartu akses.',
+        ])->assertStatus(202);
+
+        $document = Document::with('article')->sole();
+
+        $this->assertSame('PNG', $document->extension);
+        $this->assertStringContainsString('Surat Edaran 12/2026', $document->extracted_text);
+        $this->assertTrue($document->isIndexed());
+        $this->assertNotNull($document->article, 'foto berteks ketik tetap melahirkan artikel');
+        Storage::disk('local')->assertExists($document->storage_path);
+    }
+
+    /** Berkas gambarnya sendiri ikut tersimpan — itu yang nanti jadi rujukan. */
+    public function test_unggah_gambar_menyimpan_berkas_aslinya(): void
+    {
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->image('foto-sop.jpg'),
+            'extracted_text' => 'Isi SOP yang diketik dari foto.',
+        ])->assertStatus(202);
+
+        $document = Document::sole();
+
+        $this->assertSame('JPG', $document->extension);
+        $this->assertSame('foto-sop.jpg', $document->original_filename);
+        Storage::disk('local')->assertExists($document->storage_path);
+    }
+
+    /**
+     * `.jpeg` dan `.jpg` adalah format yang sama persis. Dibiarkan lewat apa
+     * adanya, label tipe di layar Documents pecah jadi dua untuk satu hal yang
+     * sama — dan penyaringan per format ikut meleset.
+     */
+    public function test_jpeg_dicatat_sebagai_jpg(): void
+    {
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->image('surat.jpeg'),
+            'extracted_text' => 'Isi surat.',
+        ])->assertStatus(202);
+
+        $this->assertSame('JPG', Document::sole()->extension);
+    }
+
+    /**
+     * SVG TIDAK boleh masuk. Ia markup yang bisa memuat skrip, sedangkan berkas
+     * rujukan disajikan inline ke layar setiap karyawan lewat endpoint dokumen
+     * EVA — satu berkas jahat cukup untuk menjalankan skrip di sana.
+     */
+    public function test_svg_ditolak(): void
+    {
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->createWithContent('bagan.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
         ])->assertStatus(422)->assertJsonValidationErrors('file');
 
         $this->assertSame(0, Document::count());

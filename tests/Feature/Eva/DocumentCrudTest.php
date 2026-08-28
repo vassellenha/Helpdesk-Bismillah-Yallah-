@@ -8,8 +8,10 @@ use App\Models\Knowledge\Document;
 use App\Models\User;
 use App\Services\Knowledge\DocumentTextExtractor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\ActsAsEvaAdmin;
 use Tests\TestCase;
@@ -188,6 +190,201 @@ final class DocumentCrudTest extends TestCase
      * jumlah potongan yang sama. Penggandaan di sini tidak memunculkan error —
      * ia hanya membuat EVA menawarkan materi kembar.
      */
+    // ---- menyunting ISI dokumen -------------------------------------------
+
+    /**
+     * Kolom yang selama ini hilang.
+     *
+     * Saat OCR gagal membaca sebuah berkas, dokumennya ditandai `failed` dengan
+     * kalimat "salin teksnya ke kolom isi, lalu indeks ulang" — kalimat yang
+     * menunjuk ke kolom yang tidak pernah ada. Satu-satunya jalan keluar dulu
+     * adalah menghapus dokumennya lalu mengunggah ulang, membuang berkas
+     * aslinya sekalian.
+     */
+    public function test_isi_dokumen_bisa_disunting_dan_ikut_terindeks_ulang(): void
+    {
+        $document = $this->indexedDocument('Teks lama yang salah baca.');
+
+        $this->putJson("/eva/api/documents/{$document->id}", $this->payload([
+            'extracted_text' => 'Buka Portal SSO, pilih Akun Saya, lalu klik Ubah Password.',
+        ]))->assertStatus(202);
+
+        $document->refresh();
+
+        $this->assertSame('Buka Portal SSO, pilih Akun Saya, lalu klik Ubah Password.', $document->extracted_text);
+        $this->assertTrue($document->isIndexed(), 'dokumen harus selesai diindeks ulang');
+        // Potongan pencarian lahir dari teks ini — dibiarkan tertinggal, EVA
+        // mencari di kalimat yang sudah tidak ada lagi di dokumennya.
+        $this->assertStringContainsString('Portal SSO', Chunk::where('document_id', $document->id)->value('content'));
+    }
+
+    /**
+     * Badan ARTIKEL sengaja TIDAK ikut tertimpa.
+     *
+     * Aturannya milik DocumentIndexer dan sudah lama berlaku: judul, ringkasan,
+     * dan badan artikel hanya diisi saat artikel pertama kali lahir; sesudah itu
+     * ia milik admin yang menyuntingnya di Article Library. Menyunting dokumen
+     * lalu diam-diam membuang pekerjaan itu jauh lebih merugikan daripada
+     * artikel yang tertinggal satu versi.
+     */
+    public function test_menyunting_isi_dokumen_tidak_menimpa_suntingan_artikel(): void
+    {
+        $document = $this->indexedDocument('Teks lama yang salah baca.');
+        $document->article->update(['body' => 'Kalimat yang sudah dirapikan admin.']);
+
+        $this->putJson("/eva/api/documents/{$document->id}", $this->payload([
+            'extracted_text' => 'Buka Portal SSO, pilih Akun Saya, lalu klik Ubah Password.',
+        ]))->assertStatus(202);
+
+        $this->assertSame('Kalimat yang sudah dirapikan admin.', $document->fresh()->article->body);
+    }
+
+    /**
+     * Jalur yang paling penting: dokumen GAGAL belum punya artikel sama sekali
+     * (DocumentIndexer berhenti sebelum membuatnya), jadi isi yang diketik admin
+     * di sinilah yang melahirkannya — dan inilah yang membuat foto tak terbaca
+     * tetap bisa jadi rujukan.
+     */
+    public function test_dokumen_gagal_yang_isinya_diketik_melahirkan_artikel(): void
+    {
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->createWithContent('foto-sop.png', 'bukan gambar sungguhan'),
+            'extracted_text' => ' ',
+        ])->assertStatus(202);
+
+        $document = Document::sole();
+        $this->assertSame(Document::STATUS_FAILED, $document->status, 'berkas ini memang tidak terbaca');
+        $this->assertNull($document->article);
+
+        $this->putJson("/eva/api/documents/{$document->id}", $this->payload([
+            'name' => 'foto-sop',
+            'extracted_text' => 'Isi surat edaran yang diketik ulang admin.',
+        ]))->assertStatus(202);
+
+        $document->refresh();
+
+        $this->assertTrue($document->isIndexed());
+        $this->assertNotNull($document->article, 'artikelnya baru lahir sekarang');
+        $this->assertStringContainsString('diketik ulang admin', $document->article->body);
+    }
+
+    /**
+     * Isi yang tidak ikut dikirim TIDAK boleh menyentuh apa pun — form
+     * keterangan yang lupa membawa kolom isi tidak boleh diam-diam mengosongkan
+     * dokumen, dan tidak boleh membangunkan antrean tanpa alasan.
+     */
+    public function test_menyunting_keterangan_tidak_mengindeks_ulang(): void
+    {
+        $document = $this->indexedDocument();
+        Queue::fake();
+
+        $this->putJson("/eva/api/documents/{$document->id}", $this->payload(['name' => 'Nama baru']))
+            ->assertOk();
+
+        Queue::assertNothingPushed();
+        $this->assertTrue($document->fresh()->isIndexed());
+    }
+
+    /** Isi yang dikirim SAMA PERSIS juga bukan perubahan. */
+    public function test_mengirim_isi_yang_sama_tidak_mengindeks_ulang(): void
+    {
+        $document = $this->indexedDocument('Teks yang tidak berubah.');
+        Queue::fake();
+
+        $this->putJson("/eva/api/documents/{$document->id}", $this->payload([
+            'extracted_text' => 'Teks yang tidak berubah.',
+        ]))->assertOk();
+
+        Queue::assertNothingPushed();
+    }
+
+    /**
+     * Mengosongkan kolom isi berarti "baca ulang berkasnya", BUKAN "dokumen ini
+     * tanpa isi" — jalan kembali bagi admin yang terlanjur menempel teks salah.
+     */
+    public function test_mengosongkan_isi_membaca_ulang_berkas_aslinya(): void
+    {
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->createWithContent('sop.txt', 'Isi asli dari berkas yang tersimpan.'),
+        ])->assertStatus(202);
+
+        $document = Document::sole();
+
+        $this->putJson("/eva/api/documents/{$document->id}", $this->payload([
+            'name' => 'sop',
+            'extracted_text' => 'Teks tempel yang salah.',
+        ]))->assertStatus(202);
+        $this->assertSame('Teks tempel yang salah.', $document->fresh()->extracted_text);
+
+        $this->putJson("/eva/api/documents/{$document->id}", $this->payload([
+            'name' => 'sop',
+            'extracted_text' => '',
+        ]))->assertStatus(202);
+
+        $this->assertSame('Isi asli dari berkas yang tersimpan.', $document->fresh()->extracted_text);
+    }
+
+    // ---- pratinjau ---------------------------------------------------------
+
+    public function test_isi_dokumen_bisa_dibaca_untuk_pratinjau(): void
+    {
+        $document = $this->indexedDocument('Isi yang akan dibaca admin.');
+
+        $this->getJson("/eva/api/documents/{$document->id}/content")
+            ->assertOk()
+            ->assertJsonPath('document.id', $document->id)
+            ->assertJsonPath('document.text', 'Isi yang akan dibaca admin.')
+            // Dokumen ini lahir dari teks tempel — tidak ada berkas untuk
+            // ditampilkan, dan layar harus tahu itu supaya tidak memasang
+            // bingkai pratinjau yang kosong.
+            ->assertJsonPath('document.has_file', false)
+            ->assertJsonPath('document.preview_as', null);
+    }
+
+    /**
+     * Berkasnya bisa dibuka admin MESKIPUN artikelnya belum siap-jawab.
+     *
+     * Ini bedanya dengan endpoint kembarannya untuk karyawan, dan bedanya
+     * disengaja: dokumen yang artikelnya masih draf — atau yang indexing-nya
+     * gagal — justru yang paling perlu dibuka, karena admin membukanya untuk
+     * mencari tahu kenapa.
+     */
+    public function test_berkas_dokumen_yang_artikelnya_masih_draf_tetap_bisa_dipratinjau_admin(): void
+    {
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->createWithContent('sop.txt', 'Isi berkas asli.'),
+        ])->assertStatus(202);
+
+        $document = Document::sole();
+        $this->assertSame(Article::STATUS_DRAFT, $document->article->status, 'artikel memang lahir sebagai draf');
+
+        $response = $this->get("/eva/api/documents/{$document->id}/file")->assertOk();
+
+        $this->assertSame('Isi berkas asli.', $response->streamedContent());
+        $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_pratinjau_dokumen_tanpa_berkas_membalas_404(): void
+    {
+        $document = $this->indexedDocument();
+
+        $this->get("/eva/api/documents/{$document->id}/file")->assertNotFound();
+    }
+
+    public function test_berkas_dokumen_tidak_bisa_dibuka_tanpa_role_eva(): void
+    {
+        $this->postJson('/eva/api/documents', [
+            'file' => UploadedFile::fake()->createWithContent('sop.txt', 'Isi berkas asli.'),
+        ])->assertStatus(202);
+
+        $document = Document::sole();
+
+        $this->actingAsRole('requester');
+
+        $this->get("/eva/api/documents/{$document->id}/file")->assertForbidden();
+        $this->getJson("/eva/api/documents/{$document->id}/content")->assertForbidden();
+    }
+
     public function test_indeks_ulang_tidak_menggandakan_artikel_maupun_potongan(): void
     {
         $document = $this->indexedDocument();

@@ -4,6 +4,7 @@ namespace App\Models\Knowledge;
 
 use App\Models\ServiceCatalogSubject;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -52,6 +53,34 @@ class Document extends Model
     public function chunks()
     {
         return $this->hasMany(Chunk::class, 'document_id');
+    }
+
+    /**
+     * Satu-satunya definisi "dokumen yang boleh dibuka dari kutipan EVA".
+     *
+     * Dua syarat, dan keduanya wajib:
+     *   1. Dokumennya sendiri tidak disembunyikan admin dari EVA.
+     *   2. Artikel turunannya lolos gerbang menjawab (scopeAnswerable) — sebab
+     *      itulah satu-satunya alasan dokumen ini bisa dikutip sama sekali.
+     *
+     * Tanpa syarat kedua, endpoint berkas menjadi jalan mengunduh SOP internal
+     * cukup dengan menebak nomor dokumen — termasuk dokumen yang artikelnya
+     * masih draf dan belum pernah boleh dibaca siapa pun di luar konsol admin.
+     */
+    public function scopeQuotable(Builder $query): Builder
+    {
+        return $query->where('is_eva_visible', true)
+            ->whereHas('article', fn (Builder $article) => $article->answerable());
+    }
+
+    /**
+     * Berkas aslinya ada di disk? Dokumen boleh lahir dari teks yang diketik
+     * admin langsung — baris seperti itu tidak punya berkas, dan itu keadaan
+     * yang wajar, bukan kerusakan.
+     */
+    public function hasFile(): bool
+    {
+        return filled($this->storage_path);
     }
 
     public function isIndexed(): bool

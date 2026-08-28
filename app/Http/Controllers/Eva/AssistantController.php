@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Eva;
 
 use App\Http\Controllers\Controller;
+use App\Models\Knowledge\Document;
 use App\Services\Knowledge\EvaChat;
 use App\Support\CurrentActor;
 use App\Support\Eva\MaterialLookup;
+use App\Support\Eva\SourceDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Permukaan EVA untuk KARYAWAN — widget mengambang di portal.
@@ -42,11 +46,16 @@ final class AssistantController extends Controller
     }
 
     /**
-     * Isi utuh materi yang dikutip sebuah jawaban.
+     * Materi yang dikutip sebuah jawaban, BERIKUT dokumen aslinya.
      *
      * Judul sumber di bawah jawaban selama ini teks mati: karyawan tahu
      * panduannya bernama apa, tapi tidak punya jalan membacanya tanpa
      * meninggalkan percakapan. Endpoint ini yang membukanya di tempat.
+     *
+     * Yang dipulangkan bukan hanya artikel hasil ekstraksi, melainkan juga
+     * keterangan dokumen sumbernya — nama berkas, formatnya, dan alamat untuk
+     * membukanya. Popup memakai keterangan itu untuk menampilkan DOKUMENNYA,
+     * dan hanya jatuh ke teks bila berkasnya memang tidak ada.
      *
      * Jenis dan nomor yang tidak lolos gerbang MaterialLookup dijawab 404 yang
      * sama — tidak dibedakan antara "tidak ada" dan "ada tapi disembunyikan".
@@ -60,6 +69,48 @@ final class AssistantController extends Controller
         abort_if($material === null, 404, 'Materi tidak ditemukan.');
 
         return response()->json($material);
+    }
+
+    /**
+     * Berkas asli dokumen yang dikutip — satu-satunya pintu keluarnya.
+     *
+     * Berkasnya disimpan di disk privat (storage/app/private), di luar document
+     * root, jadi tidak ada jalan lain ke sana selain lewat sini. Karena itu
+     * gerbangnya harus lengkap, dan ketiganya menjawab 404 yang SAMA:
+     *   - dokumen yang tidak boleh dikutip (scopeQuotable) — tidak dibedakan
+     *     dari yang tidak ada, supaya penebak nomor tidak belajar apa pun;
+     *   - dokumen yang memang tidak punya berkas (isinya diketik admin);
+     *   - baris yang berkasnya sudah hilang dari disk.
+     *
+     * `inline`, bukan `attachment`: PDF dibaca langsung di dalam popup. Format
+     * yang tidak bisa dirender browser tetap berakhir sebagai unduhan — itu
+     * keputusan browser, dan popup sudah menyiapkan karyawan untuk itu.
+     */
+    public function documentFile(Document $document): StreamedResponse
+    {
+        abort_unless(
+            Document::query()->quotable()->whereKey($document->getKey())->exists(),
+            404,
+            'Dokumen tidak ditemukan.',
+        );
+
+        abort_unless($document->hasFile(), 404, 'Dokumen ini tidak punya berkas asli.');
+
+        abort_unless(
+            Storage::disk('local')->exists((string) $document->storage_path),
+            404,
+            'Berkas dokumen tidak ada di penyimpanan.',
+        );
+
+        $filename = SourceDocument::filename($document);
+
+        return Storage::disk('local')->response((string) $document->storage_path, $filename, [
+            'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
+            // Sudah diperiksa per permintaan; menyimpannya di cache bersama
+            // (proxy kantor) berarti orang berikutnya bisa menerima berkas yang
+            // bukan haknya tanpa pernah menyentuh gerbang di atas.
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     /**

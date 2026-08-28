@@ -12,6 +12,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 use Tests\Concerns\ActsAsEvaAdmin;
+use Tests\Concerns\BuildsOcrFixtures;
 use Tests\TestCase;
 
 /**
@@ -29,6 +30,7 @@ use Tests\TestCase;
 final class PdfOcrTest extends TestCase
 {
     use ActsAsEvaAdmin;
+    use BuildsOcrFixtures;
     use RefreshDatabase;
 
     private PdfTextReader $reader;
@@ -50,35 +52,6 @@ final class PdfOcrTest extends TestCase
     }
 
     // ---- fixture ----------------------------------------------------------
-
-    private function tempPath(string $suffix): string
-    {
-        $path = tempnam(sys_get_temp_dir(), 'eva-uji').$suffix;
-        $this->beforeApplicationDestroyed(fn () => @unlink($path));
-
-        return $path;
-    }
-
-    /** PDF sederhana yang sah, dengan lapisan teks sungguhan. */
-    private function textLayerPdf(string ...$lines): string
-    {
-        $content = 'BT /F1 18 Tf 72 700 Td';
-        foreach ($lines as $index => $line) {
-            $content .= ($index === 0 ? '' : ' 0 -28 Td').' ('.$line.') Tj';
-        }
-        $content .= ' ET';
-
-        $objects = [
-            1 => '<</Type/Catalog/Pages 2 0 R>>',
-            2 => '<</Type/Pages/Kids[3 0 R]/Count 1>>',
-            3 => '<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R'
-                .'/Resources<</Font<</F1 5 0 R>>>>>>',
-            4 => "<</Length {$this->len($content)}>> stream\n".$content."\nendstream",
-            5 => '<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>',
-        ];
-
-        return $this->assemblePdf($objects);
-    }
 
     /**
      * PDF hasil "pindai": halaman dirender jadi JPEG lalu ditanam sebagai
@@ -110,43 +83,6 @@ final class PdfOcrTest extends TestCase
             5 => "<</Type/XObject/Subtype/Image/Width {$width}/Height {$height}/ColorSpace/DeviceRGB"
                 ."/BitsPerComponent 8/Filter/DCTDecode/Length {$this->len($jpeg)}>> stream\n".$jpeg."\nendstream",
         ]);
-    }
-
-    /** @param array<int,string> $objects */
-    private function assemblePdf(array $objects): string
-    {
-        $pdf = "%PDF-1.4\n";
-        $offsets = [];
-
-        foreach ($objects as $number => $body) {
-            $offsets[$number] = $this->len($pdf);
-            $pdf .= "{$number} 0 obj ".$body." endobj\n";
-        }
-
-        $xrefAt = $this->len($pdf);
-        $size = count($objects) + 1;
-        $pdf .= "xref\n0 {$size}\n0000000000 65535 f \n";
-
-        foreach ($offsets as $offset) {
-            $pdf .= sprintf("%010d 00000 n \n", $offset);
-        }
-
-        $pdf .= "trailer <</Size {$size}/Root 1 0 R>>\nstartxref\n{$xrefAt}\n%%EOF\n";
-
-        $path = $this->tempPath('.pdf');
-        file_put_contents($path, $pdf);
-
-        return $path;
-    }
-
-    private function len(string $value): int
-    {
-        return strlen($value);
-    }
-
-    private function binary(string $name): string
-    {
-        return (new OcrBinaries((array) config('eva.ocr')))->path($name);
     }
 
     private function textLayerOf(string $pdfPath): string

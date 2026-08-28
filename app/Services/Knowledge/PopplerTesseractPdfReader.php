@@ -3,8 +3,6 @@
 namespace App\Services\Knowledge;
 
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
-use Symfony\Component\Process\Process;
 
 /**
  * Membaca PDF dengan poppler + Tesseract, seluruhnya di server sendiri.
@@ -144,27 +142,9 @@ final class PopplerTesseractPdfReader implements PdfTextReader
      */
     private function run(array $command): ?string
     {
-        $process = new Process(array_map('strval', $command));
-        $process->setTimeout((float) ($this->config['timeout'] ?? 120));
-
-        try {
-            $process->run();
-        } catch (ProcessTimedOutException) {
-            // Satu berkas rusak tidak boleh menggantung antrean selamanya.
-            Log::warning('EVA: proses OCR melewati batas waktu.', ['command' => $command[0]]);
-
-            return null;
-        }
-
-        if (! $process->isSuccessful()) {
-            Log::warning('EVA: proses OCR gagal.', [
-                'command' => $command[0],
-                'error' => mb_substr($process->getErrorOutput(), 0, 500),
-            ]);
-
-            return null;
-        }
-
-        return $process->getOutput();
+        // Batas waktu, pencatatan galat, dan arti `null` dipegang OcrProcess —
+        // satu tempat, dipakai bersama pembaca gambar. Satu berkas rusak tidak
+        // boleh menggantung antrean selamanya, dan itu berlaku untuk keduanya.
+        return (new OcrProcess((float) ($this->config['timeout'] ?? 120)))->run($command);
     }
 }

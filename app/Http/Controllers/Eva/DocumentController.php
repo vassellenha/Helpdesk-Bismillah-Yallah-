@@ -9,13 +9,16 @@ use App\Services\Knowledge\DocumentTextExtractor;
 use App\Services\Knowledge\TagRegistry;
 use App\Support\CurrentActor;
 use App\Support\Eva\CatalogOptions;
+use App\Support\Eva\SourceDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Documents — hulu Knowledge Base.
@@ -32,8 +35,18 @@ use Illuminate\View\View;
  */
 class DocumentController extends Controller
 {
-    /** Ekstensi yang boleh dicatat. Dibatasi supaya label tipe tidak liar. */
-    private const ALLOWED_EXTENSIONS = ['PDF', 'DOCX', 'XLSX', 'TXT', 'MD'];
+    /**
+     * Ekstensi yang boleh dicatat. Dibatasi supaya label tipe tidak liar.
+     *
+     * Gambar raster ikut karena foto surat edaran adalah bentuk "dokumen" yang
+     * paling banyak beredar di grup kerja, dan Tesseract yang sudah dipakai
+     * membaca PDF pindaian membacanya dengan jalur yang sama persis.
+     *
+     * SVG SENGAJA tidak ada di sini, dan jangan ditambahkan: ia markup yang
+     * bisa memuat skrip, sedangkan berkas rujukan disajikan inline ke layar
+     * setiap karyawan lewat endpoint dokumen EVA.
+     */
+    private const ALLOWED_EXTENSIONS = ['PDF', 'DOCX', 'XLSX', 'TXT', 'MD', 'PNG', 'JPG', 'JPEG'];
 
     /** Batas ukuran unggahan, dalam kilobyte. */
     private const MAX_UPLOAD_KB = 20480;
@@ -67,6 +80,11 @@ class DocumentController extends Controller
                 fn (string $ext) => $this->extractor->canRead($ext),
             )),
             'tags' => $this->tags->tagsFor(Document::class),
+            // Daftar format gambar diturunkan dari ekstraktor, bukan diketik
+            // ulang: layar memakainya untuk mengingatkan bahwa hasil bacaan
+            // FOTO bergantung ketajaman gambarnya — peringatan yang tidak
+            // berlaku untuk PDF digital maupun DOCX.
+            'imageExtensions' => DocumentTextExtractor::IMAGE_EXTENSIONS,
             // Tag aktif datang dari query string supaya tautan dari layar
             // Category & Taxonomy langsung membuka daftar yang sudah tersaring.
             'activeTag' => request()->query('tag'),
@@ -216,16 +234,108 @@ class DocumentController extends Controller
         return $this->queueIndexing($document);
     }
 
+    /**
+     * Isi dokumen dan berkas aslinya — dibaca layar Documents saat admin
+     * menekan Pratinjau atau Sunting.
+     *
+     * Terpisah dari show(), yang dipanggil BERULANG selama masih ada dokumen
+     * `processing`. Menitipkan isi dokumen di sana berarti setiap denyut polling
+     * menyeret seluruh teks SOP melewati jaringan setiap tiga detik, untuk
+     * sesuatu yang hanya dibaca saat sebuah tombol ditekan.
+     *
+     * Bentuknya sama persis dengan yang dibaca popup rujukan EVA — satu
+     * penampil di layar melayani keduanya, jadi apa yang dilihat admin di sini
+     * tidak pernah berbeda dari yang dilihat karyawan di sana.
+     */
+    public function content(Document $document): JsonResponse
+    {
+        return response()->json([
+            'document' => SourceDocument::present($document, SourceDocument::ROUTE_CONSOLE),
+        ]);
+    }
+
+    /**
+     * Berkas asli, untuk dibaca admin di konsol.
+     *
+     * Gerbangnya SENGAJA cuma `role:eva` dari grup rutenya — tidak ada syarat
+     * artikelnya harus siap-jawab seperti di endpoint kembarannya untuk
+     * karyawan. Dokumen yang artikelnya masih draf, atau yang indexing-nya
+     * gagal, justru yang paling perlu dibuka: admin membukanya untuk mencari
+     * tahu kenapa gagal.
+     */
+    public function file(Document $document): StreamedResponse
+    {
+        abort_unless($document->hasFile(), 404, 'Dokumen ini tidak punya berkas asli.');
+
+        abort_unless(
+            Storage::disk('local')->exists((string) $document->storage_path),
+            404,
+            'Berkas dokumen tidak ada di penyimpanan.',
+        );
+
+        $filename = SourceDocument::filename($document);
+
+        return Storage::disk('local')->response((string) $document->storage_path, $filename, [
+            'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /**
+     * Menyunting keterangan dokumen — dan, bila diminta, ISINYA.
+     *
+     * Kolom isi itulah yang selama ini hilang. Ketika OCR gagal membaca sebuah
+     * berkas, dokumennya ditandai `failed` dengan kalimat "salin teksnya ke
+     * kolom isi, lalu indeks ulang" — kalimat yang menunjuk ke kolom yang tidak
+     * pernah ada. Satu-satunya jalan keluar adalah menghapus dokumennya lalu
+     * mengunggah ulang, dan berkas aslinya ikut terbuang bersamanya.
+     *
+     * Mengubah isi berarti MENGINDEKS ULANG: potongan pencarian lahir dari teks
+     * ini, dan membiarkannya berbeda dari isi yang baru berarti EVA mencari di
+     * kalimat yang sudah tidak ada lagi di dokumennya.
+     *
+     * Badan ARTIKEL tidak ikut tertimpa — itu aturan DocumentIndexer yang sudah
+     * lama berlaku dan sengaja dipertahankan: artikel jadi milik admin begitu ia
+     * menyuntingnya. Yang paling diuntungkan justru dokumen GAGAL, yang belum
+     * punya artikel sama sekali: isi yang diketik di sinilah yang melahirkannya,
+     * dan itulah yang membuat foto tak terbaca tetap bisa jadi rujukan.
+     *
+     * MENGOSONGKAN kolom isi bukan berarti "dokumen tanpa isi", melainkan
+     * "baca ulang berkasnya" — IndexDocument mendahulukan teks tersimpan dan
+     * baru turun ke ekstraksi ketika teksnya kosong. Itu jalan kembali bagi
+     * admin yang terlanjur menempel teks yang salah.
+     */
     public function update(Request $request, Document $document): JsonResponse
     {
-        $document->update($request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'catalog_subject_id' => ['nullable', 'integer', Rule::exists('service_catalog_subjects', 'id')],
             'is_eva_visible' => 'required|boolean',
             'tags' => 'nullable|string|max:255',
-        ]));
+            // Tidak dikirim sama sekali = tidak disentuh. Dikirim kosong =
+            // permintaan membaca ulang berkasnya. Keduanya harus terbedakan,
+            // jadi jangan menggantinya dengan `?? ''`.
+            'extracted_text' => 'sometimes|nullable|string',
+        ]);
 
-        return response()->json($this->presentFresh($document));
+        $isiBerubah = $request->has('extracted_text')
+            && (string) $data['extracted_text'] !== (string) $document->extracted_text;
+
+        $document->update(array_merge(
+            Arr::except($data, ['extracted_text']),
+            $isiBerubah ? ['extracted_text' => $data['extracted_text']] : [],
+        ));
+
+        if (! $isiBerubah) {
+            return response()->json($this->presentFresh($document));
+        }
+
+        $document->update([
+            'status' => Document::STATUS_PROCESSING,
+            'failure_reason' => null,
+        ]);
+
+        return $this->queueIndexing($document);
     }
 
     /**

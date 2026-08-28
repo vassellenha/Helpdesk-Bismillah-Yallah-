@@ -6,6 +6,7 @@ use App\Services\Knowledge\AnswerParaphraser;
 use App\Services\Knowledge\ConversationEngine;
 use App\Services\Knowledge\DocumentTextExtractor;
 use App\Services\Knowledge\FulltextKnowledgeSearch;
+use App\Services\Knowledge\ImageTextReader;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\KnowledgeSynthesizer;
 use App\Services\Knowledge\NoConversationEngine;
@@ -19,6 +20,7 @@ use App\Services\Knowledge\PdfTextReader;
 use App\Services\Knowledge\PopplerTesseractPdfReader;
 use App\Services\Knowledge\SubjectMatcher;
 use App\Services\Knowledge\SubjectSearch;
+use App\Services\Knowledge\TesseractImageReader;
 use App\Support\CurrentActor;
 use App\Support\ProfilePresenter;
 use App\Support\RoleRegistry;
@@ -52,9 +54,21 @@ class AppServiceProvider extends ServiceProvider
             return new PopplerTesseractPdfReader(new OcrBinaries($config), $config);
         });
 
+        // Pembacaan GAMBAR: seam tersendiri, bukan cabang dari yang di atas.
+        // Syaratnya lebih ringan (Tesseract saja, tanpa poppler), jadi server
+        // yang tidak bisa membaca PDF pindaian masih bisa membaca foto.
+        $this->app->singleton(ImageTextReader::class, function () {
+            $config = (array) config('eva.ocr', []);
+
+            return new TesseractImageReader(new OcrBinaries($config), $config);
+        });
+
         $this->app->singleton(
             DocumentTextExtractor::class,
-            fn ($app) => new DocumentTextExtractor($app->make(PdfTextReader::class)),
+            fn ($app) => new DocumentTextExtractor(
+                $app->make(PdfTextReader::class),
+                $app->make(ImageTextReader::class),
+            ),
         );
 
         // Seam keempat: cara jawaban KB ditulis ulang sebelum sampai ke

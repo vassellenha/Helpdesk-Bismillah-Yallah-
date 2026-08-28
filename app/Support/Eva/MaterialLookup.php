@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Eva;
 
 use App\Models\Knowledge\Article;
+use App\Models\Knowledge\Document;
 use App\Models\Knowledge\Faq;
 
 /**
@@ -75,8 +76,27 @@ final class MaterialLookup
             'summary' => $article->summary,
             'body' => $article->body,
             'subject' => self::subject($article),
+            'document' => SourceDocument::present(self::documentOf($article)),
             'updated_at' => $article->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Dokumen asal artikel — DIAMBIL LEWAT scopeQuotable(), bukan lewat relasi
+     * telanjang.
+     *
+     * Artikelnya memang sudah lolos gerbang menjawab saat sampai di sini, tapi
+     * dokumennya punya saklar sendiri: admin bisa menyembunyikan berkas asli
+     * dari EVA sambil membiarkan artikelnya tetap menjawab. Membaca relasinya
+     * langsung akan mengabaikan saklar itu diam-diam.
+     *
+     * Memakai scope yang sama dengan endpoint berkas juga menjaga keduanya
+     * tidak pernah berbeda pendapat: apa pun yang popup tawarkan untuk dibuka,
+     * pasti lolos gerbang saat benar-benar dibuka.
+     */
+    private static function documentOf(Article $article): ?Document
+    {
+        return $article->sourceDocument()->quotable()->first();
     }
 
     /**
@@ -96,6 +116,10 @@ final class MaterialLookup
             'summary' => null,
             'body' => $faq->answer,
             'subject' => self::subject($faq),
+            // FAQ ditulis langsung oleh admin, tidak pernah lahir dari berkas.
+            // Kuncinya tetap dikirim (bernilai null) supaya layar punya SATU
+            // bentuk data untuk kedua jenis materi.
+            'document' => null,
             'updated_at' => $faq->updated_at?->toIso8601String(),
         ];
     }
