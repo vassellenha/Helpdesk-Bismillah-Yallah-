@@ -2,16 +2,6 @@ function csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
 
-/**
- * Objek biasa yang lolos ke `fetch` tanpa JSON.stringify dikirim sebagai teks
- * harfiah "[object Object]" — dan Laravel melaporkannya sebagai "field wajib
- * kosong" untuk field yang sebenarnya terisi. Kegagalan yang menunjuk ke arah
- * yang salah, persis seperti jebakan Content-Type di uploadFile() di bawah.
- *
- * Konvensinya tetap: pemanggil menulis JSON.stringify sendiri. Ini jaring
- * pengaman kalau ada yang lupa, bukan izin untuk berhenti menulisnya.
- */
-
 /*
  | Basis alamat aplikasi — DITURUNKAN dari halaman, bukan diasumsikan.
  |
@@ -64,24 +54,122 @@ export function resolveUrl(url) {
     return appBase() + url.replace(/^\/+/, '');
 }
 
-function serializeBody(body) {
-    const isPlainObject = body !== null
-        && typeof body === 'object'
-        && !(body instanceof FormData)
-        && !(body instanceof Blob)
-        && !(body instanceof URLSearchParams)
-        && !(body instanceof ArrayBuffer);
+/*
+ | Kiriman dikemas sebagai FORM, bukan JSON — dan itu bukan selera.
+ |
+ | Portal SINTA menyajikan helpdesk lewat modul proxy-nya sendiri, dan proxy itu
+ | TIDAK meneruskan body JSON mentah maupun header khusus seperti X-CSRF-TOKEN.
+ | Akibatnya Laravel tidak menerima apa pun: tokennya hilang (ditolak dengan
+ | "CSRF token mismatch") dan seluruh isi permintaan ikut lenyap. Terbukti
+ | langsung di produksi, tiga cara ke endpoint yang sama:
+ |
+ |   JSON + header X-CSRF-TOKEN   -> CSRF token mismatch
+ |   JSON berisi _token           -> CSRF token mismatch
+ |   form-urlencoded + _token     -> BERHASIL, EVA menjawab
+ |
+ | Body form diteruskan utuh oleh proxy mana pun: itu bentuk kiriman HTML yang
+ | paling tua dan paling umum. Laravel membacanya lewat jalur input yang sama
+ | persis dengan JSON, jadi tidak ada satu pun controller yang perlu berubah —
+ | semuanya memakai validate()/input(), tidak ada yang memanggil $request->json().
+*/
+function toFormBody(value) {
+    const params = new URLSearchParams();
 
-    return isPlainObject ? JSON.stringify(body) : body;
+    const tulis = (kunci, isi) => {
+        /*
+         | null menjadi string kosong, lalu dikembalikan JADI null oleh
+         | middleware ConvertEmptyStringsToNull bawaan Laravel. Tanpa langkah
+         | itu, `catalog_subject_id: null` akan sampai sebagai "" dan aturan
+         | `nullable|integer` menolaknya.
+        */
+        if (isi === null || isi === undefined) {
+            params.append(kunci, '');
+            return;
+        }
+
+        // Kurung siku: bentuk yang diurai PHP menjadi array/objek bersarang.
+        if (Array.isArray(isi)) {
+            isi.forEach((item) => tulis(`${kunci}[]`, item));
+            return;
+        }
+
+        if (typeof isi === 'object' && !(isi instanceof Date)) {
+            Object.entries(isi).forEach(([sub, nilai]) => tulis(`${kunci}[${sub}]`, nilai));
+            return;
+        }
+
+        // "1"/"0", bukan "true"/"false": keduanya diterima aturan `boolean`,
+        // tapi yang ini juga lolos `accepted` dan perbandingan longgar di PHP.
+        if (typeof isi === 'boolean') {
+            params.append(kunci, isi ? '1' : '0');
+            return;
+        }
+
+        params.append(kunci, String(isi));
+    };
+
+    Object.entries(value).forEach(([kunci, isi]) => tulis(kunci, isi));
+
+    return params;
+}
+
+/**
+ * Menyiapkan isi kiriman.
+ *
+ * Bentuk yang sudah disiapkan pemanggil (FormData, Blob, URLSearchParams)
+ * dibiarkan apa adanya. Sisanya dijadikan form — termasuk teks JSON, karena
+ * pemanggil di repo ini menulis `JSON.stringify(...)` sendiri mengikuti
+ * konvensi lama. Teks itu diurai kembali di sini lalu dikemas ulang: mengubah
+ * 45 berkas pemanggil hanya demi itu jauh lebih berisiko daripada satu tempat
+ * yang mengurusnya.
+ */
+function serializeBody(body) {
+    if (body === null || body === undefined) return body;
+
+    if (body instanceof FormData || body instanceof Blob
+        || body instanceof URLSearchParams || body instanceof ArrayBuffer) {
+        return body;
+    }
+
+    if (typeof body === 'string') {
+        try {
+            const diurai = JSON.parse(body);
+
+            if (diurai !== null && typeof diurai === 'object' && !Array.isArray(diurai)) {
+                return toFormBody(diurai);
+            }
+        } catch {
+            // Bukan JSON — biarkan apa adanya.
+        }
+
+        return body;
+    }
+
+    if (typeof body === 'object' && !Array.isArray(body)) {
+        return toFormBody(body);
+    }
+
+    return body;
 }
 
 export async function apiFetch(url, options = {}) {
+    const kiriman = 'body' in options ? serializeBody(options.body) : undefined;
+
+    // Token ikut DI DALAM kiriman, bukan hanya di header: header khusus tidak
+    // selamat melewati proxy portal. Header-nya tetap dikirim untuk akses
+    // langsung — Laravel menerima keduanya, mana pun yang lebih dulu ada.
+    if (kiriman instanceof URLSearchParams && !kiriman.has('_token')) {
+        kiriman.append('_token', csrfToken());
+    }
+
     const res = await fetch(resolveUrl(url), {
         ...options,
-        ...('body' in options ? { body: serializeBody(options.body) } : {}),
+        ...(kiriman === undefined ? {} : { body: kiriman }),
         headers: {
             Accept: 'application/json',
-            'Content-Type': 'application/json',
+            // Content-Type SENGAJA tidak diset: browser menuliskannya sendiri
+            // sesuai bentuk kiriman, lengkap dengan boundary multipart yang
+            // tidak mungkin ditebak dengan tangan.
             'X-CSRF-TOKEN': csrfToken(),
             ...options.headers,
         },
@@ -166,6 +254,9 @@ function errorMessage(body, status) {
 export async function uploadFile(url, file, fields = {}) {
     const form = new FormData();
     form.append('file', file);
+    // Alasannya sama dengan apiFetch: header X-CSRF-TOKEN tidak selamat lewat
+    // proxy portal, jadi tokennya ikut sebagai field.
+    form.append('_token', csrfToken());
 
     Object.entries(fields).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== '') {

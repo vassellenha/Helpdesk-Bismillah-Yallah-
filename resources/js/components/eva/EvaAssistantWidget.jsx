@@ -74,6 +74,20 @@ export default function EvaAssistantWidget({ endpoints, offsetBottom = 24 }) {
                 body: JSON.stringify({ question, conversation_id: conversationId }),
             });
 
+            /*
+             | Balasan tanpa `type` BUKAN jawaban EVA — itu pesan galat yang
+             | lolos sebagai 200.
+             |
+             | Portal SINTA menormalkan setiap balasan menjadi status 200,
+             | termasuk penolakan seperti "CSRF token mismatch". Tanpa
+             | pemeriksaan ini, gelembung jawaban dirender dari objek yang tidak
+             | punya `hit`, lalu `message.hit.title` menjatuhkan seluruh widget —
+             | persis yang terjadi di produksi.
+            */
+            if (!reply?.type) {
+                throw new Error(reply?.message || 'Balasan server tidak dikenali.');
+            }
+
             setConversationId(reply.conversation_id);
             setMessages((current) => [
                 ...current,
