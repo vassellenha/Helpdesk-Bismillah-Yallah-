@@ -172,7 +172,7 @@ final class AssistantMaterialTest extends TestCase
             ->assertJsonPath('document.page_count', 3)
             ->assertJsonPath('document.has_file', true)
             ->assertJsonPath('document.is_previewable', true)
-            ->assertJsonPath('document.file_url', route('eva.assistant.document-file', ['document' => $document->id]))
+            ->assertJsonPath('document.file_url', route('eva.assistant.document-file', ['document' => $document->id], absolute: false))
             ->assertJsonPath('document.text', 'Isi dokumen asli: buka Portal SSO lalu pilih Ubah Password.');
     }
 
@@ -246,7 +246,7 @@ final class AssistantMaterialTest extends TestCase
             ->assertJsonPath('document.has_file', true)
             ->assertJsonPath('document.is_previewable', false)
             ->assertJsonPath('document.preview_as', null)
-            ->assertJsonPath('document.file_url', route('eva.assistant.document-file', ['document' => $document->id]));
+            ->assertJsonPath('document.file_url', route('eva.assistant.document-file', ['document' => $document->id], absolute: false));
     }
 
     /** Dokumen yang isinya diketik admin: tidak ada berkas, dan itu wajar. */

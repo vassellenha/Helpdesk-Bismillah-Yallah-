@@ -162,7 +162,9 @@ final class EvaChat
                 'subject' => $suggested?->toArray(),
                 'note' => 'Draf tiket sudah disiapkan. Silakan periksa dan kirim di halaman Buat Tiket — nomor tiket terbit setelah Anda mengirimnya.',
             ],
-            'submit_url' => route('dashboard.requester'),
+            // Relatif: alamat ini lewat JSON, yang tidak ikut ditulis ulang
+            // portal SINTA — lihat SourceDocument::present().
+            'submit_url' => route('dashboard.requester', absolute: false),
         ];
     }
 

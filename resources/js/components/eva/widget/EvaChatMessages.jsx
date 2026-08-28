@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { resolveUrl } from '../../../lib/api';
 
 /*
  | Gelembung percakapan widget EVA.
@@ -105,7 +106,7 @@ function TicketDraftBubble({ message }) {
                     </div>
                 )}
             </div>
-            <a className="eva-w-link" href={message.submit_url}>
+            <a className="eva-w-link" href={resolveUrl(message.submit_url)}>
                 Buka form Buat Tiket →
             </a>
         </div>

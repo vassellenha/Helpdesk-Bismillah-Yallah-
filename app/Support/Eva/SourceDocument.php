@@ -93,8 +93,18 @@ final class SourceDocument
             // 'pdf' | 'image' | null — layar memilih bingkai atau gambar dari
             // sini, bukan dari menebak-nebak ekstensinya sendiri.
             'preview_as' => $hasFile ? self::previewMode($document->extension) : null,
+            /*
+             | RELATIF, bukan absolut — dan itu perbedaan yang menentukan.
+             |
+             | Alamat ini lewat JSON, dan JSON tidak ikut ditulis ulang portal
+             | SINTA seperti HTML. Absolut, ia menunjuk `http://192.168.11.56/…`
+             | di dalam halaman HTTPS: browser memblokirnya sebagai mixed
+             | content, dan pratinjau dokumen berubah jadi bingkai kosong.
+             | Relatif, layar menyusunnya sendiri lewat resolveUrl() dari basis
+             | yang benar di lingkungan mana pun.
+            */
             'file_url' => $hasFile
-                ? route($route, ['document' => $document->id])
+                ? route($route, ['document' => $document->id], absolute: false)
                 : null,
             /*
              | Isi dokumen hasil pembacaan — bukan badan artikelnya.

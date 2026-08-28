@@ -1,3 +1,5 @@
+import { resolveUrl } from '../../lib/api';
+
 /*
  | Cara sebuah DOKUMEN ditampilkan — dipakai bersama oleh dua layar.
  |
@@ -102,6 +104,12 @@ export function fileMeta(document, isPreviewing) {
  */
 export function DocumentBody({ source, children = null }) {
     const { document, mode, notice, text } = source;
+    /*
+     | Alamat berkas datang RELATIF dari server (lihat SourceDocument::present)
+     | dan disusun di sini. Dipasang mentah, ia dibaca browser relatif terhadap
+     | akar domain — yang di belakang portal SINTA bukan helpdesk sama sekali.
+    */
+    const fileUrl = document ? resolveUrl(document.file_url) : null;
 
     return (
         <>
@@ -121,18 +129,18 @@ export function DocumentBody({ source, children = null }) {
                     {document.preview_as === 'image' ? (
                         <img
                             className="eva-src-image"
-                            src={document.file_url}
+                            src={fileUrl}
                             alt={`Dokumen ${document.name}`}
                         />
                     ) : (
                         <iframe
                             className="eva-src-frame"
-                            src={document.file_url}
+                            src={fileUrl}
                             title={`Dokumen ${document.name}`}
                         />
                     )}
                     <div className="eva-src-actions">
-                        <a className="eva-src-action" href={document.file_url} target="_blank" rel="noreferrer">
+                        <a className="eva-src-action" href={fileUrl} target="_blank" rel="noreferrer">
                             Buka di tab baru
                         </a>
                         <span className="eva-src-muted">{document.filename}</span>
@@ -143,7 +151,7 @@ export function DocumentBody({ source, children = null }) {
             {mode === 'download' && (
                 <div className="eva-src-file">
                     <div className="eva-src-file-name">{document.filename}</div>
-                    <a className="eva-src-action" href={document.file_url} target="_blank" rel="noreferrer">
+                    <a className="eva-src-action" href={fileUrl} target="_blank" rel="noreferrer">
                         Unduh dokumen asli
                     </a>
                 </div>
