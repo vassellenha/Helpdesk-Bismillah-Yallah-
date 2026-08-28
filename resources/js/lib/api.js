@@ -152,18 +152,54 @@ function serializeBody(body) {
     return body;
 }
 
+/*
+ | Metode yang DISAMARKAN menjadi POST.
+ |
+ | Proxy portal SINTA hanya meneruskan GET dan POST. PUT, PATCH, dan DELETE
+ | tidak pernah sampai ke helpdesk — yang kembali halaman HTML milik portal,
+ | dan seluruh fungsinya mati tanpa pesan apa pun. Terbukti di produksi pada
+ | penetapan role:
+ |
+ |   PATCH /admin/users/3843/roles          -> balasan HTML
+ |   POST  + _method=PATCH                  -> BERHASIL
+ |
+ | Penyamaran ini konvensi resmi Laravel, yang dipakai form HTML sejak sebelum
+ | ada AJAX: field `_method` dibaca lebih dulu daripada metode HTTP-nya. Jadi
+ | ini bukan akal-akalan, melainkan jalur yang memang disediakan untuk keadaan
+ | persis seperti ini — dan tetap benar saat helpdesk dibuka langsung.
+*/
+const METODE_DISAMARKAN = ['PUT', 'PATCH', 'DELETE'];
+
 export async function apiFetch(url, options = {}) {
-    const kiriman = 'body' in options ? serializeBody(options.body) : undefined;
+    let metode = (options.method ?? 'GET').toUpperCase();
+    let kiriman = 'body' in options ? serializeBody(options.body) : undefined;
+
+    if (METODE_DISAMARKAN.includes(metode)) {
+        // DELETE lazimnya tanpa isi — kirimannya dibuatkan di sini supaya ada
+        // tempat menaruh `_method` dan `_token`.
+        if (kiriman === undefined || kiriman === null) {
+            kiriman = new URLSearchParams();
+        }
+
+        if (kiriman instanceof URLSearchParams || kiriman instanceof FormData) {
+            kiriman.append('_method', metode);
+            metode = 'POST';
+        }
+    }
 
     // Token ikut DI DALAM kiriman, bukan hanya di header: header khusus tidak
     // selamat melewati proxy portal. Header-nya tetap dikirim untuk akses
     // langsung — Laravel menerima keduanya, mana pun yang lebih dulu ada.
-    if (kiriman instanceof URLSearchParams && !kiriman.has('_token')) {
+    if ((kiriman instanceof URLSearchParams || kiriman instanceof FormData)
+        && !kiriman.has('_token')) {
         kiriman.append('_token', csrfToken());
     }
 
     const res = await fetch(resolveUrl(url), {
         ...options,
+        // SETELAH sebaran options, bukan sebelum: metode yang disamarkan harus
+        // menang atas nilai asli yang dikirim pemanggil.
+        method: metode,
         ...(kiriman === undefined ? {} : { body: kiriman }),
         headers: {
             Accept: 'application/json',
