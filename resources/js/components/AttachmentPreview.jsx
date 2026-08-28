@@ -45,6 +45,36 @@ function bentuk(nama = '') {
 }
 
 /**
+ * Mengembalikan byte nol di kepala berkas video yang dibuang proxy portal.
+ *
+ * Proxy SINTA memangkas byte bernilai nol di AWAL balasan. Gambar dan PDF lolos
+ * karena byte pertamanya bukan nol (PNG 89 50, JPEG ff d8, PDF 25 50) —
+ * sedangkan MP4 dan MOV selalu diawali empat byte UKURAN yang untuk kotak
+ * pembuka nyaris selalu bernilai kecil, jadi tiga byte pertamanya nol dan ikut
+ * terbuang. Berkasnya sampai utuh selain itu, tapi browser menolaknya:
+ * "DEMUXER_ERROR_COULD_NOT_OPEN".
+ *
+ * Pemulihannya PASTI, bukan tebakan: format ISO-BMFF menetapkan penanda `ftyp`
+ * berada tepat setelah empat byte ukuran, jadi menemukannya di posisi ke-n
+ * berarti persis (4 - n) byte nol yang hilang. Diuji pada berkas sungguhan:
+ * tanpa ini videonya gagal dibuka, dengan ini durasi dan resolusinya terbaca.
+ *
+ * Berkas yang sudah benar dibiarkan apa adanya — `ftyp` di posisi 4 tidak
+ * memenuhi syarat di bawah, jadi akses langsung (tanpa portal) tidak tersentuh.
+ */
+function pulihkanVideo(data) {
+    const kepala = String.fromCharCode(...data.slice(0, 8));
+    const posisi = kepala.indexOf('ftyp');
+
+    if (posisi <= 0 || posisi >= 4) return data;
+
+    const pulih = new Uint8Array(data.length + (4 - posisi));
+    pulih.set(data, 4 - posisi);
+
+    return pulih;
+}
+
+/**
  * Membuka lampiran di pratinjau dalam aplikasi — dipakai bersama oleh daftar
  * lampiran tiket dan gelembung forum diskusi.
  *
@@ -62,6 +92,14 @@ export function useAttachmentPreview() {
     // Diisi saat berkasnya gagal diambil walau server mengira ia ada — menutup
     // celah antara pemeriksaan keberadaan dan pengambilan sesungguhnya.
     const [loadFailed, setLoadFailed] = useState(false);
+    /*
+     | Dipisah dari loadFailed: "tidak bisa DIAMBIL" dan "tidak bisa
+     | DITAMPILKAN" adalah dua keadaan berbeda dengan langkah berikutnya yang
+     | berbeda pula. Menyamakannya membuat berkas yang sebenarnya utuh dituduh
+     | hilang dari server — dan orang lalu meminta pengunggahnya mengirim ulang
+     | sesuatu yang tidak pernah rusak.
+    */
+    const [gagalTampil, setGagalTampil] = useState(false);
     useLockBodyScroll(!!preview || memuat);
 
     /*
@@ -75,6 +113,7 @@ export function useAttachmentPreview() {
 
     async function buka(a) {
         setLoadFailed(false);
+        setGagalTampil(false);
         setMemuat(true);
 
         try {
@@ -90,13 +129,19 @@ export function useAttachmentPreview() {
              | membuat berkas tampil sebagai deretan simbol. Nama berkas jauh
              | lebih bisa dipercaya di sini.
             */
-            const mentah = await res.blob();
+            const bentukBerkas = bentuk(a.name);
             const tipe = TIPE_BERKAS[ekstensi(a.name)] ?? 'application/octet-stream';
+
+            let isi = new Uint8Array(await res.arrayBuffer());
+
+            if (bentukBerkas === 'video') {
+                isi = pulihkanVideo(isi);
+            }
 
             setPreview({
                 name: a.name,
-                bentuk: bentuk(a.name),
-                url: URL.createObjectURL(new Blob([mentah], { type: tipe })),
+                bentuk: bentukBerkas,
+                url: URL.createObjectURL(new Blob([isi], { type: tipe })),
             });
         } catch {
             setPreview({ name: a.name, bentuk: 'file', url: null });
@@ -110,6 +155,7 @@ export function useAttachmentPreview() {
         if (preview?.url) URL.revokeObjectURL(preview.url);
         setPreview(null);
         setLoadFailed(false);
+        setGagalTampil(false);
     }
 
     const overlay = (
@@ -149,13 +195,24 @@ export function useAttachmentPreview() {
                                         File “{preview.name}” tidak bisa diambil dari server. Datanya masih tercatat, tapi berkas fisiknya hilang — minta pengunggahnya mengirim ulang.
                                     </p>
                                 </div>
+                            ) : gagalTampil ? (
+                                <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-ink-3"><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
+                                    <p className="text-[13px] font-semibold text-gray-700 dark:text-ink-1">Browser tidak bisa menampilkan berkas ini</p>
+                                    <p className="max-w-xs text-[12px] leading-relaxed text-gray-500 dark:text-ink-2">
+                                        Berkasnya berhasil diambil dari server — hanya tidak bisa dibuka di sini. Unduh lalu buka dengan aplikasi di komputer Anda.
+                                    </p>
+                                    <a href={preview.url} download={preview.name} className="rounded-lg bg-blue-600 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-blue-700">
+                                        Unduh {preview.name}
+                                    </a>
+                                </div>
                             ) : preview.bentuk === 'video' ? (
-                                <video src={preview.url} controls onError={() => setLoadFailed(true)} className="max-h-[70vh] w-full rounded-lg" />
+                                <video src={preview.url} controls onError={() => setGagalTampil(true)} className="max-h-[70vh] w-full rounded-lg" />
                             ) : preview.bentuk === 'image' ? (
                                 <img
                                     src={preview.url}
                                     alt={preview.name}
-                                    onError={() => setLoadFailed(true)}
+                                    onError={() => setGagalTampil(true)}
                                     className="max-h-[70vh] max-w-full rounded-lg object-contain"
                                 />
                             ) : preview.bentuk === 'pdf' ? (
