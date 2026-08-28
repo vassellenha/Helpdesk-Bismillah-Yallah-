@@ -170,21 +170,35 @@ function serializeBody(body) {
 */
 const METODE_DISAMARKAN = ['PUT', 'PATCH', 'DELETE'];
 
+/** Metode yang tidak mengubah apa pun — tidak diperiksa CSRF, tidak diberi isi. */
+const METODE_TANPA_ISI = ['GET', 'HEAD'];
+
 export async function apiFetch(url, options = {}) {
     let metode = (options.method ?? 'GET').toUpperCase();
     let kiriman = 'body' in options ? serializeBody(options.body) : undefined;
 
-    if (METODE_DISAMARKAN.includes(metode)) {
-        // DELETE lazimnya tanpa isi — kirimannya dibuatkan di sini supaya ada
-        // tempat menaruh `_method` dan `_token`.
-        if (kiriman === undefined || kiriman === null) {
-            kiriman = new URLSearchParams();
-        }
+    /*
+     | Permintaan yang MENGUBAH sesuatu selalu dibuatkan kiriman, walau
+     | pemanggilnya tidak mengirim apa-apa.
+     |
+     | Banyak aksi tombol berupa `apiFetch(url, { method: 'POST' })` tanpa body:
+     | mulai kerjakan tiket, hapus lampiran, tandai pertanyaan, dan seterusnya.
+     | Dikirim apa adanya, permintaannya berisi nol byte — dan tidak ada tempat
+     | menaruh `_token`, sehingga Laravel menjawab halaman "Page Expired" (419)
+     | begitu header X-CSRF-TOKEN dibuang proxy portal. Terbukti di produksi
+     | pada tombol Mulai Kerjakan.
+     |
+     | GET dan HEAD tidak disentuh: keduanya tidak diperiksa CSRF, dan memberi
+     | isi pada GET justru membuat sebagian proxy dan cache berperilaku aneh.
+    */
+    if (!METODE_TANPA_ISI.includes(metode) && (kiriman === undefined || kiriman === null)) {
+        kiriman = new URLSearchParams();
+    }
 
-        if (kiriman instanceof URLSearchParams || kiriman instanceof FormData) {
-            kiriman.append('_method', metode);
-            metode = 'POST';
-        }
+    if (METODE_DISAMARKAN.includes(metode)
+        && (kiriman instanceof URLSearchParams || kiriman instanceof FormData)) {
+        kiriman.append('_method', metode);
+        metode = 'POST';
     }
 
     // Token ikut DI DALAM kiriman, bukan hanya di header: header khusus tidak
