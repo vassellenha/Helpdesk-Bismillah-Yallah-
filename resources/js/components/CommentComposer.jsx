@@ -2,12 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { isImage, isVideo } from './AttachmentViewer';
 import useLockBodyScroll from '../lib/useLockBodyScroll';
 
-// Kept in sync by hand with TicketDiscussion::ALLOWED_ATTACHMENT_MIMES and
-// ::MAX_ATTACHMENT_KB server-side — this is a UX shortcut (reject obviously
-// bad picks before a round trip), not the source of truth; the server
-// re-validates everything regardless.
-export const COMMENT_ATTACHMENT_ACCEPT = '.png,.jpg,.jpeg,.pdf,.doc,.docx,.xls,.xlsx,.mp4,.mov,.webm';
-export const MAX_COMMENT_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+/*
+ | Batas ukuran disamakan dengan TicketDiscussion::MAX_ATTACHMENT_KB di server.
+ | Ini jalan pintas UX — menolak pilihan yang jelas kelewat besar sebelum
+ | menempuh perjalanan ke server — bukan sumber kebenaran; server memeriksa
+ | ulang semuanya.
+ |
+ | Daftar ekstensi DICABUT: forum diskusi menerima berkas apa pun. Yang menjaga
+ | tetap ada di server — batas ukuran, jumlah lampiran, gerbang hak akses, dan
+ | penyimpanan di disk privat.
+*/
+export const COMMENT_ATTACHMENT_ACCEPT = '';
+export const MAX_COMMENT_ATTACHMENT_MB = 30;
+export const MAX_COMMENT_ATTACHMENT_BYTES = MAX_COMMENT_ATTACHMENT_MB * 1024 * 1024;
 
 const PAPERCLIP_PATH = 'M21.4 11.1 12.7 19.8a4.5 4.5 0 0 1-6.4-6.4l8.7-8.7a3 3 0 0 1 4.2 4.2l-8.6 8.6a1.5 1.5 0 0 1-2.1-2.1l7.9-7.9';
 
@@ -74,7 +81,10 @@ export default function CommentComposer({ value, onChange, onSend, sending, plac
         if (!picked) return;
 
         if (picked.size > MAX_COMMENT_ATTACHMENT_BYTES) {
-            setError('Lampiran maksimal 5MB.');
+            // Ukuran berkasnya ikut disebut: "maksimal 30MB" saja membuat orang
+            // menebak-nebak berkas mana yang kebesaran saat mencoba beberapa.
+            const mb = (picked.size / 1024 / 1024).toFixed(1);
+            setError(`Lampiran maksimal ${MAX_COMMENT_ATTACHMENT_MB}MB. Berkas ini ${mb}MB.`);
             return;
         }
 
@@ -114,7 +124,12 @@ export default function CommentComposer({ value, onChange, onSend, sending, plac
                         className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-panel-hover dark:hover:text-ink-2"
                     >
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={PAPERCLIP_PATH} /></svg>
-                        <input type="file" accept={COMMENT_ATTACHMENT_ACCEPT} className="hidden" onChange={pickFile} />
+                        <input
+                            type="file"
+                            {...(COMMENT_ATTACHMENT_ACCEPT ? { accept: COMMENT_ATTACHMENT_ACCEPT } : {})}
+                            className="hidden"
+                            onChange={pickFile}
+                        />
                     </label>
                     <button
                         onClick={send}

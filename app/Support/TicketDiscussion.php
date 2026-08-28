@@ -6,8 +6,7 @@ use App\Models\Ticket;
 use App\Models\TicketComment;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\Facades\Log;
 /**
  * Shared body of "post a discussion reply" — Requester, Support IT, Support
  * BPO, and Approver each have their own addComment() (different auth/status
@@ -19,12 +18,13 @@ use Illuminate\Support\Facades\Storage;
  * Team Lead's own addNote() is deliberately NOT wired to this: its frontend
  * has no reply UI at all yet, a pre-existing gap this change doesn't touch.
  */
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+
 class TicketDiscussion
 {
-    /** Laravel's `max` file rule counts in kilobytes — this is 5 MB. */
-    public const MAX_ATTACHMENT_KB = 5120;
-
-    public const ALLOWED_ATTACHMENT_MIMES = 'png,jpg,jpeg,pdf,doc,docx,xls,xlsx,mp4,mov,webm';
+    /** Aturan `max` milik Laravel dihitung dalam kilobyte — ini 30 MB. */
+    public const MAX_ATTACHMENT_KB = 30720;
 
     public const STORAGE_DIR = 'ticket-comment-attachments';
 
@@ -32,7 +32,20 @@ class TicketDiscussion
     {
         return [
             'message' => 'required_without:file|nullable|string|max:3000',
-            'file' => 'nullable|file|mimes:'.self::ALLOWED_ATTACHMENT_MIMES.'|max:'.self::MAX_ATTACHMENT_KB,
+            /*
+             | Tanpa daftar putih ekstensi: forum diskusi tiket dipakai
+             | melampirkan apa pun yang menjelaskan masalah — log, arsip, berkas
+             | ekspor, rekaman layar. Daftar lama justru menolak berkas yang sah
+             | tanpa memberi tahu apa yang boleh.
+             |
+             | Yang menjaga tetap ada, dan tidak dilonggarkan: batas ukuran,
+             | jumlah lampiran per tiket, gerbang siapa yang boleh membacanya,
+             | serta penyimpanan di disk PRIVAT — berkasnya tidak pernah bisa
+             | dijangkau langsung dari web, hanya lewat rute yang memeriksa hak
+             | akses. Berkas yang tidak aman ditampilkan di layar dikirim sebagai
+             | unduhan, bukan dirender — lihat TicketAttachmentController.
+            */
+            'file' => 'nullable|file|max:'.self::MAX_ATTACHMENT_KB,
         ];
     }
 
@@ -58,7 +71,24 @@ class TicketDiscussion
         ];
 
         if ($file) {
-            $attributes['attachment_path'] = $file->store(self::STORAGE_DIR, 'local');
+            $path = $file->store(self::STORAGE_DIR, 'local');
+
+            // store() memulangkan FALSE saat penulisan gagal dan tidak melempar
+            // apa pun. Dibiarkan lolos, komentarnya tersimpan dengan lampiran
+            // yang menunjuk ke tempat kosong — dan yang terbaca di layar hanya
+            // "berkas hilang", tanpa jejak kapan ia hilang.
+            if ($path === false) {
+                Log::error('Lampiran komentar gagal disimpan ke disk.', [
+                    'ticket' => $ticket->ticket_no,
+                    'name' => $file->getClientOriginalName(),
+                ]);
+
+                throw ValidationException::withMessages([
+                    'file' => 'Berkas gagal disimpan di server. Coba kirim ulang; bila berulang, hubungi administrator.',
+                ]);
+            }
+
+            $attributes['attachment_path'] = $path;
             $attributes['attachment_name'] = $file->getClientOriginalName();
             $attributes['attachment_mime_type'] = $file->getMimeType();
             $attributes['attachment_size_bytes'] = $file->getSize();

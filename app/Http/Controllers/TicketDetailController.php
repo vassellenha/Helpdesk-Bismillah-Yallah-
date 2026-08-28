@@ -10,12 +10,13 @@ use App\Models\TicketComment;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
 use App\Support\TicketDiscussion;
-use App\Support\TicketPeople;
 use App\Support\TicketFlow;
+use App\Support\TicketPeople;
 use App\Support\TicketTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -84,6 +85,26 @@ class TicketDetailController extends Controller
         }
 
         $path = $request->file('file')->store('ticket-attachments', 'local');
+
+        /*
+         | store() memulangkan FALSE kalau penulisan gagal — disk penuh, izin
+         | folder salah, berkas sementara hilang — dan TIDAK melempar apa pun.
+         |
+         | Tanpa pemeriksaan ini, barisnya tetap dibuat dengan path kosong, dan
+         | lampirannya muncul di layar sebagai "berkas hilang" tanpa seorang pun
+         | tahu kapan atau kenapa. Lebih jujur menolak unggahannya sekarang,
+         | selagi penggunanya masih di depan layar dan bisa mencoba lagi.
+        */
+        if ($path === false) {
+            Log::error('Lampiran tiket gagal disimpan ke disk.', [
+                'ticket' => $ticket->ticket_no,
+                'name' => $request->file('file')->getClientOriginalName(),
+            ]);
+
+            return response()->json([
+                'message' => 'Berkas gagal disimpan di server. Coba unggah ulang; bila berulang, hubungi administrator.',
+            ], 500);
+        }
 
         $attachment = $ticket->attachments()->create([
             'name' => $request->file('file')->getClientOriginalName(),
@@ -304,7 +325,7 @@ class TicketDetailController extends Controller
      */
     private function latestResolutionNote(Ticket $t): ?array
     {
-        if (!in_array($t->status, ['Resolved', 'Closed'], true)) {
+        if (! in_array($t->status, ['Resolved', 'Closed'], true)) {
             return null;
         }
 
@@ -315,7 +336,7 @@ class TicketDetailController extends Controller
             ->latest('created_at')
             ->first();
 
-        if (!$audit) {
+        if (! $audit) {
             return null;
         }
 
