@@ -237,68 +237,70 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
 
     return (
         <div>
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.users.title')}</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.users.subtitle')}</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={syncEmployees}
-                        disabled={syncing}
-                        title={trans('admin.users.sync_title')}
-                        className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
-                            aria-hidden="true"
+                {/* Di bawah xl, toolbar turun jadi barisnya sendiri di bawah judul.
+                    Layar sempit pakai grid dua kolom supaya tombolnya rata —
+                    flex-wrap biasa membuat lima tombol berlebar-beda jatuh
+                    berundak ("acak" di MacBook 13"). Teks "Terakhir sync" ditarik
+                    ke barisnya sendiri di bawah tombol: sebagai item flex di
+                    antara tombol, lebarnya yang berubah-ubah ikut menggeser titik
+                    bungkus tombol lain. */}
+                <div className="flex flex-col gap-1.5 xl:items-end">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end">
+                        <ToolbarButton onClick={syncEmployees} disabled={syncing} title={trans('admin.users.sync_title')}>
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
+                                aria-hidden="true"
+                            >
+                                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                                <path d="M21 3v6h-6" />
+                            </svg>
+                            {syncing ? trans('admin.users.syncing') : trans('admin.users.sync')}
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => setModal('role')}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                                <path d={ICON_ROLES} />
+                            </svg>
+                            Kelola Role
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => setModal('export')}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                                <path d={ICON_EXPORT} />
+                            </svg>
+                            {trans('admin.users.export')}
+                        </ToolbarButton>
+                        {importUrl && (
+                            <>
+                                <input ref={importInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
+                                <ToolbarButton onClick={pickImportFile} disabled={importing} title={trans('admin.users.import_title')}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                                        <path d={ICON_IMPORT} />
+                                    </svg>
+                                    {importing ? trans('admin.users.importing') : trans('admin.users.import')}
+                                </ToolbarButton>
+                            </>
+                        )}
+                        <button
+                            onClick={() => setModal('addUser')}
+                            className={`flex items-center justify-center rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400 ${importUrl ? 'col-span-2 sm:col-span-1' : ''}`}
                         >
-                            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                            <path d="M21 3v6h-6" />
-                        </svg>
-                        {syncing ? trans('admin.users.syncing') : trans('admin.users.sync')}
-                    </button>
+                            {trans('admin.users.add_user')}
+                        </button>
+                    </div>
                     {lastSyncAt && (
-                        <span className="flex items-center px-1 text-xs text-gray-400 dark:text-ink-3">
+                        <span className="px-0.5 text-xs text-gray-400 dark:text-ink-3">
                             {trans('admin.users.last_sync', { at: lastSyncAt })}
                         </span>
                     )}
-                    <button onClick={() => setModal('role')} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
-                            <path d={ICON_ROLES} />
-                        </svg>
-                        Kelola Role
-                    </button>
-                    <button onClick={() => setModal('export')} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover dark:even:bg-white/[0.03]">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
-                            <path d={ICON_EXPORT} />
-                        </svg>
-                        {trans('admin.users.export')}
-                    </button>
-                    {importUrl && (
-                        <>
-                            <input ref={importInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
-                            <button
-                                onClick={pickImportFile}
-                                disabled={importing}
-                                title={trans('admin.users.import_title')}
-                                className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
-                                    <path d={ICON_IMPORT} />
-                                </svg>
-                                {importing ? trans('admin.users.importing') : trans('admin.users.import')}
-                            </button>
-                        </>
-                    )}
-                    <button onClick={() => setModal('addUser')} className="rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
-                        {trans('admin.users.add_user')}
-                    </button>
                 </div>
             </div>
 
@@ -387,7 +389,7 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                 </div>
             )}
 
-            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Angka dari COUNT di database, bukan dari daftar di layar —
                     yang di layar cuma satu halaman berisi 25 baris. */}
                 <Stat label={trans('admin.users.stat_total_user')} value={stats.total} color="text-blue-600 dark:text-accent-text" bg="bg-blue-50 dark:bg-accent-soft" />
@@ -589,6 +591,24 @@ export default function UserManagementConsole({ users: initialUsers, usersMeta, 
                 <ManageUserModal user={modal.user} roles={roles} onClose={() => setModal(null)} onSave={saveUser} />
             )}
         </div>
+    );
+}
+
+// Tombol sekunder di toolbar. Di layar sempit ia jadi sel grid selebar
+// setengah baris — isinya dibuat rata tengah dan ikon tidak boleh menyusut
+// (`[&>svg]:shrink-0`) kalau labelnya membungkus dua baris. Dari sm ke atas
+// kembali jadi tombol biasa yang rata kiri.
+function ToolbarButton({ onClick, disabled = false, title, children }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            title={title}
+            className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-4 py-2 text-center text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-50 dark:hover:bg-panel-hover disabled:cursor-not-allowed disabled:opacity-60 sm:justify-start sm:text-left [&>svg]:shrink-0"
+        >
+            {children}
+        </button>
     );
 }
 
