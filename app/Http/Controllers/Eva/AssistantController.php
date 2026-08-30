@@ -40,7 +40,13 @@ final class AssistantController extends Controller
 
         return response()->json($this->chat->ask(
             $data['question'],
-            $data['conversation_id'] ?? null,
+            // Dicor di BATAS MASUK, bukan dilonggarkan di hilir. Widget mengirim
+            // form (lihat resources/js/lib/api.js), dan pada form setiap nilai
+            // tiba sebagai string — aturan `integer` meloloskan "213" tanpa
+            // mengubahnya. Melonggarkan tipe EvaChat menjadi `int|string` akan
+            // memindahkan kelalaian ini ke seluruh pemanggil; yang benar adalah
+            // memastikan bentuknya SEKALI, di tempat data mentah masuk.
+            isset($data['conversation_id']) ? (int) $data['conversation_id'] : null,
             CurrentActor::requester(),
         ));
     }
@@ -128,8 +134,8 @@ final class AssistantController extends Controller
         $data = $request->validate(EvaChat::rateRules());
 
         $accepted = $this->chat->rate(
-            $data['answer_log_id'],
-            $data['stars'],
+            (int) $data['answer_log_id'],
+            (int) $data['stars'],
             $data['reason'] ?? null,
             $data['comment'] ?? null,
             CurrentActor::requester(),
@@ -156,7 +162,7 @@ final class AssistantController extends Controller
         $data = $request->validate(EvaChat::NOTE_RULES);
 
         $attached = $this->chat->annotate(
-            $data['answer_log_id'],
+            (int) $data['answer_log_id'],
             $data['reason'] ?? null,
             $data['comment'] ?? null,
             CurrentActor::requester(),
@@ -178,7 +184,7 @@ final class AssistantController extends Controller
     public function ticketDraft(Request $request): JsonResponse
     {
         $data = $request->validate(EvaChat::TICKET_DRAFT_RULES);
-        $result = $this->chat->ticketDraft($data['answer_log_id'], $data['question']);
+        $result = $this->chat->ticketDraft((int) $data['answer_log_id'], $data['question']);
 
         /*
          | Draf dititipkan ke SESI, bukan cukup dikembalikan sebagai JSON.
