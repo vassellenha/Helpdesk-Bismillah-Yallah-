@@ -13,7 +13,7 @@ namespace App\Services\Knowledge;
  */
 final class NoSynthesizer implements KnowledgeSynthesizer
 {
-    public function rangkum(string $question, array $passages): ?string
+    public function rangkum(string $question, array $passages): ?Synthesis
     {
         return null;
     }

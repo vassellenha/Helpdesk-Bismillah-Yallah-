@@ -117,10 +117,18 @@ final class EvaResponder
         // yang tersebar di beberapa dokumen tidak pernah membuat satu pun di
         // antaranya terlihat meyakinkan sendirian — persis kasus yang dulu
         // berakhir "belum menemukan jawaban" padahal materinya ada.
-        $rangkuman = $this->synthesizer->rangkum($question, $this->passages($hits));
+        $relevant = $this->relevantHits($hits);
+        $rangkuman = $this->synthesizer->rangkum($question, $this->passages($relevant));
 
         if ($rangkuman !== null && $best !== null) {
-            return $this->answer($best, $question, $conversation, $asker, $rangkuman);
+            return $this->answer(
+                $best,
+                $question,
+                $conversation,
+                $asker,
+                $rangkuman->text,
+                $this->sourcesUsed($relevant, $rangkuman->usedPassages, $best),
+            );
         }
 
         if ($best === null || $best->confidence < KnowledgeSearch::MIN_CONFIDENCE) {
@@ -167,8 +175,50 @@ final class EvaResponder
     {
         return array_values(array_map(
             fn (SearchHit $h) => ['title' => $h->title, 'text' => $h->answer],
-            array_filter($hits, fn (SearchHit $h) => $h->confidence >= AnswerReach::SYNTHESIS_FLOOR),
+            $hits,
         ));
+    }
+
+    /**
+     * Kandidat yang cukup kuat untuk ikut dirangkum.
+     *
+     * Dipisah dari passages() supaya urutannya SATU: indeks yang dikembalikan
+     * perangkum menunjuk ke array ini juga, dan pemetaan balik "potongan 3" →
+     * dokumen aslinya tidak bergantung pada dua penyaringan yang kebetulan
+     * masih sejalan.
+     *
+     * @param  SearchHit[]  $hits
+     * @return list<SearchHit>
+     */
+    private function relevantHits(array $hits): array
+    {
+        return array_values(array_filter(
+            $hits,
+            fn (SearchHit $h) => $h->confidence >= AnswerReach::SYNTHESIS_FLOOR,
+        ));
+    }
+
+    /**
+     * Materi yang benar-benar dipakai rangkuman, dipetakan dari indeks
+     * potongan.
+     *
+     * Daftar kosong BUKAN kegagalan: perangkum boleh saja tidak memberi
+     * keterangan, dan model sesekali melupakannya. Jatuhnya ke kandidat teratas
+     * — perilaku lama — karena jawaban tanpa rujukan sama sekali lebih buruk
+     * daripada rujukan yang tidak lengkap.
+     *
+     * @param  list<SearchHit>  $relevant
+     * @param  list<int>  $usedPassages
+     * @return list<SearchHit>
+     */
+    private function sourcesUsed(array $relevant, array $usedPassages, SearchHit $best): array
+    {
+        $used = array_values(array_filter(array_map(
+            fn (int $i) => $relevant[$i] ?? null,
+            $usedPassages,
+        )));
+
+        return $used === [] ? [$best] : $used;
     }
 
     /**
@@ -190,7 +240,8 @@ final class EvaResponder
         );
     }
 
-    private function answer(SearchHit $hit, string $question, ?Conversation $conversation, ?User $asker, ?string $synthesized = null): EvaReply
+    /** @param SearchHit[] $sources materi yang benar-benar dipakai; kosong = hanya $hit */
+    private function answer(SearchHit $hit, string $question, ?Conversation $conversation, ?User $asker, ?string $synthesized = null, array $sources = []): EvaReply
     {
         $log = $this->log($question, AnswerLog::OUTCOME_ANSWERED, $conversation, $asker, [
             'source_type' => $hit->sourceType,
@@ -216,6 +267,9 @@ final class EvaResponder
             answerLogId: $log->id,
             isHedged: $hit->confidence < KnowledgeSearch::HEDGE_CONFIDENCE,
             previousStars: $asker ? AnswerRating::starsGivenBy($asker, $hit->sourceType, $hit->sourceId) : null,
+            // Jawaban satu sumber tetap menyebut satu sumber — tidak ada yang
+            // berubah untuk jalur non-rangkuman.
+            sources: $sources === [] ? [$hit] : $sources,
         );
     }
 

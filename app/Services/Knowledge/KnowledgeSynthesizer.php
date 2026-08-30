@@ -13,6 +13,9 @@ namespace App\Services\Knowledge;
  * satu artikel, langkahnya di artikel lain, pengecualiannya di FAQ.
  *
  * KONTRAK:
+ * - Yang dikembalikan bukan sekadar teks melainkan Synthesis, karena jawaban
+ *   yang dijahit dari beberapa dokumen HARUS bisa menyebut dokumen mana saja
+ *   yang dipakainya. Lihat Synthesis.
  * - Mengembalikan null berarti "tidak bisa dijawab dari potongan ini". Pemanggil
  *   WAJIB memperlakukannya sebagai belum ketemu, bukan sebagai kegagalan teknis
  *   — termasuk saat mesinnya memang tidak terpasang.
@@ -27,5 +30,5 @@ interface KnowledgeSynthesizer
     /**
      * @param  list<array{title:string,text:string}>  $passages
      */
-    public function rangkum(string $question, array $passages): ?string;
+    public function rangkum(string $question, array $passages): ?Synthesis;
 }

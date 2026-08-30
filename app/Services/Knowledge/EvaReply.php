@@ -26,6 +26,17 @@ final class EvaReply
         public readonly array $clarifyOptions = [],
         /** Bintang yang pernah diberikan penanya untuk MATERI ini; null = belum pernah. */
         public readonly ?int $previousStars = null,
+        /**
+         * SELURUH materi yang isinya benar-benar dipakai menyusun jawaban ini.
+         *
+         * Berbeda dari `hit`, yang tetap satu kandidat TERATAS karena itulah
+         * yang dicatat kb_answer_logs dan dihitung Coverage. Jawaban rangkuman
+         * dijahit dari beberapa dokumen, dan menampilkan satu saja membuat
+         * karyawan yang mengeklik rujukan tidak menemukan fakta yang ia cek.
+         *
+         * @var SearchHit[]
+         */
+        public readonly array $sources = [],
     ) {}
 
     public function toArray(): array
@@ -38,6 +49,7 @@ final class EvaReply
             'is_hedged' => $this->isHedged,
             'clarify_options' => $this->clarifyOptions,
             'previous_stars' => $this->previousStars,
+            'sources' => array_map(fn (SearchHit $h) => $h->toArray(), $this->sources),
         ];
     }
 }

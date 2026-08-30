@@ -169,29 +169,48 @@ function AnswerBubble({ message, thresholds, onRate, onNote, onOpenSource }) {
 
             <div className="eva-w-answer">{message.text}</div>
 
+            {/*
+              | SELURUH materi yang dipakai disebut, bukan cuma yang teratas.
+              |
+              | Jawaban EVA dijahit dari beberapa dokumen sekaligus. Dulu hanya
+              | kandidat teratas yang tampil, jadi karyawan yang mengeklik
+              | rujukan untuk memastikan nomor formulir atau batas waktu tidak
+              | menemukannya di sana — fakta itu datang dari dokumen lain yang
+              | tak pernah disebut. Rujukan yang tidak memuat isi yang dirujuknya
+              | merusak kepercayaan lebih dalam daripada tidak ada rujukan.
+              |
+              | `sources` selalu berisi minimal satu (server menjatuhkannya ke
+              | kandidat teratas); `message.hit` dipertahankan sebagai cadangan
+              | untuk balasan lama yang masih tersimpan di layar.
+            */}
             <div className="eva-w-source">
-                {/*
-                  | Judul sumber adalah TOMBOL, bukan label — menekannya membuka
-                  | DOKUMEN aslinya, bukan artikel hasil ekstraksinya. Tetap
-                  | dirender sebagai <button> walau tampilannya chip, supaya
-                  | keyboard dan pembaca layar memperlakukannya sebagai sesuatu
-                  | yang bisa ditekan.
-                  |
-                  | Kalau pemasangnya tidak memberi onOpenSource, ia kembali jadi
-                  | label mati seperti dulu — bukan tombol yang diam saat ditekan.
-                */}
-                {onOpenSource ? (
-                    <button
-                        type="button"
-                        className="eva-w-source-tag eva-w-source-link"
-                        onClick={() => onOpenSource(message.hit)}
-                        title="Buka dokumen sumbernya"
-                    >
-                        {message.hit.title}
-                    </button>
-                ) : (
-                    <span className="eva-w-source-tag">{message.hit.title}</span>
-                )}
+                {(message.sources?.length ? message.sources : [message.hit]).map((source) => (
+                    /*
+                      | Judul sumber adalah TOMBOL, bukan label — menekannya
+                      | membuka DOKUMEN aslinya, bukan artikel hasil
+                      | ekstraksinya. Tetap <button> walau tampilannya chip,
+                      | supaya keyboard dan pembaca layar memperlakukannya
+                      | sebagai sesuatu yang bisa ditekan.
+                      |
+                      | Tanpa onOpenSource ia kembali jadi label mati seperti
+                      | dulu — bukan tombol yang diam saat ditekan.
+                    */
+                    onOpenSource ? (
+                        <button
+                            key={`${source.type}-${source.source_id}`}
+                            type="button"
+                            className="eva-w-source-tag eva-w-source-link"
+                            onClick={() => onOpenSource(source)}
+                            title="Buka dokumen sumbernya"
+                        >
+                            {source.title}
+                        </button>
+                    ) : (
+                        <span key={`${source.type}-${source.source_id}`} className="eva-w-source-tag">
+                            {source.title}
+                        </span>
+                    )
+                ))}
                 {thresholds && (
                     <span className="eva-w-muted">
                         keyakinan {message.hit.confidence} (ambang {thresholds.min_confidence})

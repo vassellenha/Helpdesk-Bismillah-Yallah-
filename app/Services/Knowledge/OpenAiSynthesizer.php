@@ -51,6 +51,10 @@ final class OpenAiSynthesizer implements KnowledgeSynthesizer
     - Ringkas: maksimal satu paragraf pendek, atau daftar langkah bila prosedurnya bertahap.
     - JANGAN memakai format Markdown: tanpa **tebal**, tanpa *miring*, tanpa # judul, tanpa `backtick`. Tulis teks polos. Kalau berupa langkah, tulis satu langkah per baris.
 
+    Setelah jawaban, tulis SATU baris terakhir yang berisi nomor potongan yang benar-benar Anda pakai, dipisah koma. Contoh:
+    SUMBER: 1,3
+    Sebutkan HANYA potongan yang isinya benar-benar dipakai di jawaban. Potongan yang Anda baca tapi tidak dipakai jangan ikut disebut.
+
     Jika potongan yang diberikan tidak memuat jawaban pertanyaannya — walau topiknya terasa berdekatan — jawab HANYA dengan satu kata berikut, tanpa tambahan apa pun:
     TIDAK_ADA_DI_KB
 
@@ -61,7 +65,7 @@ final class OpenAiSynthesizer implements KnowledgeSynthesizer
     public function __construct(private readonly array $config) {}
 
     /** @param list<array{title:string,text:string}> $passages */
-    public function rangkum(string $question, array $passages): ?string
+    public function rangkum(string $question, array $passages): ?Synthesis
     {
         if ($passages === [] || OpenAiCooldown::active()) {
             return null;
@@ -94,13 +98,54 @@ final class OpenAiSynthesizer implements KnowledgeSynthesizer
                 return null;
             }
 
-            return $this->accept(PlainAnswer::bersihkan((string) $response->json('choices.0.message.content', '')), $passages);
+            $mentah = PlainAnswer::bersihkan((string) $response->json('choices.0.message.content', ''));
+
+            // Baris SUMBER dipotong SEBELUM penilaian apa pun: numbersAreGrounded()
+            // akan menolak jawaban gara-gara nomor potongan di baris itu, dan
+            // karyawan tidak boleh melihat "SUMBER: 1,3" di layar.
+            [$jawaban, $dipakai] = $this->pisahkanSumber($mentah, count($passages));
+
+            $diterima = $this->accept($jawaban, $passages);
+
+            return $diterima === null ? null : new Synthesis($diterima, $dipakai);
         } catch (Throwable $e) {
             Log::warning('EVA rangkuman gagal dipanggil: '.$e->getMessage());
             OpenAiCooldown::start();
 
             return null;
         }
+    }
+
+    /**
+     * Memisahkan baris "SUMBER: 1,3" dari jawabannya.
+     *
+     * Nomor yang di luar jangkauan atau bukan angka DIBUANG diam-diam, bukan
+     * dijadikan error: model sesekali menyebut potongan yang tidak ada, dan
+     * membatalkan seluruh jawaban yang isinya sudah benar karena satu nomor
+     * keliru adalah harga yang terlalu mahal. Daftar kosong sah — pemanggil
+     * sudah punya jalan mundurnya sendiri.
+     *
+     * @return array{0:string,1:list<int>} jawaban tanpa baris SUMBER, indeks 0-based
+     */
+    private function pisahkanSumber(string $answer, int $jumlahPotongan): array
+    {
+        if (! preg_match('/^\s*SUMBER\s*:\s*([0-9,\s]*)$/mi', $answer, $m)) {
+            return [$answer, []];
+        }
+
+        $dipakai = [];
+
+        foreach (preg_split('/[,\s]+/', trim($m[1])) as $nomor) {
+            $index = (int) $nomor - 1;
+
+            if ($nomor !== '' && $index >= 0 && $index < $jumlahPotongan) {
+                $dipakai[$index] = true;
+            }
+        }
+
+        ksort($dipakai);
+
+        return [trim(str_replace($m[0], '', $answer)), array_map('intval', array_keys($dipakai))];
     }
 
     /** @param list<array{title:string,text:string}> $passages */

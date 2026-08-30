@@ -11,6 +11,7 @@ use App\Services\Knowledge\EvaResponder;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\KnowledgeStats;
 use App\Services\Knowledge\KnowledgeSynthesizer;
+use App\Services\Knowledge\Synthesis;
 use App\Services\Knowledge\OpenAiSynthesizer;
 use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SmallTalkDetector;
@@ -299,9 +300,11 @@ final class SmallTalkAndSynthesisTest extends TestCase
         {
             public function __construct(private readonly ?string $rangkuman) {}
 
-            public function rangkum(string $question, array $passages): ?string
+            public function rangkum(string $question, array $passages): ?Synthesis
             {
-                return $this->rangkuman;
+                // Tanpa keterangan potongan: tes ini menguji TEKS rangkuman,
+                // dan EvaResponder jatuh ke kandidat teratas seperti dulu.
+                return $this->rangkuman === null ? null : new Synthesis($this->rangkuman);
             }
         });
     }
