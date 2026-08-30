@@ -63,6 +63,22 @@ interface SubjectSearch
     public function terbaik(string $pertanyaan): ?SubjectMatch;
 
     /**
+     * LAYANAN yang jelas disebut penanya, tanpa memutuskan subject-nya.
+     *
+     * Dipakai saat terbaik() menyerah. Pertanyaan "ini aplikasi apa?" jauh
+     * lebih mudah dijawab daripada "ini masalah apa?" — nama aplikasi diketik
+     * apa adanya oleh penanya, sementara nama subject harus ditebak dari
+     * kalimat bebas. Menjawab yang mudah saja, lalu berhenti, lebih berguna
+     * daripada diam: form Buat Tiket menerima Layanan tanpa Subject lewat sub
+     * category "Lainnya", dan tiket itu tetap sampai ke tim yang benar.
+     *
+     * Null bila pertanyaan tidak menyebut satu pun nama layanan, atau menyebut
+     * lebih dari satu — dua nama aplikasi dalam satu kalimat bukan keyakinan,
+     * itu pertanyaan yang belum selesai.
+     */
+    public function layananTerbaik(string $pertanyaan): ?ServiceMatch;
+
+    /**
      * Calon-calon SERI yang sama-sama kuat — bahan EVA untuk bertanya balik.
      *
      * Kembalikan isi hanya bila pertanyaan jelas menunjuk satu masalah (calon

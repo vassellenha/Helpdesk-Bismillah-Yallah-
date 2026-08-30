@@ -5,6 +5,7 @@ namespace Tests\Feature\Eva;
 use App\Models\Knowledge\Article;
 use App\Models\Ticket;
 use App\Services\Knowledge\SubjectMatch;
+use App\Services\Knowledge\ServiceMatch;
 use App\Services\Knowledge\SubjectSearch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -95,6 +96,14 @@ final class MineTicketSubjectsTest extends TestCase
             public function calonSeri(string $pertanyaan): array
             {
                 return [];
+            }
+
+            // Tes ini menguji jalur SUBJECT. Null berarti "tidak ada layanan
+            // yang bisa disimpulkan", sehingga jalur "Lainnya" tidak ikut
+            // menyala dan tidak mengaburkan yang sedang diperiksa.
+            public function layananTerbaik(string $pertanyaan): ?ServiceMatch
+            {
+                return null;
             }
         });
     }

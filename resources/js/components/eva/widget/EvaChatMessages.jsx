@@ -105,6 +105,17 @@ function TicketDraftBubble({ message }) {
                         {message.draft.subject.subject} · {message.draft.subject.service}
                     </div>
                 )}
+                {/*
+                  | Tanpa subject tapi ada Layanan: EVA tahu aplikasinya saja.
+                  | Ditulis apa adanya — "ELISA · Lainnya" — supaya karyawan
+                  | tahu bagian mana yang sudah terisi dan bagian mana yang
+                  | menunggu dia, sebelum halaman berganti.
+                  */}
+                {!message.draft.subject && message.draft.service && (
+                    <div className="eva-w-draft-subject">
+                        {message.draft.service.service} · Lainnya
+                    </div>
+                )}
             </div>
             <a className="eva-w-link" href={resolveUrl(message.submit_url)}>
                 Buka form Buat Tiket →

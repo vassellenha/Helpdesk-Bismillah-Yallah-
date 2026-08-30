@@ -8,6 +8,7 @@ use App\Models\Knowledge\DismissedQuestion;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SubjectMatch;
+use App\Services\Knowledge\ServiceMatch;
 use App\Services\Knowledge\SubjectSearch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -46,6 +47,9 @@ final class RecommendationControllerTest extends TestCase
 
     /** @var array<string,SearchHit[]> pertanyaan → jawaban yang ditemukan EVA */
     private array $answers = [];
+
+    /** @var array<string,ServiceMatch> pertanyaan → layanan yang jelas disebut */
+    private array $services = [];
 
     protected function setUp(): void
     {
@@ -110,6 +114,11 @@ final class RecommendationControllerTest extends TestCase
             {
                 return [];
             }
+
+            public function layananTerbaik(string $pertanyaan): ?ServiceMatch
+            {
+                return $this->test->layananFor($pertanyaan);
+            }
         });
     }
 
@@ -117,6 +126,16 @@ final class RecommendationControllerTest extends TestCase
     public function scriptFor(string $question): array
     {
         return $this->script[$question] ?? [];
+    }
+
+    public function layananFor(string $question): ?ServiceMatch
+    {
+        return $this->services[$question] ?? null;
+    }
+
+    private function layananUntuk(string $question, string $service): void
+    {
+        $this->services[$question] = new ServiceMatch(serviceId: 9, service: $service);
     }
 
     /**
@@ -279,9 +298,39 @@ final class RecommendationControllerTest extends TestCase
 
         $this->assertSame([], $response->viewData('targets'));
         $this->assertSame(
-            [['question' => 'klaim tunjangan internet rumah', 'count' => 4]],
+            [['question' => 'klaim tunjangan internet rumah', 'count' => 4, 'service' => null]],
             $response->viewData('unrouted'),
         );
+    }
+
+    /**
+     * "Tanpa saran" bukan lagi satu keranjang.
+     *
+     * Pertanyaan yang menyebut nama aplikasi tapi tak menemukan subject bukan
+     * kegagalan yang sama dengan pertanyaan yang tak dikenali sama sekali. Yang
+     * pertama adalah DAFTAR KERJA — layanan itu kekurangan subject atau artikel,
+     * dan namanya sudah diketahui. Menyatukan keduanya membuat pekerjaan yang
+     * paling jelas ikut tenggelam di daftar buntu.
+     */
+    public function test_pertanyaan_tanpa_saran_membawa_layanan_bila_aplikasinya_disebut(): void
+    {
+        $this->unanswered('bagaimana melaporkan kendala di elisa', 3);
+        $this->unanswered('klaim tunjangan internet rumah', 1);
+        $this->layananUntuk('bagaimana melaporkan kendala di elisa', 'ELISA');
+
+        $response = $this->get('/eva/recommendation')->assertOk();
+
+        $this->assertSame(
+            [
+                ['question' => 'bagaimana melaporkan kendala di elisa', 'count' => 3, 'service' => 'ELISA'],
+                ['question' => 'klaim tunjangan internet rumah', 'count' => 1, 'service' => null],
+            ],
+            $response->viewData('unrouted'),
+        );
+
+        $stats = $response->viewData('stats');
+        $this->assertSame(2, $stats['unrouted']);
+        $this->assertSame(1, $stats['unrouted_with_service'], 'hanya satu yang aplikasinya diketahui');
     }
 
     // ---- sejalan dengan Unanswered Questions -------------------------------
@@ -384,6 +433,41 @@ final class RecommendationControllerTest extends TestCase
         $this->assertTrue($candidates[0]['is_auto_fill']);
         $this->assertFalse($candidates[1]['has_material']);
         $this->assertFalse($candidates[1]['is_auto_fill']);
+    }
+
+    /**
+     * Bangku uji harus memakai ATURAN YANG SAMA dengan draf tiket sungguhan.
+     *
+     * Tanpa ini, admin mengetik "kendala di elisa" dan melihat layar KOSONG —
+     * lalu menyimpulkan EVA tidak bisa apa-apa, padahal di widget pertanyaan itu
+     * justru berakhir rapi di ELISA › Lainnya. Layar uji yang menampilkan lebih
+     * sedikit daripada yang sebenarnya terjadi lebih menyesatkan daripada tidak
+     * ada layar uji sama sekali.
+     */
+    public function test_bangku_uji_menampilkan_layanan_saat_tak_ada_calon(): void
+    {
+        $this->layananUntuk('kendala di elisa', 'ELISA');
+
+        $hasil = $this->postJson('/eva/api/recommendation/test', [
+            'question' => 'kendala di elisa',
+        ])->assertOk();
+
+        $this->assertSame([], $hasil->json('candidates'));
+        $this->assertSame('ELISA', $hasil->json('service.service'));
+    }
+
+    /** Ada calon → "Lainnya" TIDAK menyala, persis seperti di draf sungguhan. */
+    public function test_bangku_uji_menyembunyikan_layanan_saat_masih_ada_calon(): void
+    {
+        $this->saranUntuk('cara reset password sap', $this->calon(1, 80));
+        $this->layananUntuk('cara reset password sap', 'SAP');
+
+        $hasil = $this->postJson('/eva/api/recommendation/test', [
+            'question' => 'cara reset password sap',
+        ])->assertOk();
+
+        $this->assertNotSame([], $hasil->json('candidates'));
+        $this->assertNull($hasil->json('service'));
     }
 
     public function test_bangku_uji_menolak_pertanyaan_kosong(): void

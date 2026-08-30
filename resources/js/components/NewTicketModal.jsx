@@ -302,15 +302,42 @@ export default function NewTicketModal({
         const subcategory = subject
             && catalog.subcategories.find((sc) => String(sc.id) === String(subject.subcategory_id));
 
+        // Jalur "Lainnya" — EVA tahu APLIKASINYA, tidak tahu masalahnya.
+        //
+        // Terjadi saat karyawan menyebut nama aplikasi tanpa menjelaskan
+        // kendalanya ("bagaimana melaporkan kendala di ELISA"). Yang bisa
+        // dipastikan cuma Layanannya, karena namanya diketik apa adanya; jenis
+        // masalahnya belum tentu ada di katalog. Membuka form pada sub category
+        // "Lainnya" milik Layanan itu menyerahkan persis sebanyak yang EVA tahu
+        // — dan tiketnya tetap sampai ke tim yang benar lewat TicketBroadcast.
+        const service = !subcategory && evaDraft.service
+            && catalog.services.find((s) => String(s.id) === String(evaDraft.service.service_id));
+
+        // Issue Category tidak punya Subject untuk diturunkan di jalur ini, jadi
+        // hanya diisikan bila seluruh subject Layanan itu memang berada di bawah
+        // satu Issue Category yang sama — server sudah menyaringnya di
+        // ServiceMatch::soleIssueCategory(). Selain itu, karyawan memilih sendiri.
+        const issueCategory = service && evaDraft.service.issue_category
+            && catalog.issueCategories.find((c) => c.name === evaDraft.service.issue_category);
+
         // Tebakan subject boleh saja meleset atau kosong — EVA hanya menebak
         // saat cukup yakin. Kalau begitu, deskripsinya tetap terisi dan
         // karyawan memilih sendiri kategorinya.
+        //
+        // subjectText SENGAJA dibiarkan kosong pada jalur "Lainnya": teks itu
+        // menjadi JUDUL tiket, dan kalimat mentah penanya ("bagaimana saya bisa
+        // melaporkan…") adalah judul yang buruk. Validasi form sudah menuntut
+        // karyawan menuliskannya sendiri.
         set({
             description: evaDraft.description ?? '',
             ...(subcategory ? {
                 serviceId: String(subcategory.service_id),
                 subcategoryId: String(subcategory.id),
                 subjectId: String(subject.id),
+            } : service ? {
+                serviceId: String(service.id),
+                subcategoryId: OTHER,
+                issueCategoryId: issueCategory ? String(issueCategory.id) : '',
             } : {}),
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps

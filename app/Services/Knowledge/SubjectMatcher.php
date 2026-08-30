@@ -67,6 +67,26 @@ final class SubjectMatcher implements SubjectSearch
 
     private const SUBCATEGORY_WEIGHT = 10;
 
+    /**
+     * Pengali untuk calon yang TIDAK MENYINGGUNG SAMA SEKALI aplikasi yang
+     * disebut penanya.
+     *
+     * Penilaian di atas hanya bisa menjumlah — ia bertanya "berapa kata subject
+     * yang disebut penanya" dan tidak pernah bertanya "apakah calon ini
+     * MEMBANTAH pertanyaannya". Akibatnya nama aplikasi, satu-satunya kata yang
+     * paling pasti benar karena diketik apa adanya, bernilai nol: pertanyaan
+     * "kendala di ELISA" mendarat di `CCM › Kendala Aplikasi` semata karena
+     * nama subject itu memakai dua kata paling umum dalam keluhan IT.
+     *
+     * Dipilih pengali, bukan pengurang tetap: calon kuat yang kebetulan salah
+     * aplikasi turun ke bawah ambang isi-otomatis tetapi MASIH TERLIHAT sebagai
+     * calon yang bisa dipilih manusia, sementara calon lemah seperti kasus di
+     * atas jatuh melewati SUGGEST_FLOOR dan hilang sendiri. Itu arah yang sama
+     * yang dipakai seluruh berkas ini — menyembunyikan calon yang benar lebih
+     * mahal daripada menampilkan calon yang lemah.
+     */
+    private const FOREIGN_SERVICE_PENALTY = 0.5;
+
     private const CACHE_KEY = 'eva.catalog-subject-index';
 
     private const CACHE_TTL_SECONDS = 300;
@@ -89,10 +109,16 @@ final class SubjectMatcher implements SubjectSearch
             return [];
         }
 
+        // Dihitung sekali di sini, bukan di dalam score(): keduanya hanya
+        // bergantung pada pertanyaan, dan versi sebelumnya menjalankan
+        // perluasan sinonim ulang untuk setiap satu dari 140 subject.
+        $expanded = $this->synonyms->expandAll($asked);
+        $named = $this->namedServiceStems($expanded);
+
         $matches = [];
 
         foreach ($this->index() as $row) {
-            $match = $this->score($row, $asked);
+            $match = $this->score($row, $expanded, $named);
 
             if ($match !== null) {
                 $matches[] = $match;
@@ -156,6 +182,46 @@ final class SubjectMatcher implements SubjectSearch
         return count($tied) >= 2 ? $tied : [];
     }
 
+    public function layananTerbaik(string $pertanyaan): ?ServiceMatch
+    {
+        $asked = $this->tokenizer->significant($pertanyaan);
+
+        if ($asked === []) {
+            return null;
+        }
+
+        $named = $this->namedServiceStems($this->synonyms->expandAll($asked));
+
+        if ($named === []) {
+            return null;
+        }
+
+        $owners = $this->serviceStemOwners();
+        $ids = array_values(array_unique(array_map(fn (string $stem) => $owners[$stem], $named)));
+
+        // Dua nama aplikasi dalam satu kalimat bukan keyakinan yang lebih
+        // besar, melainkan pertanyaan yang belum selesai ("dari SAP tidak bisa
+        // kirim ke MAILIA"). Menebak salah satunya berarti separuh tiket
+        // mendarat di tim yang salah, dan jalur "Lainnya" tidak punya Subject
+        // yang bisa mengoreksinya di hilir.
+        if (count($ids) !== 1) {
+            return null;
+        }
+
+        $rows = array_values(array_filter($this->index(), fn (array $row) => $row['service_id'] === $ids[0]));
+
+        if ($rows === []) {
+            return null;
+        }
+
+        return new ServiceMatch(
+            serviceId: $ids[0],
+            service: $rows[0]['service'],
+            issueCategories: array_values(array_unique(array_column($rows, 'issue_category'))),
+            matchedTerms: $named,
+        );
+    }
+
     /** Katalog berubah dari layar Admin — buang cache agar tidak basi. */
     public static function forget(): void
     {
@@ -172,12 +238,11 @@ final class SubjectMatcher implements SubjectSearch
      * justru tepat hanya karena kalimatnya bertele-tele.
      *
      * @param  array<string,mixed>  $row
-     * @param  string[]  $asked
+     * @param  string[]  $expanded  kata pertanyaan yang sudah diperluas sinonim
+     * @param  string[]  $named  kata yang menyebut satu layanan tertentu
      */
-    private function score(array $row, array $asked): ?SubjectMatch
+    private function score(array $row, array $expanded, array $named): ?SubjectMatch
     {
-        $expanded = $this->synonyms->expandAll($asked);
-
         $subject = $this->subjectOverlap($row, $expanded);
         $service = $this->overlap($row['service_stems'], $expanded);
         $subcategory = $this->overlap($row['subcategory_stems'], $expanded);
@@ -189,11 +254,17 @@ final class SubjectMatcher implements SubjectSearch
             return null;
         }
 
-        $confidence = (int) round(
-            self::SUBJECT_WEIGHT * $subject['ratio']
+        $score = self::SUBJECT_WEIGHT * $subject['ratio']
             + self::SERVICE_WEIGHT * $service['ratio']
-            + self::SUBCATEGORY_WEIGHT * $subcategory['ratio']
-        );
+            + self::SUBCATEGORY_WEIGHT * $subcategory['ratio'];
+
+        // Penanya menyebut nama aplikasi, dan calon ini tidak menyinggungnya di
+        // bagian mana pun dari jalurnya — lihat FOREIGN_SERVICE_PENALTY.
+        if ($named !== [] && ! $this->mentionsAny($row, $named)) {
+            $score *= self::FOREIGN_SERVICE_PENALTY;
+        }
+
+        $confidence = (int) round($score);
 
         if ($confidence < self::SUGGEST_FLOOR) {
             return null;
@@ -212,6 +283,80 @@ final class SubjectMatcher implements SubjectSearch
                 ...$subject['terms'], ...$service['terms'], ...$subcategory['terms'],
             ])),
         );
+    }
+
+    /**
+     * Kata pertanyaan yang menyebut NAMA SATU LAYANAN tertentu.
+     *
+     * Hanya stem yang dimiliki TEPAT SATU layanan yang dihitung. Nama layanan
+     * di katalog ini tidak semuanya khas — "AKUN APLIKASI" menyumbang kata
+     * "aplikasi" yang juga muncul di mana-mana. Selama stem itu masih menunjuk
+     * satu layanan saja, ia tetap berguna; yang berbahaya hanyalah stem yang
+     * dimiliki beberapa layanan sekaligus, karena penalti lalu menghukum ke
+     * segala arah.
+     *
+     * Dibaca dari kata yang SUDAH diperluas sinonim, sehingga alias yang
+     * didaftarkan admin ("eproc" untuk ELISA) ikut berlaku tanpa kode tambahan.
+     *
+     * @param  string[]  $expanded
+     * @return string[]
+     */
+    private function namedServiceStems(array $expanded): array
+    {
+        $owners = $this->serviceStemOwners();
+
+        return array_values(array_unique(array_filter(
+            $expanded,
+            fn (string $token) => isset($owners[$token]),
+        )));
+    }
+
+    /**
+     * Stem nama layanan → id layanan pemiliknya, hanya untuk stem yang dimiliki
+     * satu layanan saja.
+     *
+     * @return array<string,int>
+     */
+    private function serviceStemOwners(): array
+    {
+        $owners = [];
+
+        foreach ($this->index() as $row) {
+            foreach ($row['service_stems'] as $stem) {
+                $owners[$stem][$row['service_id']] = true;
+            }
+        }
+
+        return array_map(
+            fn (array $ids) => (int) array_key_first($ids),
+            array_filter($owners, fn (array $ids) => count($ids) === 1),
+        );
+    }
+
+    /**
+     * Apakah calon ini menyinggung aplikasi yang disebut penanya, di BAGIAN MANA
+     * PUN jalurnya.
+     *
+     * Sengaja tidak cukup membandingkan nama layanan saja. Nama aplikasi sering
+     * muncul sebagai SUB CATEGORY di bawah layanan lain — "Reset Password" yang
+     * benar untuk "reset password akun SAP" hidup di `AKUN APLIKASI › SAP`,
+     * bukan di layanan bernama SAP. Menghukumnya karena nama layanannya berbeda
+     * akan membuang justru calon yang tepat.
+     *
+     * @param  array<string,mixed>  $row
+     * @param  string[]  $named
+     */
+    private function mentionsAny(array $row, array $named): bool
+    {
+        $path = [...$row['service_stems'], ...$row['subcategory_stems'], ...$row['subject_stems']];
+
+        foreach ($named as $stem) {
+            if (in_array($stem, $path, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -413,6 +558,7 @@ final class SubjectMatcher implements SubjectSearch
                     'service_catalog_subjects.name as subject',
                     'service_catalog_subjects.requires_approval',
                     'service_catalog_subjects.support_level',
+                    'svc.id as service_id',
                     'svc.name as service',
                     'sub.name as subcategory',
                     'ic.name as issue_category',
@@ -421,6 +567,7 @@ final class SubjectMatcher implements SubjectSearch
                     'id' => (int) $row->id,
                     'subject' => $row->subject,
                     'service' => $row->service,
+                    'service_id' => (int) $row->service_id,
                     'subcategory' => $row->subcategory,
                     'issue_category' => $row->issue_category,
                     'requires_approval' => (bool) $row->requires_approval,

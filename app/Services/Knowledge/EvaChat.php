@@ -48,6 +48,7 @@ final class EvaChat
     public function __construct(
         private readonly EvaResponder $responder,
         private readonly SubjectSearch $subjects,
+        private readonly TicketRouting $routing,
     ) {}
 
     /**
@@ -155,17 +156,43 @@ final class EvaChat
         // dengan tebakan membuat satu kolom berarti dua hal dan diam-diam
         // merusak hitungan di Coverage Dashboard.
         $suggested = $this->subjects->terbaik($question);
+        $service = $suggested === null ? $this->routing->layananCadangan($question) : null;
 
         return [
             'draft' => [
                 'description' => $question,
                 'subject' => $suggested?->toArray(),
-                'note' => 'Draf tiket sudah disiapkan. Silakan periksa dan kirim di halaman Buat Tiket — nomor tiket terbit setelah Anda mengirimnya.',
+                'service' => $service?->toArray(),
+                'note' => $this->catatanDraf($suggested, $service),
             ],
             // Relatif: alamat ini lewat JSON, yang tidak ikut ditulis ulang
             // portal SINTA — lihat SourceDocument::present().
             'submit_url' => route('dashboard.requester', absolute: false),
         ];
+    }
+
+    /**
+     * Kalimat pengantar draf, jujur menurut seberapa jauh EVA sampai.
+     *
+     * Tiga keadaan, tiga kalimat berbeda. Memakai satu kalimat untuk ketiganya
+     * membuat karyawan mengira form akan terisi penuh, lalu menemukan kolom
+     * kosong tanpa tahu bagian mana yang harus ia isi sendiri.
+     */
+    private function catatanDraf(?SubjectMatch $subject, ?ServiceMatch $service): string
+    {
+        $penutup = ' Silakan periksa dan kirim di halaman Buat Tiket — nomor tiket terbit setelah Anda mengirimnya.';
+
+        if ($subject !== null) {
+            return 'Draf tiket sudah disiapkan.'.$penutup;
+        }
+
+        if ($service !== null) {
+            return 'Draf tiket sudah disiapkan untuk layanan '.$service->service
+                .'. Jenis masalahnya belum ada di katalog, jadi form terbuka pada pilihan "Lainnya" — tuliskan sendiri masalahnya dengan singkat.'
+                .$penutup;
+        }
+
+        return 'Draf tiket sudah disiapkan.'.$penutup;
     }
 
     /**

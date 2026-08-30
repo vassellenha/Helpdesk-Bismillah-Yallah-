@@ -9,6 +9,7 @@ use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\KnowledgeStats;
 use App\Services\Knowledge\SubjectMatch;
 use App\Services\Knowledge\SubjectSearch;
+use App\Services\Knowledge\TicketRouting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -53,6 +54,7 @@ class RecommendationController extends Controller
         private readonly SubjectSearch $matcher,
         private readonly CoverageCalculator $coverage,
         private readonly KnowledgeSearch $search,
+        private readonly TicketRouting $routing,
     ) {}
 
     public function index(): View
@@ -80,6 +82,7 @@ class RecommendationController extends Controller
                 'targets' => $targets->count(),
                 'without_material' => $targets->where('has_material', false)->count(),
                 'unrouted' => $unrouted->count(),
+                'unrouted_with_service' => $unrouted->whereNotNull('service')->count(),
             ],
             'endpoints' => ['test' => route('eva.recommendation.test')],
             'links' => [
@@ -96,10 +99,15 @@ class RecommendationController extends Controller
         $data = $request->validate(['question' => 'required|string|max:500']);
 
         $covered = $this->coverage->coveredSubjectIds()->flip();
+        $candidates = $this->candidates($data['question'], $covered, self::BENCH_ALTERNATIVES);
 
         return response()->json([
             'question' => $data['question'],
-            'candidates' => $this->candidates($data['question'], $covered, self::BENCH_ALTERNATIVES),
+            'candidates' => $candidates,
+            // Aturan "kapan Lainnya menyala" diambil dari TicketRouting, bukan
+            // ditulis ulang di sini — bangku uji harus menampilkan persis yang
+            // akan terjadi pada draf sungguhan, bukan tafsirannya sendiri.
+            'service' => $this->routing->layananCadangan($data['question'])?->toArray(),
         ]);
     }
 
@@ -191,7 +199,14 @@ class RecommendationController extends Controller
     {
         return $rows
             ->filter(fn (array $row) => $row['candidates'] === [])
-            ->map(fn (array $row) => ['question' => $row['question'], 'count' => $row['count']])
+            ->map(fn (array $row) => [
+                'question' => $row['question'],
+                'count' => $row['count'],
+                // Tak satu pun subject cocok, TAPI aplikasinya mungkin tetap
+                // ketahuan — penanya mengetik namanya. Bedanya besar: yang ini
+                // daftar kerja ("ELISA kekurangan subject"), bukan daftar buntu.
+                'service' => $this->matcher->layananTerbaik($row['question'])?->service,
+            ])
             ->values();
     }
 

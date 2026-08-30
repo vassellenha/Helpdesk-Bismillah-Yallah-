@@ -41,7 +41,13 @@ export default function EvaTicketRecommendation({ targets, unrouted, stats, thre
                     tone={stats.without_material ? 'var(--red-600)' : undefined}
                 />
                 <StatTile label="PERTANYAAN" value={stats.questions} hint="masih tidak terjawab saat ini" />
-                <StatTile label="TANPA SARAN" value={stats.unrouted} hint="tidak ada subject yang mendekati" />
+                <StatTile
+                    label="TANPA SARAN"
+                    value={stats.unrouted}
+                    hint={stats.unrouted_with_service > 0
+                        ? `${stats.unrouted_with_service} di antaranya sudah diketahui aplikasinya`
+                        : 'tidak ada subject yang mendekati'}
+                />
             </StatRow>
 
             <SubjectTargets targets={targets} thresholds={thresholds} links={links} />
@@ -231,13 +237,23 @@ function UnroutedQuestions({ rows, links }) {
                             {row.count}×
                         </span>
                         <span style={{ flex: 1, fontSize: '12.5px', lineHeight: 1.5 }}>{row.question}</span>
+                        {/*
+                          | Aplikasinya diketahui walau subject-nya tidak. Lencana
+                          | ini yang membedakan pekerjaan yang jelas ("ELISA
+                          | kekurangan subject") dari pertanyaan yang benar-benar
+                          | buntu — tanpanya keduanya terbaca sama di satu daftar.
+                          */}
+                        {row.service && <Badge tone="blue">{row.service} › Lainnya</Badge>}
                     </li>
                 ))}
             </ul>
 
             <p style={{ fontSize: '11.5px', color: 'var(--slate-500)', margin: 0, padding: '12px 18px', lineHeight: 1.6 }}>
-                Tidak ada subject katalog yang mendekati pertanyaan ini, sehingga user harus memilih
-                sendiri dari katalog. Tambahkan sinonim kata kuncinya pada Search Settings.
+                Tidak ada subject katalog yang mendekati pertanyaan ini. Yang berlencana aplikasi
+                sudah diketahui tujuannya — tiketnya diarahkan ke sub category “Lainnya” milik
+                layanan itu, dan lencana itu sekaligus petunjuk bahwa layanan tersebut kekurangan
+                subject atau artikel. Sisanya harus dipilih sendiri oleh user; tambahkan sinonim
+                kata kuncinya pada Search Settings.
             </p>
 
             <Pagination {...pager} onPage={pager.setPage} unit="pertanyaan" />
@@ -305,7 +321,40 @@ function Bench({ endpoint, thresholds }) {
 
             {result && (
                 result.candidates.length === 0 ? (
-                    <EmptyState>Tidak ada subject yang mendekati. Kosakatanya belum dikenali.</EmptyState>
+                    /*
+                     | Tak ada calon subject BUKAN berarti tak ada tujuan.
+                     |
+                     | Kalau aplikasinya tersebut di pertanyaan, draf tiket
+                     | sungguhan mengarahkannya ke sub category "Lainnya" milik
+                     | layanan itu. Layar uji yang cuma bilang "tidak ada yang
+                     | mendekati" membuat admin menyimpulkan EVA menyerah —
+                     | padahal di widget pertanyaan itu berakhir rapi.
+                     */
+                    result.service ? (
+                        <div style={{ padding: '0 18px 16px' }}>
+                            <div
+                                style={{
+                                    border: '1px solid var(--border-soft)', borderRadius: '10px',
+                                    padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px',
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap' }}>
+                                    <Badge tone="blue">{result.service.service} › Lainnya</Badge>
+                                    {result.service.issue_category
+                                        ? <Badge tone="neutral">{result.service.issue_category}</Badge>
+                                        : <Badge tone="amber">Kategori Masalah dipilih user</Badge>}
+                                </div>
+                                <span style={{ fontSize: '11.5px', color: 'var(--slate-500)', lineHeight: 1.6 }}>
+                                    Tidak ada subject yang cocok, tetapi aplikasinya tersebut di pertanyaan.
+                                    Draf tiket terbuka pada sub category “Lainnya” milik layanan ini dan user
+                                    menuliskan sendiri subjeknya; tiketnya diteruskan ke seluruh PIC layanan
+                                    tersebut. Ini juga petunjuk bahwa layanan itu kekurangan subject atau artikel.
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        <EmptyState>Tidak ada subject yang mendekati. Kosakatanya belum dikenali.</EmptyState>
+                    )
                 ) : (
                     <div style={{ padding: '0 18px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {result.candidates.map((candidate, index) => (

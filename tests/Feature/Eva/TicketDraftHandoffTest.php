@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Services\Knowledge\KnowledgeSearch;
 use App\Services\Knowledge\SearchHit;
 use App\Services\Knowledge\SubjectMatch;
+use App\Services\Knowledge\ServiceMatch;
 use App\Services\Knowledge\SubjectSearch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\ActsAsRole;
@@ -112,6 +113,65 @@ final class TicketDraftHandoffTest extends TestCase
     }
 
     /** EVA menyerah pada pertanyaannya, lalu drafnya diminta. */
+    /**
+     * Keadaan ketiga: EVA tahu APLIKASINYA, tidak tahu masalahnya.
+     *
+     * Sebelumnya draf hanya mengenal "tahu subject" atau "tidak tahu apa-apa",
+     * dan karyawan yang mengetik nama aplikasinya sendiri tetap ditinggal di
+     * form kosong berisi 19 Layanan. Sekarang Layanan itu ikut dititipkan,
+     * supaya form terbuka pada jalur "Lainnya" milik aplikasi yang benar.
+     */
+    public function test_layanan_dititipkan_saat_tak_ada_subject_yang_cocok(): void
+    {
+        $this->subjectTebakan(null, new ServiceMatch(
+            serviceId: 7,
+            service: 'ELISA',
+            issueCategories: ['Incident'],
+            matchedTerms: ['elisa'],
+        ));
+
+        $this->mintaDraf('bagaimana saya bisa melaporkan ketika ada kendala di elisa');
+
+        $this->assertSame(7, session('eva.ticket_draft.service.service_id'));
+        $this->assertSame('ELISA', session('eva.ticket_draft.service.service'));
+
+        // Layanan ini cuma punya satu Issue Category, jadi mengisikannya bukan
+        // tebakan melainkan satu-satunya kemungkinan.
+        $this->assertSame('Incident', session('eva.ticket_draft.service.issue_category'));
+
+        // Aturan #4 tetap: menitipkan draf tidak menerbitkan tiket.
+        $this->assertSame(0, Ticket::count());
+    }
+
+    /**
+     * Jalur "Lainnya" adalah JARING PENGAMAN, bukan pilihan pertama.
+     *
+     * Selama masih ada subject yang layak dilihat manusia, draf harus diam dan
+     * membiarkan karyawan memilih dari daftar. Tanpa penjaga ini "Lainnya"
+     * pelan-pelan jadi keranjang terbesar, tiketnya di-broadcast ke seluruh PIC
+     * alih-alih satu orang, dan katalog berhenti tumbuh karena tak ada lagi
+     * yang menunjukkan subject mana yang kurang.
+     */
+    public function test_layanan_tidak_dipakai_saat_masih_ada_calon_subject(): void
+    {
+        $calon = new SubjectMatch(
+            subjectId: 12,
+            subject: 'Reset Password',
+            service: 'AKUN APLIKASI',
+            subcategory: 'SAP',
+            issueCategory: 'Access Request',
+            confidence: 44,
+            requiresApproval: false,
+            supportLevel: 1,
+        );
+
+        $this->subjectTebakan(null, new ServiceMatch(serviceId: 7, service: 'ELISA'), [$calon]);
+
+        $this->mintaDraf('reset password');
+
+        $this->assertNull(session('eva.ticket_draft.service'));
+    }
+
     private function mintaDraf(string $pertanyaan): int
     {
         $ask = $this->postJson(route('eva.assistant.ask'), ['question' => $pertanyaan]);
@@ -125,15 +185,29 @@ final class TicketDraftHandoffTest extends TestCase
         return (int) $ask->json('answer_log_id');
     }
 
-    private function subjectTebakan(?SubjectMatch $match): void
+    /**
+     * @param  SubjectMatch[]  $calon  calon yang tetap muncul walau terbaik()
+     *                                 menyerah — dipakai menguji bahwa jalur
+     *                                 "Lainnya" TIDAK menyala saat masih ada
+     *                                 subject yang layak dilihat manusia
+     */
+    private function subjectTebakan(?SubjectMatch $match, ?ServiceMatch $layanan = null, array $calon = []): void
     {
-        $this->instance(SubjectSearch::class, new class($match) implements SubjectSearch
+        $this->instance(SubjectSearch::class, new class($match, $layanan, $calon) implements SubjectSearch
         {
-            public function __construct(private readonly ?SubjectMatch $match) {}
+            public function __construct(
+                private readonly ?SubjectMatch $match,
+                private readonly ?ServiceMatch $layanan,
+                private readonly array $calon,
+            ) {}
 
             /** @return SubjectMatch[] */
             public function cocokkan(string $pertanyaan, int $limit = 5): array
             {
+                if ($this->calon !== []) {
+                    return $this->calon;
+                }
+
                 return $this->match === null ? [] : [$this->match];
             }
 
@@ -146,6 +220,11 @@ final class TicketDraftHandoffTest extends TestCase
             public function calonSeri(string $pertanyaan): array
             {
                 return [];
+            }
+
+            public function layananTerbaik(string $pertanyaan): ?ServiceMatch
+            {
+                return $this->layanan;
             }
         });
     }
