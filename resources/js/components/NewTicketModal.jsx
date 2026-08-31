@@ -642,10 +642,19 @@ export default function NewTicketModal({
                                 <p className="mt-1">Status: <strong>{created.status}</strong></p>
                             </div>
                         ) : null}
-                        {created && attachmentNotice ? (
-                            <div className="rounded-xl bg-amber-50 dark:bg-warn-soft p-4 text-sm text-amber-800 dark:text-warn-text">
-                                {attachmentNotice}
-                            </div>
+                        {/* Syaratnya `created` saja, BUKAN `created && attachmentNotice`.
+                            Dengan syarat lama, formnya cuma hilang kalau lampirannya
+                            bermasalah — padahal itu kasus yang jarang. Pengiriman yang
+                            mulus (tanpa lampiran, atau lampirannya berhasil) membuat
+                            attachmentNotice kosong, cabangnya jatuh ke `else`, dan
+                            seluruh form tetap terpampang di bawah pesan "tiket sudah
+                            dibuat" — seolah kiriman tadi gagal dan harus diisi ulang. */}
+                        {created ? (
+                            attachmentNotice ? (
+                                <div className="rounded-xl bg-amber-50 dark:bg-warn-soft p-4 text-sm text-amber-800 dark:text-warn-text">
+                                    {attachmentNotice}
+                                </div>
+                            ) : null
                         ) : (
                             <>
                                 {error && <p className="rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
