@@ -129,6 +129,10 @@ class SupportController extends Controller
         return view('support.ticket-detail', [
             'role' => 'support',
             'currentUser' => $this->currentUserPayload($supportUser),
+            // Identitas pembaca — dipakai layar untuk memutuskan gelembung mana
+            // miliknya sendiri di Forum Diskusi. Dipisah dari
+            // currentUserPayload() yang mengisi header dan tidak membawa id.
+            'viewer' => ['id' => $supportUser->id, 'name' => $supportUser->name],
             'notifications' => $this->notifications($supportUser),
             'ticket' => $this->presentTicket($ticket),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),

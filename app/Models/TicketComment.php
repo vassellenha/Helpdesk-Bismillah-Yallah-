@@ -21,12 +21,18 @@ use Illuminate\Database\Eloquent\Model;
 class TicketComment extends Model
 {
     protected $fillable = [
-        'ticket_id', 'author_name', 'author_role', 'message',
+        'ticket_id', 'author_id', 'author_name', 'author_role', 'message',
         'attachment_name', 'attachment_path', 'attachment_mime_type', 'attachment_size_bytes',
     ];
 
     public function ticket()
     {
         return $this->belongsTo(Ticket::class);
+    }
+
+    /** Penulis komentar; null untuk komentar lama atau akun yang sudah dihapus. */
+    public function author()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'author_id');
     }
 }

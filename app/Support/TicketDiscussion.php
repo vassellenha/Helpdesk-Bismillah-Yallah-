@@ -65,6 +65,7 @@ class TicketDiscussion
     ): TicketComment {
         $attributes = [
             'ticket_id' => $ticket->id,
+            'author_id' => $author->id,
             'author_name' => $author->name,
             'author_role' => $dbAuthorRole,
             'message' => $data['message'] ?? '',
@@ -108,6 +109,11 @@ class TicketDiscussion
     {
         return [
             'id' => $c->id,
+            // Identitas, bukan peran. Layar memakainya untuk memutuskan
+            // gelembung mana milik pembacanya — lihat migrasi
+            // 2026_08_31_090000. Null untuk komentar lama; di sana layar
+            // kembali memakai perbandingan nama.
+            'authorId' => $c->author_id,
             'authorName' => $c->author_name,
             'authorRole' => $c->author_role,
             'message' => $c->message,

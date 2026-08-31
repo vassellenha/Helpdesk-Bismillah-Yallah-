@@ -146,7 +146,33 @@ function StartWorkModal({ ticketId, starting, error, onDismiss, onLater, onStart
     );
 }
 
-export default function SupportTicketDetail({ ticket: initialTicket, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, startUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
+/*
+ | Gelembung mana yang MILIK PEMBACA — ditentukan dari identitas, bukan peran.
+ |
+ | Sebelumnya perataannya membaca `authorRole === 'Support'`. Support IT dan
+ | Support BPO sama-sama menyimpan label itu (disengaja: keduanya "Support" di
+ | mata Requester), jadi di layar Support pesan kedua orang menumpuk di sisi
+ | kanan yang sama — Support IT membaca pesan Support BPO seolah tulisannya
+ | sendiri, dan percakapan dua pihak terbaca seperti monolog.
+ |
+ | Komentar lama tidak menyimpan id penulis; di sana nama dipakai sebagai
+ | cadangan, dibatasi pada peran yang sama supaya kemiripan nama antar peran
+ | tidak ikut tertarik. Nama bukan pengganti yang layak untuk komentar baru:
+ | direktori pegawai perusahaan ini memuat nama yang benar-benar kembar.
+*/
+function isMine(comment, viewer) {
+    if (!viewer) {
+        return comment.authorRole === 'Support';
+    }
+
+    if (comment.authorId != null && viewer.id != null) {
+        return comment.authorId === viewer.id;
+    }
+
+    return comment.authorRole === 'Support' && comment.authorName === viewer.name;
+}
+
+export default function SupportTicketDetail({ ticket: initialTicket, viewer = null, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, startUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
     const [flow, setFlow] = useState(initialFlow);
     const [comments, setComments] = useState(initialComments);
@@ -281,17 +307,21 @@ export default function SupportTicketDetail({ ticket: initialTicket, comments: i
                             {comments.length === 0 && (
                                 <p className="rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">{trans('support.detail.forum_empty')}</p>
                             )}
-                            {comments.map((c) => (
-                                <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${c.authorRole === 'Support' ? 'ml-auto bg-blue-600 dark:bg-blue-500 text-white' : 'bg-gray-50 dark:bg-panel-3 text-gray-800 dark:text-ink-1'}`}>
-                                    <div className={`mb-1 flex items-center gap-2 text-[11px] font-semibold ${c.authorRole === 'Support' ? 'text-blue-100' : 'text-gray-500 dark:text-ink-2'}`}>
-                                        <span>{c.authorName}</span>
-                                        <span className="opacity-70">· {c.authorRole}</span>
-                                        <span className="opacity-70">· {c.at}</span>
+                            {comments.map((c) => {
+                                const mine = isMine(c, viewer);
+
+                                return (
+                                    <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-blue-600 dark:bg-blue-500 text-white' : 'bg-gray-50 dark:bg-panel-3 text-gray-800 dark:text-ink-1'}`}>
+                                        <div className={`mb-1 flex items-center gap-2 text-[11px] font-semibold ${mine ? 'text-blue-100' : 'text-gray-500 dark:text-ink-2'}`}>
+                                            <span>{c.authorName}</span>
+                                            <span className="opacity-70">· {c.authorRole}</span>
+                                            <span className="opacity-70">· {c.at}</span>
+                                        </div>
+                                        {c.message && <p className="text-[13px] leading-relaxed">{c.message}</p>}
+                                        <CommentAttachmentChip attachment={c.attachment} dark={mine} />
                                     </div>
-                                    {c.message && <p className="text-[13px] leading-relaxed">{c.message}</p>}
-                                    <CommentAttachmentChip attachment={c.attachment} dark={c.authorRole === 'Support'} />
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {ticket.status !== 'Closed' && ticket.status !== 'Rejected' && (

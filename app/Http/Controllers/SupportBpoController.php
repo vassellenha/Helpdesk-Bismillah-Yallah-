@@ -123,6 +123,9 @@ class SupportBpoController extends Controller
         return view('support-bpo.ticket-detail', [
             'role' => 'support-bpo',
             'currentUser' => $this->currentUserPayload($bpoUser),
+            // Lihat SupportController: identitas pembaca untuk perataan
+            // gelembung Forum Diskusi, terpisah dari payload header.
+            'viewer' => ['id' => $bpoUser->id, 'name' => $bpoUser->name],
             'notifications' => $this->notifications($bpoUser),
             'ticket' => $this->presentTicket($ticket, $agent),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),
