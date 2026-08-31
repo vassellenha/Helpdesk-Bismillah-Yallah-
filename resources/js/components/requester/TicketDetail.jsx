@@ -446,7 +446,27 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                         <AttachmentViewer attachments={ticket.attachments} className="mt-4" />
                     </Card>
 
-                    {status !== 'Draft' && status !== 'Returned' && (
+                    {/* Draft SAJA yang menyembunyikan forum — tiket yang belum
+                        pernah dikirim tidak punya lawan bicara, dan tidak ada
+                        satu pun komentar yang bisa ada di sana.
+
+                        "Returned" sempat ikut disembunyikan di sini, sebagai
+                        bayangan dari syarat tombol "Edit & Resubmit" di atas
+                        (Draft || Returned) — bukan karena ada alasannya
+                        sendiri. Akibatnya justru terbalik: tiket Returned
+                        adalah tiket yang SUDAH dikirim dan sudah punya
+                        percakapan, dan pengembaliannya berarti requester
+                        diminta memperbaiki sesuatu. Di sanalah isi forum paling
+                        dibutuhkan, tapi requester baru bisa membacanya setelah
+                        menekan Edit & Resubmit — sesudah momen ia perlu tahu
+                        apa yang harus diperbaiki.
+
+                        Server tidak pernah menyamakan keduanya: addComment()
+                        hanya menutup Closed dan Rejected. Yang justru ditutup
+                        saat Returned adalah sisi Support (Returned ada di
+                        Ticket::NOT_YET_RELEASED_STATUSES) — giliran bicara
+                        memang berpindah ke requester. */}
+                    {status !== 'Draft' && (
                     <Card title={trans('requester.detail.discussion')}>
                         <div className="flex flex-col gap-3">
                             {comments.length === 0 && (
