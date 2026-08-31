@@ -18,7 +18,8 @@ return [
         'requester' => 'Requester',
         'approver' => 'Approver',
         'no_approval' => 'No Approval',
-        'support' => 'Support',
+        'support_bpo' => 'Support BPO',
+        'support_it' => 'Support IT',
         'done' => 'Done',
     ],
 
@@ -38,7 +39,7 @@ return [
         'returned_approver' => 'Sent back by the approver for revision.',
         'returned_support' => 'Sent back by Support for the requester to complete.',
         'rejected' => 'Rejected by the approver — never forwarded to Support.',
-        'with_support' => 'Being handled by Support — :pic.',
+        'with_support' => 'Being handled by :desk — :pic.',
         'resolved' => 'Resolved by Support, awaiting requester confirmation.',
         'closed' => 'Ticket finished and closed.',
     ],

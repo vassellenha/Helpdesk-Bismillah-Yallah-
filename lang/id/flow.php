@@ -19,7 +19,8 @@ return [
         'requester' => 'Requester',
         'approver' => 'Approver',
         'no_approval' => 'Tanpa Approval',
-        'support' => 'Support',
+        'support_bpo' => 'Support BPO',
+        'support_it' => 'Support IT',
         'done' => 'Selesai',
     ],
 
@@ -39,7 +40,7 @@ return [
         'returned_approver' => 'Dikembalikan approver ke requester untuk diperbaiki.',
         'returned_support' => 'Dikembalikan Support ke requester untuk dilengkapi.',
         'rejected' => 'Ditolak approver — tiket tidak diteruskan ke Support.',
-        'with_support' => 'Sedang ditangani Support — :pic.',
+        'with_support' => 'Sedang ditangani :desk — :pic.',
         'resolved' => 'Sudah diselesaikan Support, menunggu konfirmasi requester.',
         'closed' => 'Tiket selesai dan ditutup.',
     ],

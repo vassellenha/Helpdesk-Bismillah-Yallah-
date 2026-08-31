@@ -35,7 +35,7 @@ class TicketManagementController extends Controller
 {
     public function index(): View
     {
-        $tickets = Ticket::with(['requester', 'approver', 'attachments', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
+        $tickets = Ticket::with(['requester', 'approver', 'attachments', 'assignedAgent', 'escalatedByAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])
             ->whereNotNull('requester_id')
             ->latest('created_at')
             ->get();
@@ -88,7 +88,7 @@ class TicketManagementController extends Controller
             'ids' => 'nullable|string',
         ]);
 
-        $query = Ticket::with(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])->whereNotNull('requester_id');
+        $query = Ticket::with(['requester', 'approver', 'assignedAgent', 'escalatedByAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent'])->whereNotNull('requester_id');
 
         if (! empty($data['ids'])) {
             $ids = array_values(array_filter(explode(',', $data['ids'])));
