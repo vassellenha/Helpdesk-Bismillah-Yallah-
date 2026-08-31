@@ -166,13 +166,41 @@ class SupportBpoController extends Controller
     /**
      * A BPO agent who escalated this ticket to IT can still open it and
      * chat in the discussion thread — but not start/resolve/escalate/return
-     * it, so those actions stay gated on the stricter TicketBroadcast::canAct()
-     * alone. Mirrors the includeEscalatedAway option on visibleTicketsQuery(),
+     * it, so those actions stay gated on the stricter canManage() below.
+     * Mirrors the includeEscalatedAway option on visibleTicketsQuery(),
      * which is what keeps the ticket listed for them in the first place.
      */
     private function canView(Ticket $ticket, SupportAgent $agent): bool
     {
-        return TicketBroadcast::canAct($ticket, $agent) || $ticket->escalated_by_agent_id === $agent->id;
+        return $this->canManage($ticket, $agent) || $ticket->escalated_by_agent_id === $agent->id;
+    }
+
+    /**
+     * Wewenang MENGERJAKAN tiket ini di portal BPO — bukan sekadar melihatnya.
+     *
+     * `escalated_at` yang memutuskan lebih dulu, dan itu tidak bisa diserahkan
+     * ke TicketBroadcast::canAct() sendirian: canAct() sadar-tahap, dan sesudah
+     * eskalasi tahapnya IT — eligiblePics()-nya berpindah ke daftar PIC *IT*.
+     * Untuk tiket "Lainnya" yang dieskalasi secara broadcast (assigned_agent_id
+     * kembali null), canAct() lalu menimbang agent BPO ini terhadap daftar PIC
+     * IT. Orang dobel peran (BPO & IT di Layanan yang sama — pola nyata, lihat
+     * TicketEscalateDualRoleTest) ada di daftar itu, jadi layar BPO-nya kembali
+     * menganggap tiket yang baru saja ia serahkan sebagai miliknya: popup
+     * "Mulai kerjakan tiket ini?" muncul lagi, dan tombolnya benar-benar
+     * menarik tiket itu balik dari IT.
+     *
+     * Daftar PIC IT tidak boleh jadi sumber wewenang di portal BPO. Giliran BPO
+     * selesai begitu tiketnya dieskalasi — syarat yang sama persis sudah
+     * dipegang visibleTicketsQuery() lewat whereNull('escalated_at'), dan
+     * `escalated_at` tidak pernah dikosongkan lagi setelah terisi.
+     */
+    private function canManage(Ticket $ticket, SupportAgent $agent): bool
+    {
+        if ($ticket->escalated_at !== null) {
+            return false;
+        }
+
+        return TicketBroadcast::canAct($ticket, $agent);
     }
 
     public function addComment(Request $request, Ticket $ticket): JsonResponse
@@ -183,7 +211,16 @@ class SupportBpoController extends Controller
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 403, 'Ticket belum diteruskan ke Support.');
         abort_if(in_array($ticket->status, ['Closed', 'Rejected'], true), 422, 'Diskusi tiket ini sudah ditutup.');
 
-        TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
+        // Klaimnya ikut syarat canManage(), bukan cuma canView(): sesudah
+        // eskalasi, tiket broadcast kembali `assigned_agent_id = null` dan
+        // claimIfUnclaimed() menimbang agent ini terhadap daftar PIC IT. Untuk
+        // orang dobel peran, sekadar menambahkan komentar akan menuliskan baris
+        // BPO-nya ke assigned_agent_id — tiket yang sudah diserahkan tertarik
+        // balik ke portal BPO dan lenyap dari antrean IT, tanpa siapa pun
+        // menekan tombol apa pun.
+        if ($this->canManage($ticket, $agent)) {
+            TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
+        }
 
         $data = $request->validate(TicketDiscussion::rules());
 
@@ -206,7 +243,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
+        abort_unless($this->canManage($ticket, $agent), 403);
         abort_unless($ticket->status === 'Open', 422, 'Tiket ini tidak bisa dimulai dari status saat ini.');
 
         TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
@@ -244,7 +281,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
+        abort_unless($this->canManage($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
 
         TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
@@ -301,7 +338,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
+        abort_unless($this->canManage($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
 
         // Level ditentukan oleh Subjek-nya di service catalog: Level 2 berarti
@@ -449,7 +486,7 @@ class SupportBpoController extends Controller
     {
         $bpoUser = CurrentActor::supportBpo();
         $agent = $this->agentFor($bpoUser);
-        abort_unless(TicketBroadcast::canAct($ticket, $agent), 403);
+        abort_unless($this->canManage($ticket, $agent), 403);
         abort_if(in_array($ticket->status, Ticket::NOT_YET_RELEASED_STATUSES, true), 422, 'Ticket belum diteruskan ke Support.');
 
         TicketBroadcast::claimIfUnclaimed($ticket, $bpoUser, $agent);
@@ -724,7 +761,7 @@ class SupportBpoController extends Controller
             // this ticket can open it and comment (canView() in show()/
             // data()/addComment() allows that), but no longer owns it, so
             // the frontend hides start/resolve/escalate/return here.
-            'canManage' => TicketBroadcast::canAct($t, $agent),
+            'canManage' => $this->canManage($t, $agent),
             // Subject Level 1 = BPO-only, tidak ada IT yang boleh menerima —
             // tombol Eskalasi disembunyikan di frontend. Tiket "Lainnya" (tanpa
             // catalogSubject) tidak kena aturan Level ini, tetap boleh eskalasi.
