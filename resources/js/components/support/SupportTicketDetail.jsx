@@ -182,7 +182,15 @@ export default function SupportTicketDetail({ ticket: initialTicket, viewer = nu
     const [confirmAction, setConfirmAction] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const [startOpen, setStartOpen] = useState(initialTicket.status === 'Open');
+    // `canManage` ikut menentukan, bukan cuma status: sesudah BPO
+    // mengeskalasi, tiketnya kembali ke status "Open" untuk tahap IT (lihat
+    // TicketBroadcast::escalateBroadcast()). Tanpa syarat kedua ini, BPO yang
+    // baru saja melepas tiket itu justru disambut popup "Mulai kerjakan tiket
+    // ini?" tiap kali ia membukanya lagi — menawarkan pekerjaan yang bukan
+    // miliknya lagi, dan menghalangi ia sekadar membaca isinya. Tombol aksi di
+    // bawah sudah memakai syarat yang sama (canAct && canManage !== false).
+    const canStartWork = initialTicket.canManage !== false;
+    const [startOpen, setStartOpen] = useState(initialTicket.status === 'Open' && canStartWork);
     const [starting, setStarting] = useState(false);
     const [startError, setStartError] = useState('');
 

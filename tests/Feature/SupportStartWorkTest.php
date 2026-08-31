@@ -69,6 +69,34 @@ class SupportStartWorkTest extends TestCase
         $this->post(route('support.tickets.start', $ticket))->assertStatus(403);
     }
 
+    /**
+     * Sesudah eskalasi, tiketnya kembali ke status "Open" untuk tahap IT
+     * (TicketBroadcast::escalateBroadcast()) — tapi popup "Mulai kerjakan
+     * tiket ini?" bukan lagi urusan BPO yang baru melepasnya. Halaman detail
+     * memutuskan itu dari `canManage` pada props, jadi yang dikunci di sini
+     * adalah kontrak datanya: BPO pengeskalasi harus tetap bisa membuka tiket
+     * (canView) namun menerima canManage=false.
+     */
+    public function test_bpo_pengeskalasi_membuka_tiket_open_tanpa_hak_mengerjakan(): void
+    {
+        [, $ticket] = $this->openTicketFor('bpo', '19960130096', 'Denny Firmansyah');
+        $bpoAgent = SupportAgent::where('type', 'bpo')->firstOrFail();
+
+        $itAgent = SupportAgent::create(['name' => 'Agung Wijayanto', 'type' => 'it', 'is_active' => true]);
+        $ticket->update([
+            'assigned_agent_id' => $itAgent->id,
+            'status' => 'Open',
+            'escalated_at' => Carbon::now(),
+            'escalated_by_agent_id' => $bpoAgent->id,
+        ]);
+
+        $response = $this->get(route('support-bpo.tickets.show', $ticket))->assertOk();
+
+        $props = $response->viewData('ticket');
+        $this->assertSame('Open', $props['status']);
+        $this->assertFalse($props['canManage']);
+    }
+
     /** @return array{0:User,1:Ticket} */
     private function openTicketFor(string $type, string $nip, string $name, string $status = 'Open'): array
     {
