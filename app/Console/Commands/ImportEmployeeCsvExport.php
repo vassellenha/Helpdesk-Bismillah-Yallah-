@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\AuditTrail;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\SupportAgentSync;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -252,6 +253,8 @@ class ImportEmployeeCsvExport extends Command
     private function attachRoles(User $user, array $roleNames, \Illuminate\Support\Collection $roleCache, array &$summary): void
     {
         $user->loadMissing('roles');
+        $attached = false;
+
         foreach ($roleNames as $name) {
             $roleId = $roleCache[$name] ?? null;
             if (! $roleId) {
@@ -260,8 +263,30 @@ class ImportEmployeeCsvExport extends Command
             if (! $user->roles->contains('id', $roleId)) {
                 $user->roles()->attach($roleId);
                 $summary['roles_added']++;
+                $attached = true;
             }
         }
+
+        if (! $attached) {
+            return;
+        }
+
+        /*
+         | Role Support tanpa baris support_agents adalah kegagalan yang tidak
+         | menunjuk ke mana pun: orangnya tidak muncul di dropdown PIC Service
+         | Catalog, dan dashboard Support-nya menjawab 404 — persis alasan
+         | SupportAgentSync ditulis. UserRoleController sudah memanggilnya pada
+         | dua jalurnya; importer ini luput karena membaca kolom "Role" dari CSV
+         | apa adanya, jadi satu baris berisi "Support IT" membuka lubang yang
+         | sama lewat pintu lain.
+         |
+         | Relasi WAJIB dimuat ulang lebih dulu: yang ada di memori adalah
+         | daftar SEBELUM attach di atas, dan reconcile() memakai loadMissing()
+         | yang tidak akan menyegarkannya sendiri — ia akan membaca role lama
+         | dan menyimpulkan orang ini bukan Support.
+        */
+        $user->load('roles');
+        SupportAgentSync::reconcile($user);
     }
 
     private function auditActor(): ?User
