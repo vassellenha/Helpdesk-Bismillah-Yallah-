@@ -109,6 +109,70 @@ final class PassagePickerTest extends TestCase
         $this->assertStringContainsString('30 menit', $jawaban);
     }
 
+    /**
+     * Kasus nyata dari produksi: SOP pendaftaran vendor ELISA. Pertanyaan
+     * "berapa lama verifikasi vendor baru" tidak terjawab, padahal dokumennya
+     * menulis "paling lambat 5 hari kerja" — hanya di potongan yang berbeda
+     * dari yang terpilih.
+     *
+     * Potongan pembuka memuat lebih banyak kata pertanyaan ("verifikasi",
+     * "vendor", "baru"), jadi penghitungan polos memenangkannya. Yang membalik
+     * urutan adalah "lama": kata itu cuma ada di potongan yang menjawab.
+     */
+    public function test_potongan_penjawab_ikut_terbawa_walau_bukan_yang_paling_mirip(): void
+    {
+        $article = $this->artikelBerdokumen([
+            'Pendaftaran vendor baru. Verifikasi vendor baru dilakukan Bagian Procurement lalu Bagian Keuangan atas lima dokumen legalitas vendor baru.',
+            'Waktu proses. Verifikasi diselesaikan paling lambat 5 hari kerja sejak dokumen lengkap diterima.',
+        ]);
+
+        $tokens = ['berapa', 'lama', 'verifikasi', 'vendor', 'baru'];
+
+        // Potongan pembuka memang yang paling mirip: ia memuat tiga kata
+        // pertanyaan, sementara potongan penjawab cuma satu. Tidak ada satu pun
+        // kata yang bisa memenangkannya — penanya menulis "lama", dokumennya
+        // menulis "paling lambat". Memilih satu terbaik akan selalu meleset di
+        // sini, dan itulah sebabnya keduanya harus ikut terbawa.
+        $this->assertStringNotContainsString('5 hari kerja', (string) $this->jawaban($article, $tokens));
+
+        $gabungan = implode(' ', $this->picker()->passagesFor(new EloquentCollection([$article]), $tokens)[$article->id] ?? []);
+
+        $this->assertStringContainsString('5 hari kerja', $gabungan);
+    }
+
+    /**
+     * CELAH YANG TERSISA: satu artikel hanya pernah menyumbang SATU potongan,
+     * padahal pertanyaan sering membutuhkan dua bagian dokumen yang sama.
+     *
+     * "Apa syaratnya dan berapa lama prosesnya" adalah bentuk pertanyaan yang
+     * wajar, dan jawabannya memang tersebar: syaratnya di bagian awal, lama
+     * prosesnya di bagian lain. Selama hanya satu potongan yang dioper ke
+     * perangkum, separuh jawabannya tidak pernah terbaca — dan perangkum
+     * dengan jujur menjawab "tidak ada di KB" untuk sesuatu yang ada.
+     *
+     * Risikonya bukan cuma tidak menjawab: dokumen panjang punya sampai 500
+     * potongan, dan 499 di antaranya tidak pernah ikut dipertimbangkan dalam
+     * satu pertanyaan.
+     */
+    public function test_dua_bagian_dokumen_yang_sama_bisa_terbawa_sekaligus(): void
+    {
+        $article = $this->artikelBerdokumen([
+            'Syarat pengajuan. Pemohon wajib melampirkan akta pendirian dan NPWP badan usaha.',
+            'Bagian lain yang tidak menjawab apa pun mengenai pengajuan tersebut.',
+            'Waktu proses. Pengajuan diselesaikan paling lambat 5 hari kerja sejak dokumen lengkap.',
+        ]);
+
+        $potongan = $this->picker()->passagesFor(
+            new EloquentCollection([$article]),
+            ['syarat', 'akta', 'lama', 'waktu', 'proses'],
+        )[$article->id] ?? [];
+
+        $gabungan = implode(' ', $potongan);
+
+        $this->assertStringContainsString('akta pendirian', $gabungan, 'syaratnya tidak terbawa');
+        $this->assertStringContainsString('5 hari kerja', $gabungan, 'lama prosesnya tidak terbawa');
+    }
+
     public function test_kembali_ke_ringkasan_bila_tidak_ada_potongan_yang_cocok(): void
     {
         $article = $this->artikelBerdokumen([

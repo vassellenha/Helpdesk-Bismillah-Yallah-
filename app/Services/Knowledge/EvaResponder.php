@@ -31,6 +31,18 @@ final class EvaResponder
      */
     private const SYNTHESIS_CANDIDATES = 8;
 
+    /**
+     * Batas potongan yang benar-benar dikirim, setelah tiap kandidat boleh
+     * menyumbang lebih dari satu.
+     *
+     * Delapan kandidat × tiga potongan = 24, dan itu melipatgandakan prompt
+     * untuk keuntungan yang menipis: potongan ketiga dari kandidat kedelapan
+     * hampir tidak pernah yang menjawab. Dua belas menampung seluruh potongan
+     * dari empat kandidat teratas — di situlah jawaban hampir selalu berada —
+     * tanpa membuat setiap pertanyaan membayar untuk ekor daftar.
+     */
+    private const SYNTHESIS_PASSAGES = 12;
+
     /*
      | Lantai rangkuman dulu ditulis di sini juga. Sekarang tinggal di
      | AnswerReach, karena angka itulah yang membedakan "EVA tidak menjawab"
@@ -118,7 +130,8 @@ final class EvaResponder
         // antaranya terlihat meyakinkan sendirian — persis kasus yang dulu
         // berakhir "belum menemukan jawaban" padahal materinya ada.
         $relevant = $this->relevantHits($hits);
-        $rangkuman = $this->synthesizer->rangkum($question, $this->passages($relevant));
+        [$passages, $owners] = $this->passagesWithOwners($relevant);
+        $rangkuman = $this->synthesizer->rangkum($question, $passages);
 
         if ($rangkuman !== null && $best !== null) {
             return $this->answer(
@@ -127,7 +140,7 @@ final class EvaResponder
                 $conversation,
                 $asker,
                 $rangkuman->text,
-                $this->sourcesUsed($relevant, $rangkuman->usedPassages, $best),
+                $this->sourcesUsed($owners, $rangkuman->usedPassages, $best),
             );
         }
 
@@ -173,10 +186,39 @@ final class EvaResponder
      */
     private function passages(array $hits): array
     {
-        return array_values(array_map(
-            fn (SearchHit $h) => ['title' => $h->title, 'text' => $h->answer],
-            $hits,
-        ));
+        return $this->passagesWithOwners($hits)[0];
+    }
+
+    /**
+     * Potongan yang dikirim ke perangkum, BESERTA sumber tiap potongan.
+     *
+     * Keduanya dikembalikan sekaligus dan itu bukan kenyamanan: satu kandidat
+     * kini boleh menyumbang beberapa potongan, jadi "potongan ke-3" tidak lagi
+     * berarti "kandidat ke-3". Perangkum menjawab dengan nomor POTONGAN, dan
+     * tanpa daftar pemilik yang sejajar, rujukan yang ditampilkan akan
+     * menunjuk dokumen yang salah — persis bentuk kesalahan yang paling sulit
+     * terlihat, karena jawabannya tetap benar.
+     *
+     * @param  SearchHit[]  $hits
+     * @return array{0: list<array{title:string,text:string}>, 1: list<SearchHit>}
+     */
+    private function passagesWithOwners(array $hits): array
+    {
+        $passages = [];
+        $owners = [];
+
+        foreach ($hits as $hit) {
+            foreach ($hit->passageList() as $text) {
+                if (count($passages) >= self::SYNTHESIS_PASSAGES) {
+                    break 2;
+                }
+
+                $passages[] = ['title' => $hit->title, 'text' => $text];
+                $owners[] = $hit;
+            }
+        }
+
+        return [$passages, $owners];
     }
 
     /**
@@ -211,14 +253,24 @@ final class EvaResponder
      * @param  list<int>  $usedPassages
      * @return list<SearchHit>
      */
-    private function sourcesUsed(array $relevant, array $usedPassages, SearchHit $best): array
+    private function sourcesUsed(array $owners, array $usedPassages, SearchHit $best): array
     {
-        $used = array_values(array_filter(array_map(
-            fn (int $i) => $relevant[$i] ?? null,
-            $usedPassages,
-        )));
+        $used = [];
 
-        return $used === [] ? [$best] : $used;
+        foreach ($usedPassages as $i) {
+            $hit = $owners[$i] ?? null;
+
+            if ($hit === null) {
+                continue;
+            }
+
+            // Satu dokumen bisa menyumbang dua potongan yang dua-duanya
+            // dipakai; ia tetap SATU rujukan di layar. Menyebutnya dua kali
+            // membuat pembaca mengira ada dua sumber yang saling menguatkan.
+            $used[$hit->type().':'.$hit->sourceId] = $hit;
+        }
+
+        return $used === [] ? [$best] : array_values($used);
     }
 
     /**

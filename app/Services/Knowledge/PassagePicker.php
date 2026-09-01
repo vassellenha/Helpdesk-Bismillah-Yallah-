@@ -38,6 +38,28 @@ final class PassagePicker
      */
     private const ANSWER_LENGTH = 600;
 
+    /**
+     * Berapa potongan per dokumen yang dioper ke mesin rangkuman.
+     *
+     * Satu potongan tidak cukup, dan ini bukan dugaan: SOP pendaftaran vendor
+     * ELISA menulis "paling lambat 5 hari kerja" di bagian Waktu Proses,
+     * sementara pertanyaan "berapa LAMA verifikasi vendor baru" paling mirip
+     * dengan bagian PEMBUKA — yang memuat "verifikasi", "vendor", dan "baru"
+     * sekaligus. Tidak ada kata yang bisa membalikkannya, karena penanya
+     * menulis "lama" dan dokumennya menulis "lambat". Memilih satu terbaik
+     * akan selalu meleset di sini.
+     *
+     * Bentuk pertanyaan yang wajar pun sering butuh dua bagian sekaligus
+     * ("apa syaratnya dan berapa lama prosesnya"): syaratnya di bagian awal,
+     * lamanya di bagian lain.
+     *
+     * Tiga, bukan semua. Dokumen boleh punya sampai 500 potongan, dan
+     * mengirim seluruhnya berarti biaya dan waktu tunggu yang naik terus
+     * sampai menabrak batas panjang prompt — kegagalan yang datang belakangan
+     * dan menimpa semua orang sekaligus.
+     */
+    public const MAX_PASSAGES = 3;
+
     public function __construct(private readonly SynonymExpander $synonyms) {}
 
     /**
@@ -50,9 +72,29 @@ final class PassagePicker
      *
      * @param  Collection<int, Article>  $articles
      * @param  string[]  $tokens
-     * @return array<int, string> [article_id => potongan jawaban]
+     * @return array<int, string> [article_id => potongan jawaban terbaik]
      */
     public function forArticles(Collection $articles, array $tokens): array
+    {
+        return array_map(
+            fn (array $potongan) => $potongan[0],
+            array_filter($this->passagesFor($articles, $tokens, 1)),
+        );
+    }
+
+    /**
+     * BEBERAPA potongan terbaik untuk setiap artikel, terurut dari yang paling
+     * menjawab.
+     *
+     * Kembarannya forArticles() yang hanya mengambil yang teratas: gelembung
+     * jawaban di layar tetap mengutip satu potongan (lebih dari itu tidak
+     * terbaca sebagai kutipan), sedangkan mesin rangkuman membaca semuanya.
+     *
+     * @param  Collection<int, Article>  $articles
+     * @param  string[]  $tokens
+     * @return array<int, list<string>> [article_id => potongan, terbanyak $limit]
+     */
+    public function passagesFor(Collection $articles, array $tokens, int $limit = self::MAX_PASSAGES): array
     {
         // Diperluas sinonimnya, sama seperti tahap recall: kalau pengguna
         // menulis "sandi" sedangkan dokumennya menulis "password", potongan
@@ -102,15 +144,19 @@ final class PassagePicker
             */
             $bobot = $this->bobotToken($milik, $tokens);
 
-            $terbaik = $milik
+            $terpilih = $milik
+                ->filter(fn (Chunk $c) => $this->skor($c->content, $tokens, $bobot) > 0.0)
                 ->sortByDesc(fn (Chunk $c) => $this->skor($c->content, $tokens, $bobot))
-                ->first();
+                ->take($limit);
 
-            if ($this->skor($terbaik->content, $tokens, $bobot) <= 0.0) {
+            if ($terpilih->isEmpty()) {
                 continue;
             }
 
-            $hasil[$article->id] = $this->rapikan($terbaik->content, $tokens, $bobot);
+            $hasil[$article->id] = $terpilih
+                ->map(fn (Chunk $c) => $this->rapikan($c->content, $tokens, $bobot))
+                ->values()
+                ->all();
         }
 
         return $hasil;

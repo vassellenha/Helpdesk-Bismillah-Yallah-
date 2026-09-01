@@ -19,7 +19,32 @@ final class SearchHit
         /** 0–100. Di bawah KnowledgeSearch::MIN_CONFIDENCE, EVA tidak menjawab. */
         public readonly int $confidence,
         public readonly ?int $catalogSubjectId,
+        /**
+         * Potongan dokumen yang dibaca mesin rangkuman — bisa lebih dari satu.
+         *
+         * `answer` tetap SATU potongan terbaik, karena itulah yang dikutip di
+         * gelembung jawaban; kutipan sepanjang tiga potongan tidak terbaca
+         * sebagai kutipan. Perangkum tidak punya batasan itu dan justru
+         * membutuhkan lebih: jawaban sering tersebar di dua bagian dokumen yang
+         * sama. Lihat PassagePicker::MAX_PASSAGES.
+         *
+         * Kosong berarti "tidak ada potongan tersendiri" — sumber tanpa dokumen
+         * (FAQ, artikel tulisan tangan) memakai `answer` apa adanya.
+         *
+         * @var list<string>
+         */
+        public readonly array $passages = [],
     ) {}
+
+    /**
+     * Seluruh teks yang boleh dibaca perangkum dari sumber ini.
+     *
+     * @return list<string>
+     */
+    public function passageList(): array
+    {
+        return $this->passages !== [] ? $this->passages : [$this->answer];
+    }
 
     /**
      * Kunci jenis yang dipakai layar: 'article' atau 'faq'.

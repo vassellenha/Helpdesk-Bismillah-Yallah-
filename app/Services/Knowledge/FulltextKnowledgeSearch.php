@@ -177,7 +177,11 @@ final class FulltextKnowledgeSearch implements KnowledgeSearch
         | artikel yang ditulis tangan (yang tidak punya dokumen sumber): di sana
         | ringkasannya memang ditulis manusia sebagai jawaban.
         */
-        $potongan = $this->passages->forArticles($articles, $tokens);
+        // Satu potongan untuk DIKUTIP di layar, beberapa untuk DIBACA
+        // perangkum. Keduanya dari pemilih yang sama supaya potongan teratas
+        // yang dikutip selalu ada di dalam yang dibaca.
+        $banyak = $this->passages->passagesFor($articles, $tokens);
+        $potongan = array_map(fn (array $p) => $p[0], $banyak);
 
         return $articles->map(fn (Article $article) => new SearchHit(
             sourceType: Article::class,
@@ -190,6 +194,7 @@ final class FulltextKnowledgeSearch implements KnowledgeSearch
                 ScoredText::forArticle($article),
             ),
             catalogSubjectId: $article->catalog_subject_id,
+            passages: $banyak[$article->id] ?? [],
         ))->all();
     }
 

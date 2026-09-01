@@ -57,6 +57,38 @@ final class AnswerSourcesTest extends TestCase
         return $hits;
     }
 
+    /**
+     * Kandidat yang menyumbang BEBERAPA potongan — bentuk yang membuat indeks
+     * potongan tidak lagi sama dengan indeks kandidat.
+     *
+     * @return SearchHit[]
+     */
+    private function fakeSearchBerpotongan(): array
+    {
+        $hits = [
+            // Dokumen pertama menyumbang DUA potongan: 0 dan 1.
+            new SearchHit(Article::class, 11, 'SOP Pendaftaran Vendor', 'Syaratnya lima dokumen.', 61, null, [
+                'Syaratnya lima dokumen legalitas.',
+                'Verifikasi selesai paling lambat 5 hari kerja.',
+            ]),
+            // Dokumen kedua menyumbang satu: potongan 2.
+            new SearchHit(Article::class, 22, 'SOP Rilis Vendor', 'Rilis oleh Vendor Administrator.', 46, null),
+        ];
+
+        $this->instance(KnowledgeSearch::class, new class($hits) implements KnowledgeSearch
+        {
+            public function __construct(private readonly array $hits) {}
+
+            /** @return SearchHit[] */
+            public function cari(string $pertanyaan, int $limit = 5): array
+            {
+                return array_slice($this->hits, 0, $limit);
+            }
+        });
+
+        return $hits;
+    }
+
     /** @param list<int> $used indeks potongan yang diaku dipakai perangkum */
     private function fakeSynthesizer(array $used): void
     {
@@ -136,6 +168,43 @@ final class AnswerSourcesTest extends TestCase
         $this->assertSame(
             ['Syarat pengajuan akses', 'Formulir pengajuan akses'],
             array_column($reply->toArray()['sources'], 'title'),
+        );
+    }
+
+    /**
+     * Indeks potongan BUKAN indeks kandidat begitu satu dokumen menyumbang
+     * lebih dari satu potongan.
+     *
+     * Potongan 1 milik dokumen PERTAMA (potongan keduanya), potongan 2 milik
+     * dokumen kedua. Kalau pemetaannya masih menganggap indeks potongan sama
+     * dengan indeks kandidat, "potongan 2" akan dibaca sebagai kandidat ketiga
+     * — yang tidak ada — dan rujukannya diam-diam jatuh ke kandidat teratas.
+     * Jawabannya tetap terlihat benar; hanya rujukannya yang berbohong.
+     */
+    public function test_indeks_potongan_dipetakan_ke_dokumen_yang_benar(): void
+    {
+        $this->fakeSearchBerpotongan();
+        $this->fakeSynthesizer([1, 2]);
+
+        $reply = app(EvaResponder::class)->jawab('berapa lama verifikasi vendor');
+
+        $this->assertSame(
+            ['SOP Pendaftaran Vendor', 'SOP Rilis Vendor'],
+            array_map(fn (SearchHit $h) => $h->title, $reply->sources),
+        );
+    }
+
+    /** Dua potongan dari SATU dokumen tetap satu rujukan, bukan dua. */
+    public function test_dokumen_yang_menyumbang_dua_potongan_disebut_sekali(): void
+    {
+        $this->fakeSearchBerpotongan();
+        $this->fakeSynthesizer([0, 1]);
+
+        $reply = app(EvaResponder::class)->jawab('syarat dan lama proses vendor');
+
+        $this->assertSame(
+            ['SOP Pendaftaran Vendor'],
+            array_map(fn (SearchHit $h) => $h->title, $reply->sources),
         );
     }
 }
