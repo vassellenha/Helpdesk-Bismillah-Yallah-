@@ -48,7 +48,7 @@ final class TicketAttachmentAccess
         // Administrator dan Team Lead memang punya layar yang menampilkan
         // seluruh tiket, jadi menahan lampirannya hanya akan membuat layar itu
         // berlubang tanpa menambah keamanan apa pun.
-        if (self::hasAnyRole($user, ['admin', 'team-lead'])) {
+        if (self::hasAnyRole($user, ['admin', 'team-lead', 'team-lead-bpo'])) {
             return true;
         }
 

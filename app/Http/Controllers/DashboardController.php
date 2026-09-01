@@ -111,17 +111,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function teamLead(): View
-    {
-        return view('dashboard.team-lead', [
-            'role' => 'team-lead',
-            'agents' => DummyData::agents(),
-            'slaPerformance' => DummyData::slaPerformance(),
-            'ticketVolume' => DummyData::ticketVolumeByCategory(),
-            'notifications' => DummyData::notifications(),
-        ]);
-    }
-
     public function eva(): View
     {
         $eva = CurrentActor::knowledgeAdmin();

@@ -60,7 +60,7 @@ export default function SlaTopSubjects({ rows = [] }) {
                     <input
                         value={query}
                         onChange={(e) => { setQuery(e.target.value); setPage(1); setOpen(null); }}
-                        placeholder="Cari subjek, sub-kategori, atau aplikasi…"
+                        placeholder="Cari subjek, sub-kategori, atau layanan…"
                         className="w-full rounded-xl border border-gray-200 dark:border-edge-strong py-2.5 pl-10 pr-4 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400"
                     />
                 </div>
@@ -69,7 +69,7 @@ export default function SlaTopSubjects({ rows = [] }) {
             <div className="overflow-x-auto">
                 <div className="min-w-[820px]">
                     <div className="grid grid-cols-[36px_1fr_120px_90px_80px_100px_36px] gap-3 border-y border-gray-100 dark:border-edge bg-gray-50 dark:bg-panel-3 px-6 py-2.5 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">
-                        <span>#</span><span>Subjek</span><span>Aplikasi</span><span className="text-right">Volume</span><span className="text-right">Breach</span><span className="text-right">Compliance</span><span />
+                        <span>#</span><span>Subjek</span><span>Layanan</span><span className="text-right">Volume</span><span className="text-right">Breach</span><span className="text-right">Compliance</span><span />
                     </div>
 
                     {pageRows.map((r, i) => {
@@ -101,8 +101,14 @@ export default function SlaTopSubjects({ rows = [] }) {
                                     </span>
                                 </div>
 
+                                {/* Latar rincian ini tadinya tanpa pasangan `dark:`, sementara SEMUA
+                                    teks di dalamnya sudah memakai token gelap — jadi di mode gelap
+                                    isinya tertulis dengan warna terang di atas latar yang juga
+                                    terang, dan baris rinciannya praktis hilang. Nadanya sengaja
+                                    lebih gelap dari panel-3 yang dipakai track bar di dalamnya,
+                                    supaya track-nya tidak ikut lenyap ke dalam latar. */}
                                 {expanded && (
-                                    <div className="flex flex-col gap-2 bg-gray-50/50 px-6 pb-4 pl-[70px] pt-1">
+                                    <div className="flex flex-col gap-2 bg-gray-50/50 dark:bg-panel-1 px-6 pb-4 pl-[70px] pt-1">
                                         <p className="text-[10.5px] font-bold uppercase tracking-wide text-gray-400 dark:text-ink-3">Rincian Masalah Tiket</p>
                                         {r.causes.map((c) => (
                                             <div key={c.name} className="flex items-center gap-3">

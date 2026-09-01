@@ -15,7 +15,10 @@
 @section('content')
 <h1 class="text-3xl font-extrabold text-gray-900 dark:text-ink-1">@lang('admin.dashboard.title')</h1>
 
-<div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+{{-- Jumlah kolom mengikuti jumlah kartu (lima). Sebelumnya enam, jadi kolom
+     terakhir selalu kosong dan barisnya berhenti sebelum tepi kanan.
+     Kalau kartunya bertambah/berkurang, angka di sini ikut disesuaikan. --}}
+<div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
     @foreach ($stats as $s)
         <a href="{{ $s['href'] }}" class="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 p-5 shadow-sm transition-shadow hover:shadow-md hover:border-blue-200 dark:hover:border-accent-text">
             <span class="flex h-9 w-9 items-center justify-center rounded-lg {{ $s['bg'] }} {{ $s['color'] }}">

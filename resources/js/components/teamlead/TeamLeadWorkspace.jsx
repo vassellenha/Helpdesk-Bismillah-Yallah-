@@ -118,8 +118,12 @@ export default function TeamLeadWorkspace(props) {
         refresh();
     }
 
+    // Judul dan sub-judul ikut desk yang sedang dibuka: layar ini dipakai
+    // Team Lead IT dan Team Lead BPO, dan menyebut tim yang salah di kepala
+    // halaman adalah kekeliruan yang tidak akan dicurigai siapa pun.
+    const teamLabel = props.teamLabel ?? 'Support IT';
     const title = trans(`teamlead.titles.${active}`);
-    const subtitle = trans(`teamlead.titles.${active}_sub`);
+    const subtitle = trans(`teamlead.titles.${active}_sub`, { team: teamLabel });
     const shared = { ...data, actions, monitorFilter };
 
     return (
@@ -158,7 +162,7 @@ export default function TeamLeadWorkspace(props) {
             <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 px-7 py-7">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-ink-3">{trans('teamlead.workspace')}</p>
+                        <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-ink-3">{trans('teamlead.workspace', { role: props.roleLabel ?? 'Team Lead' })}</p>
                         <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-ink-1">{title}</h1>
                         <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{subtitle}</p>
                     </div>

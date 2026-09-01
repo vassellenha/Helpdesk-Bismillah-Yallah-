@@ -30,7 +30,16 @@ function RatingCell({ done, rating, ratingActive }) {
     );
 }
 
-function BpoTable({ rows, actions }) {
+/*
+ * Arah eskalasi menentukan apakah barisnya bisa dibuka.
+ *
+ * Bagi Team Lead IT ('in') tiket-tiket ini pekerjaan yang baru masuk, jadi
+ * barisnya adalah pintu ke detail tiket. Bagi Team Lead BPO ('out') tiket itu
+ * sudah diserahkan ke Tim IT dan bukan lagi wewenangnya — membiarkan barisnya
+ * mengundang klik hanya akan mengantar dia ke layar yang menolaknya dengan 403.
+ */
+function BpoTable({ rows, actions, direction = 'in' }) {
+    const isOutgoing = direction === 'out';
     const [query, setQuery] = useState('');
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -43,8 +52,8 @@ function BpoTable({ rows, actions }) {
                 <div className="flex items-center gap-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-accent-soft text-blue-600 dark:text-accent-text"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V9 M8 12l4-4 4 4 M8 4h8"/></svg></span>
                     <div>
-                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans('teamlead.escalation.bpo_table')} <span className="ml-1 rounded-full bg-gray-100 dark:bg-panel-3 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:text-ink-2">{trans('teamlead.escalation.monitored')}</span></h2>
-                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans('teamlead.escalation.bpo_desc')}</p>
+                        <h2 className="text-[15px] font-bold text-gray-900 dark:text-ink-1">{trans(isOutgoing ? 'teamlead.escalation.bpo_table_out' : 'teamlead.escalation.bpo_table')} <span className="ml-1 rounded-full bg-gray-100 dark:bg-panel-3 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:text-ink-2">{trans('teamlead.escalation.monitored')}</span></h2>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-ink-3">{trans(isOutgoing ? 'teamlead.escalation.bpo_desc_out' : 'teamlead.escalation.bpo_desc')}</p>
                     </div>
                 </div>
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={trans('teamlead.escalation.search')} className="w-56 rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 outline-none focus:border-blue-400" />
@@ -64,8 +73,12 @@ function BpoTable({ rows, actions }) {
                     </thead>
                     <tbody>
                         {filtered.map((e) => (
-                            <tr key={e.id} onClick={() => actions.openTicket?.(e.id)} className="group cursor-pointer border-b border-gray-50 last:border-0 dark:border-transparent dark:even:bg-white/[0.03] hover:bg-blue-50/30 dark:hover:bg-panel-hover">
-                                <td className="px-4 py-4 pl-6"><span className="font-bold text-blue-600 dark:text-accent-text group-hover:underline">{e.id}</span></td>
+                            <tr
+                                key={e.id}
+                                onClick={isOutgoing ? undefined : () => actions.openTicket?.(e.id)}
+                                className={`group border-b border-gray-50 last:border-0 dark:border-transparent dark:even:bg-white/[0.03] ${isOutgoing ? '' : 'cursor-pointer hover:bg-blue-50/30 dark:hover:bg-panel-hover'}`}
+                            >
+                                <td className="px-4 py-4 pl-6"><span className={`font-bold ${isOutgoing ? 'text-gray-500 dark:text-ink-2' : 'text-blue-600 dark:text-accent-text group-hover:underline'}`}>{e.id}</span></td>
                                 <td className="px-4 py-4">
                                     <p className="max-w-[280px] truncate text-[13px] font-semibold text-gray-900 dark:text-ink-1">{e.subject}</p>
                                     {e.note && <p className="mt-0.5 max-w-[280px] truncate text-[11.5px] text-gray-400 dark:text-ink-3">{e.note}</p>}
@@ -132,7 +145,7 @@ function BreachTable({ rows, actions }) {
     );
 }
 
-export default function EscalationTab({ escalations = [], breachEscalations = [], actions = {} }) {
+export default function EscalationTab({ escalations = [], breachEscalations = [], escalationDirection = 'in', actions = {} }) {
     const [view, setView] = useState('bpo');
 
     const stats = useMemo(() => ({
@@ -155,7 +168,9 @@ export default function EscalationTab({ escalations = [], breachEscalations = []
                 ))}
             </div>
 
-            {view === 'bpo' ? <BpoTable rows={escalations} actions={actions} /> : <BreachTable rows={breachEscalations} actions={actions} />}
+            {view === 'bpo'
+                ? <BpoTable rows={escalations} actions={actions} direction={escalationDirection} />
+                : <BreachTable rows={breachEscalations} actions={actions} />}
         </div>
     );
 }

@@ -57,7 +57,7 @@ class ReportExportTest extends TestCase
         $this->assertStringContainsString('.xlsx"', $response->headers->get('Content-Disposition'));
 
         $sheet = $this->sheetXml($response->getContent());
-        $this->assertStringContainsString('Aplikasi', $sheet);
+        $this->assertStringContainsString('Layanan', $sheet);
         $this->assertStringContainsString('SAP', $sheet);
     }
 

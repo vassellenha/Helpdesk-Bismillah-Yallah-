@@ -1,18 +1,17 @@
 <?php
 
-use App\Http\Controllers\NotificationHistoryController;
 use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\TicketManagementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ApprovalController;
-use App\Http\Controllers\Auth\DevLoginController;
 use App\Http\Controllers\AuditTrailController;
+use App\Http\Controllers\Auth\DevLoginController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Eva\AnalyticsController as EvaAnalyticsController;
 use App\Http\Controllers\Eva\AppsController as EvaAppsController;
-use App\Http\Controllers\Eva\AssistantController as EvaAssistantController;
 use App\Http\Controllers\Eva\ArticleController as EvaArticleController;
+use App\Http\Controllers\Eva\AssistantController as EvaAssistantController;
 use App\Http\Controllers\Eva\ConversationController as EvaConversationController;
 use App\Http\Controllers\Eva\CoverageController as EvaCoverageController;
 use App\Http\Controllers\Eva\DocumentController as EvaDocumentController;
@@ -26,6 +25,7 @@ use App\Http\Controllers\Eva\TaxonomyController as EvaTaxonomyController;
 use App\Http\Controllers\Eva\TrainingController as EvaTrainingController;
 use App\Http\Controllers\Eva\UnansweredController as EvaUnansweredController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationHistoryController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServiceCatalogController;
@@ -33,7 +33,8 @@ use App\Http\Controllers\SlaPolicyController;
 use App\Http\Controllers\SsoController;
 use App\Http\Controllers\SupportBpoController;
 use App\Http\Controllers\SupportController;
-use App\Http\Controllers\TeamLeadController;
+use App\Http\Controllers\TeamLeadBpoController;
+use App\Http\Controllers\TeamLeadItController;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketDetailController;
@@ -109,7 +110,8 @@ Route::prefix('dashboard')->name('dashboard.')->middleware('auth')->group(functi
     Route::get('/approver', [ApprovalController::class, 'inbox'])->middleware('role:approver')->name('approver');
     Route::get('/support', [SupportController::class, 'dashboard'])->middleware('role:support')->name('support');
     Route::get('/support-bpo', [SupportBpoController::class, 'dashboard'])->middleware('role:support-bpo')->name('support-bpo');
-    Route::get('/team-lead', [TeamLeadController::class, 'dashboard'])->middleware('role:team-lead')->name('team-lead');
+    Route::get('/team-lead', [TeamLeadItController::class, 'dashboard'])->middleware('role:team-lead')->name('team-lead');
+    Route::get('/team-lead-bpo', [TeamLeadBpoController::class, 'dashboard'])->middleware('role:team-lead-bpo')->name('team-lead-bpo');
     Route::get('/eva', [DashboardController::class, 'eva'])->middleware('role:eva')->name('eva');
 });
 
@@ -158,23 +160,36 @@ Route::prefix('support-bpo')->name('support-bpo.')->middleware(['auth', 'role:su
     Route::post('/notifications/read-all', [SupportBpoController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
 });
 
-Route::prefix('team-lead')->name('team-lead.')->middleware(['auth', 'role:team-lead'])->group(function () {
-    Route::get('/profile', [ProfileController::class, 'teamLead'])->name('profile');
-    Route::get('/data', [TeamLeadController::class, 'dataFeed'])->name('data-feed');
-    Route::get('/tickets/{ticket}', [TeamLeadController::class, 'showTicket'])->name('tickets.show');
-    Route::get('/tickets/{ticket}/data', [TeamLeadController::class, 'ticketData'])->name('tickets.data');
-    Route::post('/tickets/{ticket}/note', [TeamLeadController::class, 'addNote'])->name('tickets.note');
-    Route::post('/tickets/{ticket}/remind', [TeamLeadController::class, 'remind'])->name('tickets.remind');
-    Route::post('/tickets/{ticket}/reassign', [TeamLeadController::class, 'reassign'])->name('tickets.reassign');
-    Route::post('/tickets/{ticket}/raise-priority', [TeamLeadController::class, 'raisePriority'])->name('tickets.raise-priority');
-    Route::post('/agents/{agent}/remind-rating', [TeamLeadController::class, 'remindRating'])->name('agents.remind-rating');
-    Route::post('/escalation/raise', [TeamLeadController::class, 'escalateGroup'])->name('escalation.raise');
-    Route::get('/reports/preview', [TeamLeadController::class, 'previewReport'])->name('reports.preview');
-    Route::get('/reports/export', [TeamLeadController::class, 'exportReport'])->name('reports.export');
-    Route::get('/notifications', [NotificationHistoryController::class, 'teamLead'])->name('notifications');
-    Route::post('/notifications/{notification}/read', [TeamLeadController::class, 'markNotificationRead'])->name('notifications.read');
-    Route::post('/notifications/read-all', [TeamLeadController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
-});
+/*
+| Dua desk Team Lead, satu daftar rute.
+|
+| Isinya identik sampai ke nama aksinya; yang berbeda cuma controller, kunci
+| role, dan orang yang boleh membukanya. Menuliskannya dua kali berarti setiap
+| rute baru harus diingat untuk ditambahkan dua kali juga — dan yang terlupa
+| tidak akan gagal, ia hanya membuat satu desk kehilangan satu tombol.
+*/
+foreach ([
+    ['team-lead', TeamLeadItController::class, 'teamLead'],
+    ['team-lead-bpo', TeamLeadBpoController::class, 'teamLeadBpo'],
+] as [$deskKey, $deskController, $profileAction]) {
+    Route::prefix($deskKey)->name($deskKey.'.')->middleware(['auth', 'role:'.$deskKey])->group(function () use ($deskController, $profileAction) {
+        Route::get('/profile', [ProfileController::class, $profileAction])->name('profile');
+        Route::get('/data', [$deskController, 'dataFeed'])->name('data-feed');
+        Route::get('/tickets/{ticket}', [$deskController, 'showTicket'])->name('tickets.show');
+        Route::get('/tickets/{ticket}/data', [$deskController, 'ticketData'])->name('tickets.data');
+        Route::post('/tickets/{ticket}/note', [$deskController, 'addNote'])->name('tickets.note');
+        Route::post('/tickets/{ticket}/remind', [$deskController, 'remind'])->name('tickets.remind');
+        Route::post('/tickets/{ticket}/reassign', [$deskController, 'reassign'])->name('tickets.reassign');
+        Route::post('/tickets/{ticket}/raise-priority', [$deskController, 'raisePriority'])->name('tickets.raise-priority');
+        Route::post('/agents/{agent}/remind-rating', [$deskController, 'remindRating'])->name('agents.remind-rating');
+        Route::post('/escalation/raise', [$deskController, 'escalateGroup'])->name('escalation.raise');
+        Route::get('/reports/preview', [$deskController, 'previewReport'])->name('reports.preview');
+        Route::get('/reports/export', [$deskController, 'exportReport'])->name('reports.export');
+        Route::get('/notifications', [NotificationHistoryController::class, $profileAction])->name('notifications');
+        Route::post('/notifications/{notification}/read', [$deskController, 'markNotificationRead'])->name('notifications.read');
+        Route::post('/notifications/read-all', [$deskController, 'markAllNotificationsRead'])->name('notifications.read-all');
+    });
+}
 
 Route::prefix('requester')->name('requester.')->middleware(['auth', 'role:requester'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'requester'])->name('profile');

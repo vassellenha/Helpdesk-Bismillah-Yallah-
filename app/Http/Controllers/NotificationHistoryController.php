@@ -89,6 +89,19 @@ class NotificationHistoryController extends Controller
         );
     }
 
+    public function teamLeadBpo(Request $request): View
+    {
+        return $this->page(
+            $request,
+            CurrentActor::teamLeadBpo(),
+            'team-lead-bpo',
+            'layouts.team-lead',
+            'dashboard.team-lead-bpo',
+            'team-lead-bpo.notifications.read',
+            'team-lead-bpo.notifications.read-all',
+        );
+    }
+
     private function page(
         Request $request,
         User $user,

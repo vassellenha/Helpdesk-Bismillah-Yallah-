@@ -28,6 +28,7 @@ final class RoleAccessControlTest extends TestCase
         'support' => 'dashboard.support',
         'support-bpo' => 'dashboard.support-bpo',
         'team-lead' => 'dashboard.team-lead',
+        'team-lead-bpo' => 'dashboard.team-lead-bpo',
         'admin' => 'admin.dashboard',
         'eva' => 'eva.coverage',
     ];

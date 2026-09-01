@@ -38,6 +38,11 @@ class ProfileController extends Controller
         return response()->json(ProfilePresenter::present(CurrentActor::teamLead()));
     }
 
+    public function teamLeadBpo(): JsonResponse
+    {
+        return response()->json(ProfilePresenter::present(CurrentActor::teamLeadBpo()));
+    }
+
     public function admin(): JsonResponse
     {
         return response()->json(ProfilePresenter::present(CurrentActor::admin()));

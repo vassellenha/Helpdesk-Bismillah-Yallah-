@@ -53,6 +53,11 @@ class CurrentActor
         return self::forRole('team-lead');
     }
 
+    public static function teamLeadBpo(): User
+    {
+        return self::forRole('team-lead-bpo');
+    }
+
     public static function supportBpo(): User
     {
         return self::forRole('support-bpo');

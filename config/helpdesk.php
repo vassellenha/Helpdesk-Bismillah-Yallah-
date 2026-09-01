@@ -127,14 +127,35 @@ return [
             ],
             'cta' => 'Dashboard · My Tickets →',
         ],
+        /*
+        | Team Lead terpecah dua desk, satu per tim Support.
+        |
+        | Kunci 'team-lead' SENGAJA dipertahankan untuk desk IT meskipun nama
+        | rolenya kini 'Team Lead IT'. Kunci itu bukan sekadar label: ia jadi
+        | prefix URL (/team-lead/*), nilai kolom ticket_notifications.role, dan
+        | dibaca ActsAsRole di tes. Menggantinya berarti memindahkan notifikasi
+        | lama ke peran yang tidak ada lagi — yaitu lonceng yang diam tanpa satu
+        | pun pesan error. Yang baru cukup ditambahkan di sebelahnya.
+        */
         'team-lead' => [
             'key' => 'team-lead',
-            'role' => 'Team Lead',
-            'initials' => 'T',
-            'label' => 'Team Lead',
-            'description' => 'Memantau performa tim support dan menangani eskalasi SLA.',
+            'role' => 'Team Lead IT',
+            'initials' => 'TI',
+            'label' => 'Team Lead IT',
+            'description' => 'Memantau performa tim Support IT dan menangani eskalasi SLA.',
             'links' => [
                 ['label' => 'Dashboard', 'route' => 'dashboard.team-lead'],
+            ],
+            'cta' => 'Dashboard →',
+        ],
+        'team-lead-bpo' => [
+            'key' => 'team-lead-bpo',
+            'role' => 'Team Lead BPO',
+            'initials' => 'TB',
+            'label' => 'Team Lead BPO',
+            'description' => 'Memantau performa tim Support BPO dan menangani eskalasi SLA.',
+            'links' => [
+                ['label' => 'Dashboard', 'route' => 'dashboard.team-lead-bpo'],
             ],
             'cta' => 'Dashboard →',
         ],

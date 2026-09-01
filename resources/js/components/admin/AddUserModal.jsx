@@ -21,15 +21,6 @@ const FIELDS_AFTER_PHONE = [
     ['nama_proyek', 'nama_proyek'],
 ];
 
-const ROLE_DESCRIPTIONS = {
-    Requester: 'Membuat & memantau tiket sendiri, mengakses Knowledge Base, memberi rating/feedback.',
-    Approver: 'Meninjau & memutuskan tiket yang membutuhkan persetujuan sebelum diteruskan ke Support.',
-    'Support IT': 'Menangani tiket layanan/aplikasi yang berada di bawah kepemilikan Tim IT.',
-    'Support BPO': 'Menangani tiket layanan/aplikasi yang berada di bawah kepemilikan Business Process Owner (unit bisnis).',
-    'Team Lead': 'Mengawasi layanan dan memantau seluruh tiket pada layanan yang menjadi tanggung jawabnya.',
-    Administrator: 'Akses konfigurasi penuh: user, role, SLA, service catalog, kategori, approval matrix, audit, integrasi.',
-    'Knowledge Administrator': 'Mengelola artikel, FAQ, approval knowledge, AI knowledge training, dan analytics.',
-};
 
 export default function AddUserModal({ roles, onClose, onSave }) {
     const [form, setForm] = useState({

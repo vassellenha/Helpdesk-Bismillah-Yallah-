@@ -14,7 +14,8 @@
 */
 
 return [
-    'workspace' => 'Team Lead Workspace',
+    // :role diisi dari payload controller — layar ini dipakai dua desk.
+    'workspace' => ':role Workspace',
     'period' => 'Periode',
 
     'nav' => [
@@ -38,13 +39,13 @@ return [
 
     'titles' => [
         'operational' => 'Operational Dashboard',
-        'operational_sub' => 'Distribusi, tren, dan volume tiket tim Support IT.',
+        'operational_sub' => 'Distribusi, tren, dan volume tiket tim :team.',
         'sla' => 'SLA Dashboard',
         'sla_sub' => 'Kepatuhan, breach, dan performa SLA per prioritas.',
         'support' => 'Support Dashboard',
         'support_sub' => 'Beban kerja tim serta teguran tiket via Email & WhatsApp.',
         'management' => 'Management Dashboard',
-        'management_sub' => 'Tren, isu teratas, aplikasi, dan performa layanan.',
+        'management_sub' => 'Tren tiket, isu & layanan teratas, serta performa layanan.',
         'monitoring' => 'SLA Monitoring',
         'monitoring_sub' => 'Pantauan tiket aktif dengan sisa waktu SLA.',
         'escalation' => 'Eskalasi',
@@ -57,7 +58,7 @@ return [
 
     'common' => [
         'all' => 'Semua',
-        'all_app' => 'Semua Aplikasi',
+        'all_app' => 'Semua Layanan',
         'reset' => 'Reset',
         'cancel' => 'Batal',
         'save' => 'Simpan',
@@ -78,7 +79,7 @@ return [
         'ticket_no' => 'No. Tiket',
         'subject' => 'Subjek',
         'service' => 'Layanan',
-        'app' => 'Aplikasi',
+        'app' => 'Layanan',
         'subcategory' => 'Sub-Kategori',
         'priority' => 'Prioritas',
         'status' => 'Status',
@@ -95,12 +96,12 @@ return [
         'created_vs_resolved' => 'Tiket Dibuat vs Diselesaikan',
         'monthly_trend' => 'Tren bulanan · 6 bulan terakhir',
         'by_category' => 'Tiket per Kategori',
-        'by_app' => 'Tren per Aplikasi',
-        'pick_app' => 'Pilih aplikasi untuk fokus',
+        'by_app' => 'Tren per Layanan',
+        'pick_app' => 'Pilih layanan untuk fokus',
         'showing_trend' => 'Menampilkan tren :app',
         'suggested' => ':count disarankan',
         'raised_badge' => 'Dinaikkan',
-        'all_app' => 'Semua aplikasi',
+        'all_app' => 'Semua layanan',
         'recommendation' => 'Rekomendasi Eskalasi',
         'recommendation_hint' => 'Kategori tiket yang disarankan naik satu tingkat prioritas',
         'category_service' => 'Kategori / Layanan',
@@ -110,6 +111,15 @@ return [
         'raised' => 'Prioritas dinaikkan.',
         'raise_failed' => 'Gagal menaikkan prioritas.',
         'no_recommendation' => 'Tidak ada rekomendasi eskalasi. 🎉',
+
+        // Konfirmasi sebelum menaikkan prioritas SEKELOMPOK tiket sekaligus.
+        // Tombolnya kecil dan berdampingan dengan baris-baris lain, sementara
+        // akibatnya menyentuh banyak tiket sekaligus — jarak antara salah klik
+        // dan perubahan massal tidak boleh nol.
+        'confirm_title' => 'Naikkan prioritas satu kelompok tiket?',
+        'confirm_body' => ':count tiket aktif pada :name akan naik dari :from ke :to.',
+        'confirm_note' => 'Berlaku untuk seluruh tiket di kelompok itu sekaligus, tercatat di Audit Trail, dan tidak bisa dibatalkan lewat satu tombol.',
+        'confirm_yes' => 'Ya, Naikkan',
     ],
 
     'sla' => [
@@ -133,7 +143,7 @@ return [
         'breach_label' => 'Breach',
         'top_subjects' => 'SLA Compliance — Tiket Penyumbang Terbanyak',
         'top_subjects_hint' => 'Rincian Masalah Tiket',
-        'top_subjects_search' => 'Cari subjek, sub-kategori, atau aplikasi…',
+        'top_subjects_search' => 'Cari subjek, sub-kategori, atau layanan…',
         'top_subjects_empty' => 'Tidak ada subjek yang cocok dengan pencarian.',
         'this_month' => 'Bulan ini',
     ],
@@ -182,7 +192,7 @@ return [
         'pic_table' => 'PIC per Subjek Tiket',
         'pic_hint' => 'Penanggung jawab (support) yang mengerjakan tiap subjek layanan',
         'pic_readonly' => 'Read-only · diatur Administrator',
-        'pic_search' => 'Cari subjek, PIC, aplikasi, atau sub-kategori…',
+        'pic_search' => 'Cari subjek, PIC, layanan, atau sub-kategori…',
         'pic_empty' => 'Tidak ada subjek yang cocok.',
 
         'teguran_table' => 'Notifikasi & Teguran Tiket',
@@ -204,8 +214,8 @@ return [
         'trend_hint' => 'Total tiket dibuat per bulan',
         'top_issues' => 'Isu Teratas',
         'top_issues_hint' => 'Subjek tiket dengan volume tertinggi',
-        'top_apps' => 'Aplikasi Teratas',
-        'top_apps_hint' => 'Volume tiket per aplikasi',
+        'top_apps' => 'Layanan Teratas',
+        'top_apps_hint' => 'Volume tiket per layanan',
         'service_performance' => 'Performa Layanan',
         'service_performance_hint' => 'Avg resolusi, volume, & kepatuhan SLA per kategori',
     ],
@@ -221,7 +231,7 @@ return [
         'warn_title' => 'SLA Warning — :count tiket kritis mendekati batas waktu',
         'warn_body' => 'Tiket Critical / High dengan sisa waktu < 30 menit. Segera tinjau atau alihkan tugas.',
         'filter_count' => 'Filter · :count',
-        'app_count' => 'Aplikasi · :count',
+        'app_count' => 'Layanan · :count',
         'reassign' => 'Alihkan',
         'showing' => ':from–:to dari :total tiket',
         'prev' => 'Sebelumnya',
@@ -236,7 +246,7 @@ return [
         'live' => 'Live · tiap detik',
         'paused' => 'Dijeda',
         'search' => 'Cari ID, subjek, PIC…',
-        'app_placeholder' => 'Ketik nama aplikasi…',
+        'app_placeholder' => 'Ketik nama layanan…',
         'type' => 'Jenis Tiket',
         'unit' => 'Unit Kerja',
         'sort_nearest' => 'Sort by Nearest Breach',
@@ -250,6 +260,9 @@ return [
 
     'escalation' => [
         'bpo_desc' => 'Tiket yang dieskalasi Support BPO ke Support IT karena perlu penanganan lanjutan (view-only).',
+        // Peristiwa yang sama dibaca dari sisi tim yang melepasnya.
+        'bpo_desc_out' => 'Tiket yang tim Anda serahkan ke Support IT. Penanganannya kini di Tim IT — baris ini catatan, bukan antrean kerja.',
+        'bpo_table_out' => 'Eskalasi Tim Anda → Tim IT',
         'breach_desc' => 'Tiket aktif yang sudah melewati SLA — dipantau supervisor (view-only).',
         'monitored_count' => ':count dipantau',
         'handling' => ':count sedang ditangani',
@@ -262,7 +275,7 @@ return [
         'breach_table' => 'Eskalasi SLA Breach',
         'bpo_table' => 'Eskalasi BPO → Tim IT',
         'monitored' => 'dipantau',
-        'search' => 'Cari tiket, agen, aplikasi…',
+        'search' => 'Cari tiket, agen, layanan…',
         'subject_reason' => 'Subjek & Alasan',
         'delay' => 'Keterlambatan',
         'from_to' => 'Dari (BPO) → Ke (IT)',
@@ -274,7 +287,7 @@ return [
     'report_cols' => [
         'ticket' => 'Tiket',
         'subject' => 'Subjek',
-        'app' => 'Aplikasi',
+        'app' => 'Layanan',
         'priority' => 'Prioritas',
         'overdue' => 'Overdue',
         'agent' => 'Agen',
@@ -340,11 +353,11 @@ return [
         'description' => 'Deskripsi Masalah',
         'no_description' => 'Tidak ada deskripsi.',
         'info' => 'Informasi',
-        'reporter' => 'Pelapor',
+        'reporter' => 'Requester',
         'unit' => 'Unit Kerja',
         'category' => 'Kategori',
         'subcategory' => 'Sub-Kategori',
-        'app' => 'Aplikasi',
+        'app' => 'Layanan',
         'assigned_agent' => 'Agen Ditugaskan',
         'support_pic' => 'PIC Support',
         'email' => 'Email',
@@ -373,7 +386,7 @@ return [
     'flow' => [
         'no_approval' => 'Tanpa Approval',
         'manager' => 'Manager',
-        'bpo_owner' => 'BPO / Owner Aplikasi',
+        'bpo_owner' => 'BPO / Owner Layanan',
         'it_support' => 'IT Support',
         'handling' => 'Penanganan',
         'incident' => 'Incident',
@@ -412,13 +425,13 @@ return [
     ],
 
     'reassign' => [
-        'subtitle' => ':id · pilih tujuan berdasarkan agen, subjek, aplikasi, atau kategori',
+        'subtitle' => ':id · pilih tujuan berdasarkan agen, subjek, layanan, atau kategori',
         'recommendation' => 'Rekomendasi PIC',
         'rec_meta' => 'Mengerjakan :subjects subjek · beban :load tiket',
         'agent_meta' => 'Beban :load tiket aktif · Support :type',
         'subjects' => 'Subjek (:count) ',
         'assign_to' => 'Alihkan ke :name',
-        'empty' => 'Tidak ada agen pada lingkup ini. Coba "Aplikasi sama" atau "Semua aplikasi".',
+        'empty' => 'Tidak ada agen pada lingkup ini. Coba "Layanan sama" atau "Semua layanan".',
         'sla' => 'SLA',
         'title' => 'Alihkan Tiket',
         'target' => 'Agen Tujuan',
@@ -426,9 +439,9 @@ return [
         'submit' => 'Alihkan',
         'lightest' => 'Beban Teringan',
         'same_subcategory' => 'Sub-kategori sama',
-        'same_app' => 'Aplikasi sama',
+        'same_app' => 'Layanan sama',
         'nearest_subcategory' => 'Sub-kategori terdekat: ',
-        'all_app' => 'Semua aplikasi',
+        'all_app' => 'Semua layanan',
         'avg_resolution' => 'AVG RESOLUSI',
         'resolved' => 'RESOLVED',
         'rating' => 'RATING',

@@ -117,7 +117,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <button
                                     onClick={() => setStep('reopen')}
-                                    className="flex flex-col items-center gap-2 rounded-2xl border-2 border-red-100 bg-red-50/50 px-4 py-5 text-center hover:border-red-300"
+                                    className="flex flex-col items-center gap-2 rounded-2xl border-2 border-red-100 dark:border-bad-text/30 bg-red-50/50 dark:bg-bad-soft px-4 py-5 text-center hover:border-red-300"
                                 >
                                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600 dark:text-bad-text">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
@@ -127,7 +127,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                                 </button>
                                 <button
                                     onClick={() => setStep('rate')}
-                                    className="flex flex-col items-center gap-2 rounded-2xl border-2 border-emerald-100 bg-emerald-50/50 px-4 py-5 text-center hover:border-emerald-300"
+                                    className="flex flex-col items-center gap-2 rounded-2xl border-2 border-emerald-100 dark:border-ok-text/30 bg-emerald-50/50 dark:bg-ok-soft px-4 py-5 text-center hover:border-emerald-300"
                                 >
                                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:text-ok-text">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>

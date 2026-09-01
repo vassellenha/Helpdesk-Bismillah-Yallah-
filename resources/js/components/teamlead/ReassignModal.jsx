@@ -140,14 +140,17 @@ export default function ReassignModal({ ticket, agents = [], remindUrlBase, onCl
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-6 py-4">
+                    {/* Latar hijau muda kartu rekomendasi ini tadinya tanpa pasangan
+                        `dark:`, jadi di mode gelap ia tetap terang: kotaknya menyala
+                        putih dan baris "Sub-kategori terdekat" hilang di dalamnya. */}
                     {recommended && (
-                        <div className="mb-5 rounded-2xl border-[1.5px] border-emerald-400 bg-emerald-50/60 p-4">
+                        <div className="mb-5 rounded-2xl border-[1.5px] border-emerald-400 dark:border-ok-text/40 bg-emerald-50/60 dark:bg-ok-soft p-4">
                             <p className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-wide text-emerald-600 dark:text-ok-text">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 5 5.6.5-4.2 3.7 1.3 5.5L12 19l-5.1 2.7 1.3-5.5L4 12.5l5.6-.5Z"/></svg>
                                 {trans('teamlead.reassign.recommendation')}
                             </p>
                             <p className="mt-2 text-[11.5px] text-gray-600 dark:text-ink-2">{trans('teamlead.reassign.nearest_subcategory')}<b>{ticket.subcategory || '—'}</b> · {ticket.service || '—'}</p>
-                            <div className="mt-3 flex items-center gap-3 rounded-xl border border-emerald-300 bg-white dark:bg-panel-2 p-3">
+                            <div className="mt-3 flex items-center gap-3 rounded-xl border border-emerald-300 dark:border-ok-text/35 bg-white dark:bg-panel-2 p-3">
                                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 dark:bg-ok-soft text-xs font-bold text-emerald-600 dark:text-ok-text">{recommended.initials}</span>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[13.5px] font-bold text-gray-900 dark:text-ink-1">{recommended.name}</p>

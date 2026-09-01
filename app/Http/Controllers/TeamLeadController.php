@@ -15,6 +15,7 @@ use App\Support\Export\XlsxWriter;
 use App\Support\NotificationService;
 use App\Support\PriorityRegistry;
 use App\Support\Reports\TeamLeadReport;
+use App\Support\RoleRegistry;
 use App\Support\TeguranNotifier;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
@@ -31,19 +32,75 @@ use Illuminate\View\View;
 /**
  * Team Lead dashboard — a supervisor's view over the whole support operation.
  * Every number here is computed live from the real tickets/support_agents
- * tables (no DummyData), and the three corrective actions (SLA teguran,
- * reassign, raise priority) are Team-Lead-only endpoints that never touch the
+ * tables (no DummyData), and the corrective actions (SLA teguran, reassign,
+ * raise priority) are Team-Lead-only endpoints that never touch the
  * Requester/Support/Approver controllers.
  *
- * Scope note: this Team Lead supervises the Support IT team (TEAM_SCOPE).
- * A ticket belongs to the scope when its current PIC is an IT agent — BPO
- * tickets enter the scope the moment BPO escalates them, because escalation
- * reassigns the ticket to the catalog subject's IT agent.
+ * SATU LAYAR, DUA DESK. Ada dua Team Lead — satu mengawasi Support IT, satu
+ * mengawasi Support BPO — dan keduanya memakai kelas ini. Yang membedakan
+ * cuma `deskType()`: sebuah tiket masuk cakupan ketika PIC-nya saat ini adalah
+ * agent bertipe itu.
+ *
+ * Kelas ini abstrak dengan sengaja. Sebelumnya cakupannya sebuah konstanta
+ * `TEAM_SCOPE = 'it'`, dan menyalin seluruh berkas untuk desk kedua adalah
+ * jalan yang paling cepat hari ini — tapi dua salinan Support yang lahir dari
+ * pola itu kini sudah berbeda 215 baris, dan berkas ini tiga kali lebih besar.
+ * Perbedaannya hanya tujuh titik; sisanya sama persis, jadi biarlah sama
+ * persis juga di kodenya.
+ *
+ * Turunannya cukup menjawab dua pertanyaan: desk mana, dan kunci role mana.
+ * Segala sisanya — nama rute, label tim, arah eskalasi, kolom PIC di katalog —
+ * diturunkan dari sana, supaya menambah desk ketiga tidak berarti mengingat
+ * tujuh tempat yang harus ikut diisi.
  */
-class TeamLeadController extends Controller
+abstract class TeamLeadController extends Controller
 {
-    /** Support-agent `type` this Team Lead supervises (support_agents.type). */
-    private const TEAM_SCOPE = 'it';
+    private const DESK_IT = 'it';
+
+    /**
+     * `support_agents.type` yang diawasi desk ini: 'it' atau 'bpo'.
+     */
+    abstract protected function deskType(): string;
+
+    /**
+     * Kunci role di config/helpdesk.php — sekaligus prefix rute dan prefix URL
+     * desk ini ('team-lead' atau 'team-lead-bpo'). Ketiganya sengaja satu
+     * nilai: kalau dipisah, rute yang benar bisa berpasangan dengan role yang
+     * salah tanpa satu pun error muncul.
+     */
+    abstract protected function roleKey(): string;
+
+    protected function isItDesk(): bool
+    {
+        return $this->deskType() === self::DESK_IT;
+    }
+
+    /** Nama tim yang diawasi, untuk judul dan sub-judul layar. */
+    protected function teamLabel(): string
+    {
+        return $this->isItDesk() ? 'Support IT' : 'Support BPO';
+    }
+
+    /** Nama role ini sebagaimana dibaca orang — dipakai di riwayat tiket. */
+    protected function roleLabel(): string
+    {
+        return (string) (RoleRegistry::all()[$this->roleKey()]['label'] ?? 'Team Lead');
+    }
+
+    /** Nama rute bertanda desk: routeName('tickets.remind') → 'team-lead-bpo.tickets.remind'. */
+    protected function routeName(string $suffix): string
+    {
+        return $this->roleKey().'.'.$suffix;
+    }
+
+    /**
+     * Aktor desk ini. Dinamai per role, mengikuti CurrentActor yang memang
+     * sengaja tidak menyediakan pintu generik.
+     */
+    protected function lead(): User
+    {
+        return $this->isItDesk() ? CurrentActor::teamLead() : CurrentActor::teamLeadBpo();
+    }
 
     /** Below this average, an agent's satisfaction rating is eligible for a Team-Lead teguran. */
     private const RATING_TEGURAN_THRESHOLD = 4.0;
@@ -65,7 +122,7 @@ class TeamLeadController extends Controller
      */
     private function scopedAgentQuery()
     {
-        return SupportAgent::where('is_active', true)->where('type', self::TEAM_SCOPE);
+        return SupportAgent::where('is_active', true)->where('type', $this->deskType());
     }
 
     /**
@@ -82,12 +139,19 @@ class TeamLeadController extends Controller
     private function scopeTickets($query)
     {
         return $query->where(function ($q) {
-            $q->whereHas('assignedAgent', fn ($q2) => $q2->where('type', self::TEAM_SCOPE))
-                ->orWhere(function ($q2) {
+            $q->whereHas('assignedAgent', fn ($q2) => $q2->where('type', $this->deskType()));
+
+            // HANYA desk IT. Siaran adalah mekanisme milik Tim IT — BPO tidak
+            // punya padanannya — jadi bagi desk BPO klausa ini tidak menambah
+            // tiketnya sendiri, melainkan MENARIK MASUK tiket IT yang belum
+            // diklaim ke layar yang seharusnya tidak memuatnya.
+            if ($this->isItDesk()) {
+                $q->orWhere(function ($q2) {
                     $q2->whereNull('assigned_agent_id')
                         ->whereNull('catalog_subject_id')
                         ->whereNotNull('escalated_at');
                 });
+            }
         });
     }
 
@@ -110,7 +174,7 @@ class TeamLeadController extends Controller
     /** @return array<string,mixed> */
     private function dashboardData(Request $request): array
     {
-        $lead = CurrentActor::teamLead();
+        $lead = $this->lead();
 
         $period = in_array($request->query('period'), ['today', '7d', '30d', 'quarter'], true)
             ? $request->query('period') : '30d';
@@ -135,9 +199,14 @@ class TeamLeadController extends Controller
         $slaTotal = max($withSla->count(), 1);
 
         return [
-            'role' => 'team-lead',
+            'role' => $this->roleKey(),
+            'roleLabel' => $this->roleLabel(),
+            'teamLabel' => $this->teamLabel(),
+            // Dibaca EscalationTab: 'in' berarti eskalasi MASUK ke tim ini
+            // (dan barisnya bisa dibuka), 'out' berarti keluar — catatan saja.
+            'escalationDirection' => $this->isItDesk() ? 'in' : 'out',
             'period' => $period,
-            'escalateUrl' => route('team-lead.escalation.raise'),
+            'escalateUrl' => route($this->routeName('escalation.raise')),
             'currentUser' => $this->currentUserPayload($lead),
             'notifications' => $this->teamLeadNotifications($tickets, $lead),
             'metrics' => [
@@ -197,13 +266,19 @@ class TeamLeadController extends Controller
             'reportUnits' => $this->reportUnits(),
             'reportTypes' => TeamLeadReport::TYPES,
             'reportDefaults' => $this->reportDefaults(),
-            'reportPreviewUrl' => route('team-lead.reports.preview'),
-            'reportExportUrl' => route('team-lead.reports.export'),
-            'remindUrlBase' => url('/team-lead/tickets'),
-            'remindRatingUrlBase' => url('/team-lead/agents'),
+            'reportPreviewUrl' => route($this->routeName('reports.preview')),
+            'reportExportUrl' => route($this->routeName('reports.export')),
+            'remindUrlBase' => url('/'.$this->roleKey().'/tickets'),
+            'remindRatingUrlBase' => url('/'.$this->roleKey().'/agents'),
             'ratingTeguranThreshold' => self::RATING_TEGURAN_THRESHOLD,
-            'markAllReadUrl' => route('team-lead.notifications.read-all'),
-            'dashboardDataUrl' => route('team-lead.data-feed'),
+            'markAllReadUrl' => route($this->routeName('notifications.read-all')),
+            'dashboardDataUrl' => route($this->routeName('data-feed')),
+            // URL layar sendiri ikut di payload, tidak lagi ditulis di blade:
+            // satu blade kini melayani dua desk, dan route('team-lead.…') yang
+            // dipatok di sana akan mengantar Team Lead BPO ke layar Tim IT.
+            'dashboardUrl' => route('dashboard.'.$this->roleKey()),
+            'profileUrl' => route($this->routeName('profile')),
+            'allNotificationsUrl' => route($this->routeName('notifications')),
         ];
     }
 
@@ -217,9 +292,9 @@ class TeamLeadController extends Controller
         $this->assertInScope($ticket);
 
         return view('dashboard.team-lead-ticket', [
-            'role' => 'team-lead',
+            'role' => $this->roleKey(),
             ...$this->ticketDetailPayload($ticket),
-            'dashboardUrl' => route('dashboard.team-lead'),
+            'dashboardUrl' => route('dashboard.'.$this->roleKey()),
         ]);
     }
 
@@ -239,8 +314,9 @@ class TeamLeadController extends Controller
      */
     private function assertInScope(Ticket $ticket): void
     {
-        $isTeamAgent = $ticket->assignedAgent && $ticket->assignedAgent->type === self::TEAM_SCOPE;
-        $isUnclaimedItBroadcast = $ticket->assigned_agent_id === null
+        $isTeamAgent = $ticket->assignedAgent && $ticket->assignedAgent->type === $this->deskType();
+        $isUnclaimedItBroadcast = $this->isItDesk()
+            && $ticket->assigned_agent_id === null
             && $ticket->catalog_subject_id === null
             && $ticket->escalated_at !== null;
 
@@ -262,7 +338,7 @@ class TeamLeadController extends Controller
      */
     public function previewReport(Request $request): JsonResponse
     {
-        CurrentActor::teamLead();
+        $this->lead();
 
         $filters = $request->validate($this->reportRules());
         $composed = $this->composeReport($filters);
@@ -284,7 +360,7 @@ class TeamLeadController extends Controller
      */
     public function exportReport(Request $request)
     {
-        CurrentActor::teamLead();
+        $this->lead();
 
         $filters = $request->validate([
             ...$this->reportRules(),
@@ -415,17 +491,17 @@ class TeamLeadController extends Controller
     {
         $this->assertInScope($ticket);
 
-        $lead = CurrentActor::teamLead();
+        $lead = $this->lead();
         $data = $request->validate(['message' => 'required|string|max:3000']);
 
         $comment = TicketComment::create([
             'ticket_id' => $ticket->id,
             'author_name' => $lead->name,
-            'author_role' => 'Team Lead',
+            'author_role' => $this->roleLabel(),
             'message' => $data['message'],
         ]);
 
-        NotificationService::notifyDiscussionParticipants($ticket, $lead, 'Team Lead', $data['message']);
+        NotificationService::notifyDiscussionParticipants($ticket, $lead, $this->roleLabel(), $data['message']);
 
         return response()->json([
             'id' => $comment->id,
@@ -479,7 +555,7 @@ class TeamLeadController extends Controller
                 'at' => $c->created_at->format('d M · H:i'),
             ])->values(),
             'agentOptions' => $this->agentOptions($agents, Ticket::all()),
-            'remindUrlBase' => url('/team-lead/tickets'),
+            'remindUrlBase' => url('/'.$this->roleKey().'/tickets'),
         ];
     }
 
@@ -644,7 +720,7 @@ class TeamLeadController extends Controller
      */
     public function remind(Request $request, Ticket $ticket): JsonResponse
     {
-        $lead = CurrentActor::teamLead();
+        $lead = $this->lead();
 
         $data = $request->validate([
             'message' => 'required|string|max:2000',
@@ -660,7 +736,7 @@ class TeamLeadController extends Controller
 
         $agent = $ticket->assignedAgent;
         abort_unless($agent !== null, 422, 'Tiket ini belum punya PIC support untuk ditegur.');
-        abort_unless($agent->type === self::TEAM_SCOPE, 403, 'Tiket ini ditangani tim lain, di luar cakupan Team Lead.');
+        abort_unless($agent->type === $this->deskType(), 403, 'Tiket ini ditangani tim lain, di luar cakupan Team Lead.');
 
         $channels = $data['channels'] ?? config('notifications.teguran_channels');
         $delivered = TeguranNotifier::send($lead, $agent, $ticket, $data['message'], $channels);
@@ -691,8 +767,8 @@ class TeamLeadController extends Controller
      */
     public function remindRating(Request $request, SupportAgent $agent): JsonResponse
     {
-        $lead = CurrentActor::teamLead();
-        abort_unless($agent->type === self::TEAM_SCOPE, 403, 'Agent ini di luar cakupan Team Lead.');
+        $lead = $this->lead();
+        abort_unless($agent->type === $this->deskType(), 403, 'Agent ini di luar cakupan Team Lead.');
 
         $data = $request->validate([
             'message' => 'required|string|max:2000',
@@ -744,7 +820,7 @@ class TeamLeadController extends Controller
             __('teamlead.flow.closed_no_action')
         );
 
-        $lead = CurrentActor::teamLead();
+        $lead = $this->lead();
 
         /*
          | Alasan wajib, sejalan dengan Panel Keputusan Approver yang juga
@@ -763,7 +839,7 @@ class TeamLeadController extends Controller
         $newAgent = SupportAgent::findOrFail($data['agent_id']);
         $oldAgent = $ticket->assignedAgent;
 
-        abort_unless($newAgent->is_active && $newAgent->type === self::TEAM_SCOPE, 422, 'Agent tujuan bukan anggota aktif tim yang diawasi Team Lead.');
+        abort_unless($newAgent->is_active && $newAgent->type === $this->deskType(), 422, 'Agent tujuan bukan anggota aktif tim yang diawasi Team Lead.');
         abort_if($oldAgent && $oldAgent->id === $newAgent->id, 422, 'Tiket sudah ditangani agent tersebut.');
 
         $ticket->update(['assigned_agent_id' => $newAgent->id]);
@@ -779,7 +855,7 @@ class TeamLeadController extends Controller
         TicketComment::create([
             'ticket_id' => $ticket->id,
             'author_name' => $lead->name,
-            'author_role' => 'Team Lead',
+            'author_role' => $this->roleLabel(),
             'message' => "Tiket dialihkan dari {$namaAsal} ke {$newAgent->name}. Alasan: {$reason}",
         ]);
 
@@ -835,7 +911,7 @@ class TeamLeadController extends Controller
     {
         $this->assertInScope($ticket);
 
-        $lead = CurrentActor::teamLead();
+        $lead = $this->lead();
 
         // Daftar prioritas yang sah datang dari SLA Policy aktif, bukan empat
         // nama tetap. Dengan daftar tetap, prioritas buatan Admin ditolak 422
@@ -888,7 +964,7 @@ class TeamLeadController extends Controller
         TicketComment::create([
             'ticket_id' => $ticket->id,
             'author_name' => $lead->name,
-            'author_role' => 'Team Lead',
+            'author_role' => $this->roleLabel(),
             'message' => "Prioritas tiket diubah dari {$old} ke {$data['priority']}. Target penyelesaian kini {$policy->resolution_time_minutes} menit sejak tiket masuk.",
         ]);
 
@@ -911,7 +987,7 @@ class TeamLeadController extends Controller
 
     public function markNotificationRead(TicketNotification $notification): JsonResponse
     {
-        $lead = CurrentActor::teamLead();
+        $lead = $this->lead();
         abort_unless($notification->user_id === $lead->id, 403);
 
         if ($notification->read_at === null) {
@@ -923,8 +999,8 @@ class TeamLeadController extends Controller
 
     public function markAllNotificationsRead(): JsonResponse
     {
-        $lead = CurrentActor::teamLead();
-        TicketNotification::where('user_id', $lead->id)->where('role', 'team-lead')->whereNull('read_at')->update(['read_at' => Carbon::now()]);
+        $lead = $this->lead();
+        TicketNotification::where('user_id', $lead->id)->where('role', $this->roleKey())->whereNull('read_at')->update(['read_at' => Carbon::now()]);
 
         return response()->json(['read' => true]);
     }
@@ -1094,12 +1170,19 @@ class TeamLeadController extends Controller
         // saw BPO names here while every other panel showed their IT agents.
         $scoped = $this->scopedAgentQuery()->pluck('id');
 
+        // Satu subjek katalog menyimpan DUA pemilik — PIC BPO dan PIC IT — dan
+        // tiap desk membaca kolomnya sendiri. Salah kolom tidak memunculkan
+        // error maupun tabel kosong, melainkan daftar nama yang tampak wajar
+        // tapi berisi orang yang bukan bawahan pembacanya.
+        $column = $this->isItDesk() ? 'it_agent_id' : 'support_agent_id';
+        $relation = $this->isItDesk() ? 'itAgent' : 'supportAgent';
+
         return ServiceCatalogSubject::where('is_active', true)
-            ->whereIn('it_agent_id', $scoped)
-            ->with(['service:id,name', 'subcategory:id,name', 'itAgent:id,name'])
+            ->whereIn($column, $scoped)
+            ->with(['service:id,name', 'subcategory:id,name', $relation.':id,name'])
             ->get()
-            ->map(function (ServiceCatalogSubject $s) {
-                $pic = $s->itAgent;
+            ->map(function (ServiceCatalogSubject $s) use ($relation) {
+                $pic = $s->{$relation};
 
                 return [
                     'pic' => $pic?->name ?? '—',
@@ -1174,10 +1257,10 @@ class TeamLeadController extends Controller
             'apps' => $distinct('service_name'),
             'subcats' => $distinct('subcategory_name'),
             'units' => $distinct('requester.unit'),
-            // Only this lead's own team (TEAM_SCOPE), and every active member of
-            // it — a Team Lead supervises Support IT, so BPO agents are not
-            // theirs to filter by, and an agent with an empty queue today is
-            // still someone they need to be able to look up.
+            // Only this lead's own desk, and every active member of it — the
+            // other desk's agents are not theirs to filter by, and an agent
+            // with an empty queue today is still someone they need to be able
+            // to look up.
             'pics' => $this->scopedAgentQuery()->orderBy('name')->pluck('name')->unique()->values()->all(),
         ];
     }
@@ -1223,7 +1306,7 @@ class TeamLeadController extends Controller
             ->get()
             ->keyBy('target_name');
 
-        return Ticket::whereNotNull('escalated_at')
+        return $this->escalationQuery()
             ->whereNotIn('status', ['Draft', 'Returned'])
             ->with('assignedAgent')
             ->latest('escalated_at')
@@ -1252,6 +1335,29 @@ class TeamLeadController extends Controller
             ->all();
     }
 
+    /**
+     * Eskalasi yang relevan bagi desk ini — dan arahnya berlawanan.
+     *
+     * Bagi Tim IT eskalasi adalah pekerjaan yang MASUK: tiketnya kini miliknya,
+     * jadi daftarnya mengikuti cakupan biasa. Bagi Tim BPO eskalasi adalah
+     * pekerjaan yang KELUAR: tiket itu sudah bukan tanggung jawabnya, tapi
+     * tetap perlu terbaca sebagai ukuran seberapa sering timnya menyerahkan
+     * tiket ke IT.
+     *
+     * Daftar desk BPO sengaja tidak disaring lebih jauh. Eskalasi di sistem ini
+     * hanya berjalan satu arah — SupportBpoController::escalate() satu-satunya
+     * yang mengisi `escalated_at` — sehingga setiap tiket yang pernah
+     * dieskalasi pasti berangkat dari BPO. Menyaringnya lewat PIC lama akan
+     * bersandar pada nama yang tersimpan di Audit Trail, dan nama bisa berubah
+     * sementara barisnya tidak.
+     */
+    private function escalationQuery(): Builder
+    {
+        $query = Ticket::whereNotNull('escalated_at');
+
+        return $this->isItDesk() ? $this->scopeTickets($query) : $query;
+    }
+
     private function presentBreachRow(Ticket $t): array
     {
         return [
@@ -1270,14 +1376,28 @@ class TeamLeadController extends Controller
      * to Monitoring pre-filtered to the exact same set counted here, instead
      * of the frontend re-guessing which statuses "In Progress"/"Closed" mean.
      */
+    /**
+     * Kartu ringkasan di tab Operational.
+     *
+     * SATU-SATUNYA tempat di repo ini yang mengirim kelas Tailwind dari sisi
+     * server; di mana pun selain di sini, warna kartu ditulis di JSX-nya. Itu
+     * pula sebabnya hanya tab ini yang sempat tertinggal saat mode gelap
+     * dipasang: penulis JSX melihat pasangan `dark:` di sebelahnya dan ikut
+     * mengisinya, sedangkan larik di bawah ini tidak berdampingan dengan apa
+     * pun yang mengingatkan.
+     *
+     * Jadi tiap warna WAJIB berpasangan: kelas terang lalu padanan gelapnya.
+     * Tanpa pasangan itu, ikonnya menyala terang di atas kartu gelap — tidak
+     * error, hanya salah, dan hanya kelihatan oleh yang memakai mode gelap.
+     */
     private function opStats(Collection $tickets): array
     {
         return [
-            ['label' => __('teamlead.columns.total_tickets'), 'value' => $tickets->count(), 'icon' => self::I_TICKET, 'bg' => 'bg-blue-50', 'fg' => 'text-blue-600', 'statuses' => []],
-            ['label' => 'Open', 'value' => $tickets->where('status', 'Open')->count(), 'icon' => self::I_INBOX, 'bg' => 'bg-gray-100', 'fg' => 'text-gray-500', 'statuses' => ['Open']],
-            ['label' => 'Assigned', 'value' => $tickets->where('status', 'Assigned')->count(), 'icon' => self::I_USER, 'bg' => 'bg-sky-50', 'fg' => 'text-sky-600', 'statuses' => ['Assigned']],
-            ['label' => 'In Progress', 'value' => $tickets->whereIn('status', ['In Progress', 'Waiting for Response'])->count(), 'icon' => self::I_CLOCK, 'bg' => 'bg-amber-50', 'fg' => 'text-amber-600', 'statuses' => ['In Progress', 'Waiting for Response']],
-            ['label' => 'Closed', 'value' => $tickets->whereIn('status', Ticket::DONE_STATUSES)->count(), 'icon' => self::I_CHECK, 'bg' => 'bg-emerald-50', 'fg' => 'text-emerald-600', 'statuses' => Ticket::DONE_STATUSES],
+            ['label' => __('teamlead.columns.total_tickets'), 'value' => $tickets->count(), 'icon' => self::I_TICKET, 'bg' => 'bg-blue-50 dark:bg-accent-soft', 'fg' => 'text-blue-600 dark:text-accent-text', 'statuses' => []],
+            ['label' => 'Open', 'value' => $tickets->where('status', 'Open')->count(), 'icon' => self::I_INBOX, 'bg' => 'bg-gray-100 dark:bg-panel-3', 'fg' => 'text-gray-500 dark:text-ink-2', 'statuses' => ['Open']],
+            ['label' => 'Assigned', 'value' => $tickets->where('status', 'Assigned')->count(), 'icon' => self::I_USER, 'bg' => 'bg-sky-50 dark:bg-accent-soft', 'fg' => 'text-sky-600 dark:text-accent-icon', 'statuses' => ['Assigned']],
+            ['label' => 'In Progress', 'value' => $tickets->whereIn('status', ['In Progress', 'Waiting for Response'])->count(), 'icon' => self::I_CLOCK, 'bg' => 'bg-amber-50 dark:bg-warn-soft', 'fg' => 'text-amber-600 dark:text-warn-text', 'statuses' => ['In Progress', 'Waiting for Response']],
+            ['label' => 'Closed', 'value' => $tickets->whereIn('status', Ticket::DONE_STATUSES)->count(), 'icon' => self::I_CHECK, 'bg' => 'bg-emerald-50 dark:bg-ok-soft', 'fg' => 'text-emerald-600 dark:text-ok-text', 'statuses' => Ticket::DONE_STATUSES],
         ];
     }
 
@@ -1343,7 +1463,25 @@ class TeamLeadController extends Controller
                 $breaches = $g->filter(fn (Ticket $t) => $t->sla_kind === 'breach')->count();
                 $current = $g->groupBy('priority')->sortByDesc(fn ($x) => $x->count())->keys()->first() ?? 'Medium';
                 $idx = array_search($current, $order, true);
-                $to = $order[min(count($order) - 1, ($idx === false ? 1 : $idx) + 1)];
+
+                /*
+                 | Prioritas tepat di atasnya — `null` bila kelompok ini sudah
+                 | berada di puncak.
+                 |
+                 | Sebelumnya nilainya dijepit min() ke indeks terakhir, jadi
+                 | kelompok yang sudah Critical "disarankan naik" dari Critical
+                 | ke Critical: baris yang tampil mendesak, dengan tombol yang
+                 | mengundang ditekan, dan tidak mengubah apa pun. Server memang
+                 | melewati tiket yang prioritasnya sudah sama — tapi yang
+                 | rusak bukan datanya, melainkan panel yang justru dibaca saat
+                 | orang sedang panik.
+                 |
+                 | Prioritas yang tidak dikenal registry (mis. dihapus Admin
+                 | setelah tiketnya dibuat) tetap dianggap satu tingkat di atas
+                 | dasar, seperti sebelumnya, supaya tiketnya tidak menghilang
+                 | diam-diam dari rekomendasi.
+                 */
+                $to = $order[($idx === false ? 1 : $idx) + 1] ?? null;
 
                 return [
                     'name' => $name,
@@ -1355,6 +1493,7 @@ class TeamLeadController extends Controller
                     'to' => $to,
                 ];
             })
+            ->filter(fn (array $row) => $row['to'] !== null)
             ->sortByDesc('count')
             ->take(4)
             ->values()
@@ -1368,7 +1507,7 @@ class TeamLeadController extends Controller
      */
     public function escalateGroup(Request $request): JsonResponse
     {
-        $lead = CurrentActor::teamLead();
+        $lead = $this->lead();
 
         $data = $request->validate([
             'service' => 'required|string',
@@ -1568,11 +1707,24 @@ class TeamLeadController extends Controller
     private function auditRows(): array
     {
         $scopedTicketIds = $this->scopeTickets(Ticket::query())->select('tickets.id');
+        $scopedAgentIds = $this->scopedAgentQuery()->select('support_agents.id');
 
         return AuditTrail::query()
             ->with('actor:id,name')
-            ->where(function (Builder $q) use ($scopedTicketIds) {
-                $q->where('module', 'team_lead')
+            ->where(function (Builder $q) use ($scopedTicketIds, $scopedAgentIds) {
+                // Cabang 'team_lead' dulu tanpa saringan sama sekali: benar
+                // selama Team Lead cuma satu, bocor begitu desk-nya dua.
+                // Teguran dan pemindahan PIC adalah catatan tentang ORANG, dan
+                // atasan desk sebelah tidak berkepentingan membacanya.
+                $q->where(fn (Builder $lead) => $lead
+                    ->where('module', 'team_lead')
+                    ->where(fn (Builder $target) => $target
+                        ->where(fn (Builder $onTicket) => $onTicket
+                            ->where('target_type', 'ticket')
+                            ->whereIn('target_id', $scopedTicketIds))
+                        ->orWhere(fn (Builder $onAgent) => $onAgent
+                            ->where('target_type', 'support_agent')
+                            ->whereIn('target_id', $scopedAgentIds))))
                     ->orWhere(fn (Builder $ticketScope) => $ticketScope
                         ->whereIn('module', self::AUDIT_TICKET_MODULES)
                         ->where('target_type', 'ticket')
@@ -1607,7 +1759,7 @@ class TeamLeadController extends Controller
     {
         return [
             'name' => $lead->name,
-            'title' => trim(($lead->jabatan ?? 'Team Lead').' · '.($lead->unit ?? '')),
+            'title' => trim(($lead->jabatan ?? $this->roleLabel()).' · '.($lead->unit ?? '')),
             'initials' => $this->initials($lead->name),
         ];
     }
@@ -1621,7 +1773,13 @@ class TeamLeadController extends Controller
 
     private function notifications(User $lead): array
     {
-        return NotificationService::present($lead, 'team-lead', 20, 'dashboard.team-lead', 'team-lead.notifications.read');
+        return NotificationService::present(
+            $lead,
+            $this->roleKey(),
+            20,
+            'dashboard.'.$this->roleKey(),
+            $this->routeName('notifications.read'),
+        );
     }
 
     /**
@@ -1640,12 +1798,18 @@ class TeamLeadController extends Controller
         ];
         $items = [];
 
-        foreach (Ticket::whereNotNull('escalated_at')->latest('escalated_at')->take(10)->get() as $t) {
+        foreach ($this->escalationQuery()->latest('escalated_at')->take(10)->get() as $t) {
+            // Peristiwa yang sama dibaca dua arah: bagi Tim IT ini pekerjaan
+            // yang datang, bagi Tim BPO ini pekerjaan yang dilepas.
+            $arah = $this->isItDesk()
+                ? "Tiket {$t->ticket_no} dieskalasi BPO → Tim IT"
+                : "Tiket {$t->ticket_no} dieskalasi tim Anda → Tim IT";
+
             $items[] = [
                 'sortAt' => $t->escalated_at,
                 'id' => 'esc-'.$t->id,
                 'type' => 'ticket_escalated',
-                'text' => "Tiket {$t->ticket_no} dieskalasi BPO → Tim IT".($t->escalation_note ? ": {$t->escalation_note}" : '.'),
+                'text' => $arah.($t->escalation_note ? ": {$t->escalation_note}" : '.'),
                 'time' => $t->escalated_at->diffForHumans(),
                 'unread' => true,
                 'ticketId' => $t->ticket_no,
