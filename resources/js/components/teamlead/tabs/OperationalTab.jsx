@@ -235,7 +235,7 @@ function EscalationRecs({ rows = [], escalateUrl, onRaised }) {
                     onConfirm={() => { const r = confirming; setConfirming(null); raise(r); }}
                 />
             )}
-            {toast && <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
+            {toast && <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
         </div>
     );
 }
@@ -251,7 +251,7 @@ function ConfirmRaiseDialog({ row, onCancel, onConfirm }) {
     useLockBodyScroll();
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onMouseDown={onCancel}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onMouseDown={onCancel}>
             <div className="liquid-glass-dense w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="flex items-start gap-3 px-5 pt-5">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 dark:bg-warn-soft text-amber-600 dark:text-warn-text">

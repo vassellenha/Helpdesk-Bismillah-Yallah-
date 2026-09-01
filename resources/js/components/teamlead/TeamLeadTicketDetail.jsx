@@ -150,7 +150,7 @@ export default function TeamLeadTicketDetail({ flow = null, ticket: initial, tim
                 <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setTicket((t) => ({ ...t, priority: res.priority })); setModal(null); flash(res?.message ?? trans('teamlead.ticket.priority_updated')); }} />
             )}
 
-            {toast && <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
+            {toast && <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
         </div>
     );
 }

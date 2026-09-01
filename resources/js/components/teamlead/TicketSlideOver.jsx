@@ -218,8 +218,24 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
     // and nothing left to hand to another agent.
     const finished = ['Resolved', 'Completed', 'Closed'].includes(t?.status);
 
+    /*
+         | TANGGA LAPISAN Team Lead — dibaca dari belakang ke depan:
+         |
+         |   20/30  bilah kepala & elemen lengket
+         |   50     panel agen (WorkloadTable → AgentDetail)
+         |   60     panel tiket (berkas ini) — dibuka DARI panel agen,
+         |          jadi wajib di atasnya
+         |   70     modal aksi: Remind, Reassign, RaisePriority,
+         |          konfirmasi eskalasi — dibuka DARI panel tiket
+         |   80     toast — selalu terlihat di atas apa pun
+         |
+         | Panel ini dulu z-40, satu tingkat DI BAWAH panel agen yang
+         | membukanya: tiketnya benar-benar terbuka, hanya tertutup rapat
+         | di belakang. Menaikkannya sendirian tidak cukup — tiga modal
+         | aksi di bawah ini dibuka dari sini dan ikut harus naik.
+         */
     return (
-        <div className="fixed inset-0 z-40 flex justify-end bg-slate-950/40 backdrop-blur-sm" onMouseDown={onClose}>
+        <div className="fixed inset-0 z-[60] flex justify-end bg-slate-950/40 backdrop-blur-sm" onMouseDown={onClose}>
             <div className="liquid-glass-dense flex h-full w-[33vw] min-w-[420px] max-w-full flex-col shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
                 {loading ? (
                     <SlideOverSkeleton />
@@ -324,7 +340,7 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
             {modal === 'reassign' && row && <ReassignModal ticket={row} agents={data.agentOptions} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onReassigned={(res) => { setModal(null); flash(res?.message ?? trans('teamlead.ticket.reassigned')); load(); onChanged?.(); }} />}
             {modal === 'raise' && row && <RaisePriorityModal ticket={row} remindUrlBase={remindUrlBase} onClose={() => setModal(null)} onSaved={(res) => { setModal(null); flash(res?.message ?? trans('teamlead.ticket.priority_updated')); load(); onChanged?.(); }} />}
 
-            {toast && <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
+            {toast && <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-xl bg-gray-900 dark:bg-panel-selected px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg">{toast}</div>}
         </div>
     );
 }
