@@ -27,14 +27,14 @@ export function LoadingState({ label = 'Memuat…', className = 'flex-1' }) {
 
 /** A single pulsing gray bar — building block for skeleton layouts. */
 export function SkeletonBar({ className = 'h-3 w-full' }) {
-    return <div className={`animate-pulse rounded-md bg-gray-200 ${className}`} />;
+    return <div className={`animate-pulse rounded-md bg-gray-200 dark:bg-panel-3 ${className}`} />;
 }
 
 /** Thin indeterminate progress bar, for a background refresh (data already on screen). */
 export function TopProgressBar({ active }) {
     if (!active) return null;
     return (
-        <div className="fixed inset-x-0 top-0 z-[100] h-[3px] overflow-hidden bg-blue-100">
+        <div className="fixed inset-x-0 top-0 z-[100] h-[3px] overflow-hidden bg-blue-100 dark:bg-accent-soft">
             <div className="h-full w-1/3 animate-loading-bar rounded-r-full bg-blue-600 dark:bg-blue-500" />
         </div>
     );

@@ -126,7 +126,7 @@ export default function ManageUserModal({ user, roles, onClose, onSave }) {
                             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-ink-3">{trans('admin.user_form.active_roles')}</p>
                             <div className="flex flex-wrap gap-2">
                                 {user.roles.map((r) => (
-                                    <span key={r} className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-accent-text">{r}</span>
+                                    <span key={r} className="rounded-full bg-blue-100 dark:bg-accent-soft px-3 py-1 text-xs font-semibold text-blue-700 dark:text-accent-text">{r}</span>
                                 ))}
                             </div>
                         </div>

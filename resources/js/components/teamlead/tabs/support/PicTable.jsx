@@ -59,7 +59,7 @@ export default function PicTable({ rows = [] }) {
                         {filtered.map((r, i) => (
                             <div key={`${r.subject}-${i}`} className="grid grid-cols-[170px_150px_180px_1fr] items-center gap-3 border-b border-gray-50 dark:border-transparent dark:even:bg-white/[0.03] px-6 py-3 last:border-0 hover:bg-blue-50/30 dark:hover:bg-panel-hover">
                                 <span className="flex items-center gap-2 text-[12px] font-semibold text-gray-800 dark:text-ink-1">
-                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[9px] font-bold text-blue-700 dark:text-accent-text">{r.initials}</span>
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-accent-soft text-[9px] font-bold text-blue-700 dark:text-accent-text">{r.initials}</span>
                                     <span className="truncate">{r.pic}</span>
                                 </span>
                                 <span className="flex items-center gap-2 text-[12px] font-bold text-gray-900 dark:text-ink-1">

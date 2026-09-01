@@ -396,7 +396,7 @@ function TicketDetailModal({ ticket: t, onClose, busy, onToggle }) {
                                     <li key={i} className="flex gap-3">
                                         <div className="flex flex-col items-center">
                                             <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${step.state === 'done' ? 'bg-emerald-500' : step.state === 'current' ? 'bg-blue-500' : step.state === 'rejected' ? 'bg-red-500' : 'bg-gray-300'}`} />
-                                            {i < t.timeline.length - 1 && <span className="w-px flex-1 bg-gray-200" />}
+                                            {i < t.timeline.length - 1 && <span className="w-px flex-1 bg-gray-200 dark:bg-edge-strong" />}
                                         </div>
                                         <div className={`pb-4 text-sm ${step.state === 'pending' ? 'opacity-50' : ''}`}>
                                             <p className="font-semibold text-gray-800 dark:text-ink-1">{step.label}</p>

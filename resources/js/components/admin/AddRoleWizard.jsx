@@ -37,7 +37,7 @@ export default function AddRoleWizard({ onClose, onSave, unitOrganisasi = [], mo
 
             <div className="flex items-center gap-3 px-6 pt-4">
                 <StepBadge active={step === 1} done={step > 1} number={1} label={trans('admin.roles.step_info')} />
-                <div className="h-px flex-1 bg-gray-200" />
+                <div className="h-px flex-1 bg-gray-200 dark:bg-edge-strong" />
                 <StepBadge active={step === 2} done={false} number={2} label={trans('admin.roles.step_access')} />
             </div>
 
@@ -165,7 +165,7 @@ function StepBadge({ active, done, number, label }) {
         <div className="flex items-center gap-2">
             <span
                 className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
-                    active || done ? 'bg-blue-700 dark:bg-blue-500 text-white' : 'bg-gray-200 text-gray-500 dark:text-ink-2'
+                    active || done ? 'bg-blue-700 dark:bg-blue-500 text-white' : 'bg-gray-200 dark:bg-panel-3 text-gray-500 dark:text-ink-2'
                 }`}
             >
                 {done ? '✓' : number}

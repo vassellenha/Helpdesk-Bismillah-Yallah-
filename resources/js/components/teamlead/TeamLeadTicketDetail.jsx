@@ -125,7 +125,7 @@ export default function TeamLeadTicketDetail({ flow = null, ticket: initial, tim
                                         <div key={i} className="flex gap-3">
                                             <div className="flex flex-col items-center">
                                                 <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${st.dot}`} />
-                                                {i < timeline.length - 1 && <span className="my-1 w-px flex-1 bg-gray-200" style={{ minHeight: 18 }} />}
+                                                {i < timeline.length - 1 && <span className="my-1 w-px flex-1 bg-gray-200 dark:bg-edge-strong" style={{ minHeight: 18 }} />}
                                             </div>
                                             <div className="pb-3">
                                                 <p className={`text-[12.5px] font-semibold ${st.text}`}>{s.label}</p>

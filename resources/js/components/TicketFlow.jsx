@@ -6,11 +6,11 @@
  */
 const STEP_STYLE = {
     done: { dot: 'bg-emerald-500', line: 'bg-emerald-500', text: 'text-gray-900 dark:text-ink-1' },
-    current: { dot: 'bg-blue-500 ring-4 ring-blue-100', line: 'bg-gray-200', text: 'text-blue-700 dark:text-accent-text' },
-    pending: { dot: 'bg-gray-300', line: 'bg-gray-200', text: 'text-gray-400 dark:text-ink-3' },
+    current: { dot: 'bg-blue-500 ring-4 ring-blue-100', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-blue-700 dark:text-accent-text' },
+    pending: { dot: 'bg-gray-300', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-gray-400 dark:text-ink-3' },
     // A ticket can stop at a stage instead of passing through it.
-    rejected: { dot: 'bg-red-500 ring-4 ring-red-100', line: 'bg-gray-200', text: 'text-red-600 dark:text-bad-text' },
-    returned: { dot: 'bg-amber-500 ring-4 ring-amber-100', line: 'bg-gray-200', text: 'text-amber-700 dark:text-warn-text' },
+    rejected: { dot: 'bg-red-500 ring-4 ring-red-100', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-red-600 dark:text-bad-text' },
+    returned: { dot: 'bg-amber-500 ring-4 ring-amber-100', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-amber-700 dark:text-warn-text' },
 };
 
 const NOTE_STYLE = {
@@ -39,7 +39,7 @@ export default function TicketFlow({ flow }) {
             <div className="flex items-stretch overflow-x-auto rounded-2xl bg-gray-50 dark:bg-panel-3 p-4">
                 {flow.stages.map((s, i) => {
                     const st = STEP_STYLE[s.state] ?? STEP_STYLE.pending;
-                    const prev = STEP_STYLE[flow.stages[i - 1]?.state]?.line ?? 'bg-gray-200';
+                    const prev = STEP_STYLE[flow.stages[i - 1]?.state]?.line ?? 'bg-gray-200 dark:bg-edge-strong';
 
                     return (
                         <div key={s.key ?? i} className="flex min-w-[104px] flex-1 flex-col items-center gap-2 text-center">

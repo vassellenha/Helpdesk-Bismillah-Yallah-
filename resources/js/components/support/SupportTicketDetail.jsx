@@ -21,7 +21,7 @@ const CONFIRM_STYLE = {
 function ReopenNoteBanner({ reopenNote }) {
     return (
         <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-warn-soft p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:text-warn-text">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-warn-soft text-amber-700 dark:text-warn-text">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 12a9.5 9.5 0 1 1-2.8-6.7M21.5 3v6h-6" /></svg>
             </span>
             <div className="min-w-0">
@@ -36,7 +36,7 @@ function ReopenNoteBanner({ reopenNote }) {
 function EscalationNoteBanner({ note }) {
     return (
         <div className="flex gap-3 rounded-2xl border border-blue-200 bg-blue-50 dark:bg-accent-soft p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:text-accent-text">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-accent-soft text-blue-700 dark:text-accent-text">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5 M5 12l7-7 7 7" /></svg>
             </span>
             <div className="min-w-0">

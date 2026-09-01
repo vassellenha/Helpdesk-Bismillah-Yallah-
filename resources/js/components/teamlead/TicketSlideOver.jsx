@@ -11,12 +11,12 @@ import { SkeletonBar } from '../Spinner';
 
 const STEP_STYLE = {
     done: { dot: 'bg-emerald-500', line: 'bg-emerald-500', text: 'text-gray-900 dark:text-ink-1' },
-    current: { dot: 'bg-blue-500 ring-4 ring-blue-100', line: 'bg-gray-200', text: 'text-blue-700 dark:text-accent-text' },
-    pending: { dot: 'bg-gray-300', line: 'bg-gray-200', text: 'text-gray-400 dark:text-ink-3' },
+    current: { dot: 'bg-blue-500 ring-4 ring-blue-100', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-blue-700 dark:text-accent-text' },
+    pending: { dot: 'bg-gray-300', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-gray-400 dark:text-ink-3' },
     // A ticket can stop at an approval step instead of passing through it:
     // rejected ends the flow, returned bounces it back to the requester.
-    rejected: { dot: 'bg-red-500 ring-4 ring-red-100', line: 'bg-gray-200', text: 'text-red-600 dark:text-bad-text' },
-    returned: { dot: 'bg-amber-500 ring-4 ring-amber-100', line: 'bg-gray-200', text: 'text-amber-700 dark:text-warn-text' },
+    rejected: { dot: 'bg-red-500 ring-4 ring-red-100', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-red-600 dark:text-bad-text' },
+    returned: { dot: 'bg-amber-500 ring-4 ring-amber-100', line: 'bg-gray-200 dark:bg-edge-strong', text: 'text-amber-700 dark:text-warn-text' },
 };
 
 const NOTE_STYLE = {
@@ -275,7 +275,7 @@ export default function TicketSlideOver({ ticketId, remindUrlBase, onClose, onCh
                                         <div key={i} className="flex gap-3">
                                             <div className="flex flex-col items-center">
                                                 <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${TL_STYLE[s.state] ?? TL_STYLE.pending}`} />
-                                                {i < data.timeline.length - 1 && <span className="my-1 w-px flex-1 bg-gray-200" style={{ minHeight: 16 }} />}
+                                                {i < data.timeline.length - 1 && <span className="my-1 w-px flex-1 bg-gray-200 dark:bg-edge-strong" style={{ minHeight: 16 }} />}
                                             </div>
                                             <div className="pb-2.5">
                                                 <p className="text-[12.5px] font-semibold text-gray-800 dark:text-ink-1">{s.label}</p>

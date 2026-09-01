@@ -296,7 +296,7 @@ export default function ApprovalTicketDetail({ ticket: initialTicket, viewer = n
                         <div className="flex flex-col gap-3.5">
                             {[ticket.people?.requester, ticket.people?.approver, ...(ticket.people?.support ?? [])].filter(Boolean).map((p, i) => (
                                 <div key={i} className="flex items-center gap-3">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:text-accent-text">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-accent-soft text-xs font-bold text-blue-700 dark:text-accent-text">
                                         {p.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
                                     </span>
                                     <div className="min-w-0">

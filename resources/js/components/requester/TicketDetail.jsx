@@ -119,7 +119,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                                     onClick={() => setStep('reopen')}
                                     className="flex flex-col items-center gap-2 rounded-2xl border-2 border-red-100 dark:border-bad-text/30 bg-red-50/50 dark:bg-bad-soft px-4 py-5 text-center hover:border-red-300"
                                 >
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600 dark:text-bad-text">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 dark:bg-bad-soft text-red-600 dark:text-bad-text">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
                                     </span>
                                     <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.detail.not_yet')}</span>
@@ -129,7 +129,7 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
                                     onClick={() => setStep('rate')}
                                     className="flex flex-col items-center gap-2 rounded-2xl border-2 border-emerald-100 dark:border-ok-text/30 bg-emerald-50/50 dark:bg-ok-soft px-4 py-5 text-center hover:border-emerald-300"
                                 >
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:text-ok-text">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 dark:bg-ok-soft text-emerald-600 dark:text-ok-text">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                                     </span>
                                     <span className="text-[13px] font-bold text-gray-900 dark:text-ink-1">{trans('requester.detail.yes_done')}</span>
@@ -210,19 +210,19 @@ function ConfirmCloseModal({ ticket, onClose, onDone, reopenUrl, closeUrl }) {
 
 const APPROVAL_NOTE_STYLES = {
     approved: {
-        border: 'border-emerald-200', bg: 'bg-emerald-50 dark:bg-ok-soft', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-700 dark:text-ok-text',
+        border: 'border-emerald-200', bg: 'bg-emerald-50 dark:bg-ok-soft', iconBg: 'bg-emerald-100 dark:bg-ok-soft', iconColor: 'text-emerald-700 dark:text-ok-text',
         title: 'text-emerald-800', body: 'text-emerald-900', time: 'text-emerald-600 dark:text-ok-text',
         label: (name) => `Disetujui oleh ${name}`,
         icon: 'M20 6 9 17l-5-5',
     },
     revision_requested: {
-        border: 'border-amber-200', bg: 'bg-amber-50 dark:bg-warn-soft', iconBg: 'bg-amber-100', iconColor: 'text-amber-700 dark:text-warn-text',
+        border: 'border-amber-200', bg: 'bg-amber-50 dark:bg-warn-soft', iconBg: 'bg-amber-100 dark:bg-warn-soft', iconColor: 'text-amber-700 dark:text-warn-text',
         title: 'text-amber-800', body: 'text-amber-900', time: 'text-amber-600 dark:text-warn-text',
         label: (name) => `Diminta perbaikan oleh ${name}`,
         icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z',
     },
     rejected: {
-        border: 'border-red-200', bg: 'bg-red-50 dark:bg-bad-soft', iconBg: 'bg-red-100', iconColor: 'text-red-700 dark:text-bad-text',
+        border: 'border-red-200', bg: 'bg-red-50 dark:bg-bad-soft', iconBg: 'bg-red-100 dark:bg-bad-soft', iconColor: 'text-red-700 dark:text-bad-text',
         title: 'text-red-800', body: 'text-red-900', time: 'text-red-600 dark:text-bad-text',
         label: (name) => `Ditolak oleh ${name}`,
         icon: 'M6 6l12 12 M18 6 6 18',
@@ -250,7 +250,7 @@ function ApprovalNoteBanner({ approvalNote }) {
 function ReopenNoteBanner({ reopenNote }) {
     return (
         <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-warn-soft p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:text-warn-text">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-warn-soft text-amber-700 dark:text-warn-text">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 12a9.5 9.5 0 1 1-2.8-6.7M21.5 3v6h-6" /></svg>
             </span>
             <div className="min-w-0">
@@ -265,7 +265,7 @@ function ReopenNoteBanner({ reopenNote }) {
 function SupportReturnNoteBanner({ supportReturnNote }) {
     return (
         <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-warn-soft p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:text-warn-text">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-warn-soft text-amber-700 dark:text-warn-text">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
             </span>
             <div className="min-w-0">
@@ -280,7 +280,7 @@ function SupportReturnNoteBanner({ supportReturnNote }) {
 function ResolutionNoteBanner({ resolutionNote }) {
     return (
         <div className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 dark:bg-ok-soft p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:text-ok-text">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-ok-soft text-emerald-700 dark:text-ok-text">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
             </span>
             <div className="min-w-0">
@@ -527,7 +527,7 @@ export default function TicketDetail({ ticket: initialTicket, viewer = null, com
                         <div className="flex flex-col gap-3.5">
                             {[ticket.people.requester, ticket.people.approver, ...(ticket.people.support ?? [])].filter(Boolean).map((p, i) => (
                                 <div key={i} className="flex items-center gap-3">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:text-accent-text">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-accent-soft text-xs font-bold text-blue-700 dark:text-accent-text">
                                         {p.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
                                     </span>
                                     <div className="min-w-0">

@@ -30,7 +30,7 @@ function AgentCard({ a, onPick, saving, disabled, recommended }) {
     return (
         <div className={`rounded-2xl border bg-white dark:bg-panel-2 p-4 ${recommended ? 'border-emerald-400' : 'border-gray-200 dark:border-edge-strong'}`}>
             <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:text-accent-text">{a.initials}</span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-accent-soft text-xs font-bold text-blue-700 dark:text-accent-text">{a.initials}</span>
                 <div className="min-w-0 flex-1">
                     <p className="text-[14px] font-bold text-gray-900 dark:text-ink-1">{a.name}</p>
                     <p className="text-[11.5px] text-gray-400 dark:text-ink-3">{trans('teamlead.reassign.agent_meta', { load: a.load, type: a.type })}</p>

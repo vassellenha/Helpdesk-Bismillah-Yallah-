@@ -137,7 +137,7 @@ function AgentDetail({ agent, onClose, onOpenTicket, remindRatingUrlBase, rating
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 backdrop-blur-sm" onMouseDown={onClose}>
             <div className="liquid-glass-dense flex h-full w-[440px] max-w-full flex-col shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
                 <div className="liquid-glass-well flex items-center gap-3.5 border-b border-gray-200 dark:border-edge-strong px-6 py-5">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-base font-extrabold text-blue-700 dark:text-accent-text">{agent.initials}</span>
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-accent-soft text-base font-extrabold text-blue-700 dark:text-accent-text">{agent.initials}</span>
                     <div className="min-w-0 flex-1">
                         <p className="text-lg font-extrabold text-gray-900 dark:text-ink-1">{agent.name}</p>
                         <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${a.bg} ${a.text}`}>
@@ -241,7 +241,7 @@ export default function WorkloadTable({ rows = [], onOpenTicket, remindRatingUrl
                 <div className="flex flex-wrap items-center gap-2.5">
                     <div className="flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-panel-3 px-3.5 py-2">
                         <div><p className="text-base font-extrabold leading-none text-gray-900 dark:text-ink-1">{summary.totalLoad}</p><p className="text-[10px] font-semibold text-gray-400 dark:text-ink-3">{trans('teamlead.support.total_active')}</p></div>
-                        <span className="h-6 w-px bg-gray-200" />
+                        <span className="h-6 w-px bg-gray-200 dark:bg-edge-strong" />
                         <div><p className="text-base font-extrabold leading-none text-gray-900 dark:text-ink-1">{summary.avg}</p><p className="text-[10px] font-semibold text-gray-400 dark:text-ink-3">{trans('teamlead.support.per_agent')}</p></div>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -271,7 +271,7 @@ export default function WorkloadTable({ rows = [], onOpenTicket, remindRatingUrl
                         return (
                             <div key={a.id} onClick={() => setDetail(a)} className="grid cursor-pointer grid-cols-[190px_1fr_70px_100px_90px_74px_70px_50px] items-center gap-3 border-b border-gray-50 dark:border-transparent dark:even:bg-white/[0.03] px-6 py-3.5 last:border-0 hover:bg-blue-50/30 dark:hover:bg-panel-hover">
                                 <div className="flex items-center gap-2.5">
-                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700 dark:text-accent-text">{a.initials}</span>
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-accent-soft text-[11px] font-bold text-blue-700 dark:text-accent-text">{a.initials}</span>
                                     <div className="min-w-0">
                                         <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-ink-1">{a.name}</p>
                                         <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${av.bg} ${av.text}`}><span className={`h-1 w-1 rounded-full ${av.dot}`} />{trans(av.labelKey)}</span>
