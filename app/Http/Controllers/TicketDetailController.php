@@ -27,7 +27,7 @@ class TicketDetailController extends Controller
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
 
-        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'escalatedByAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return view('requester.ticket-detail', [
             'role' => 'requester',
@@ -59,7 +59,7 @@ class TicketDetailController extends Controller
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
 
-        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'escalatedByAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
 
         return response()->json([
             'ticket' => $this->presentTicket($ticket),

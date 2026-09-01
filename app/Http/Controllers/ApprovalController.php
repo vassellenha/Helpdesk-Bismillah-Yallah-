@@ -192,7 +192,7 @@ class ApprovalController extends Controller
         $approver = CurrentActor::approver();
         abort_unless($ticket->approver_id === $approver->id, 403);
 
-        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'escalatedByAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
         $lastDecision = TicketApproval::where('ticket_id', $ticket->id)->where('approver_id', $approver->id)->latest('created_at')->first();
 
         return view('approver.ticket-detail', [
@@ -220,7 +220,7 @@ class ApprovalController extends Controller
         $approver = CurrentActor::approver();
         abort_unless($ticket->approver_id === $approver->id, 403);
 
-        $ticket->load(['requester', 'approver', 'assignedAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
+        $ticket->load(['requester', 'approver', 'assignedAgent', 'escalatedByAgent', 'catalogSubject.supportAgent', 'catalogSubject.itAgent', 'comments', 'attachments']);
         $lastDecision = TicketApproval::where('ticket_id', $ticket->id)->where('approver_id', $approver->id)->latest('created_at')->first();
 
         return response()->json([
