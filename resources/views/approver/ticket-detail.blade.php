@@ -7,6 +7,7 @@
     data-react="ApprovalTicketDetail"
     data-props="{{ json_encode([
         'ticket' => $ticket,
+        'viewer' => $viewer,
         'comments' => $comments,
         'timeline' => $timeline,
         'flow' => $flow,

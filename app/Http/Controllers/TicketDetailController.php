@@ -31,6 +31,10 @@ class TicketDetailController extends Controller
 
         return view('requester.ticket-detail', [
             'role' => 'requester',
+            // Identitas pembaca — dipakai layar untuk memutuskan gelembung mana
+            // miliknya sendiri di Forum Diskusi. Dipisah dari payload header
+            // yang tidak membawa id. Lihat lib/discussion.js.
+            'viewer' => ['id' => $requester->id, 'name' => $requester->name],
             'currentUser' => ['name' => $requester->name, 'title' => $requester->jabatan.' · '.$requester->unit, 'initials' => $this->initials($requester->name)],
             'notifications' => NotificationService::present($requester, 'requester'),
             'ticket' => $this->presentTicket($ticket),

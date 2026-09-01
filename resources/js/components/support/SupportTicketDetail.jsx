@@ -6,6 +6,7 @@ import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import CommentAttachmentChip from '../CommentAttachmentChip';
 import CommentComposer from '../CommentComposer';
+import { isMine } from '../../lib/discussion';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 import { t as trans } from '../../lib/i18n';
 
@@ -144,32 +145,6 @@ function StartWorkModal({ ticketId, starting, error, onDismiss, onLater, onStart
             </div>
         </div>
     );
-}
-
-/*
- | Gelembung mana yang MILIK PEMBACA — ditentukan dari identitas, bukan peran.
- |
- | Sebelumnya perataannya membaca `authorRole === 'Support'`. Support IT dan
- | Support BPO sama-sama menyimpan label itu (disengaja: keduanya "Support" di
- | mata Requester), jadi di layar Support pesan kedua orang menumpuk di sisi
- | kanan yang sama — Support IT membaca pesan Support BPO seolah tulisannya
- | sendiri, dan percakapan dua pihak terbaca seperti monolog.
- |
- | Komentar lama tidak menyimpan id penulis; di sana nama dipakai sebagai
- | cadangan, dibatasi pada peran yang sama supaya kemiripan nama antar peran
- | tidak ikut tertarik. Nama bukan pengganti yang layak untuk komentar baru:
- | direktori pegawai perusahaan ini memuat nama yang benar-benar kembar.
-*/
-function isMine(comment, viewer) {
-    if (!viewer) {
-        return comment.authorRole === 'Support';
-    }
-
-    if (comment.authorId != null && viewer.id != null) {
-        return comment.authorId === viewer.id;
-    }
-
-    return comment.authorRole === 'Support' && comment.authorName === viewer.name;
 }
 
 export default function SupportTicketDetail({ ticket: initialTicket, viewer = null, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, startUrl, resolveUrl, escalateUrl, returnUrl, ticketsUrl }) {
@@ -316,7 +291,7 @@ export default function SupportTicketDetail({ ticket: initialTicket, viewer = nu
                                 <p className="rounded-lg bg-gray-50 dark:bg-panel-3 px-3 py-4 text-center text-[13px] text-gray-400 dark:text-ink-3">{trans('support.detail.forum_empty')}</p>
                             )}
                             {comments.map((c) => {
-                                const mine = isMine(c, viewer);
+                                const mine = isMine(c, viewer, 'Support');
 
                                 return (
                                     <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-blue-600 dark:bg-blue-500 text-white' : 'bg-gray-50 dark:bg-panel-3 text-gray-800 dark:text-ink-1'}`}>

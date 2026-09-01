@@ -198,6 +198,10 @@ class ApprovalController extends Controller
         return view('approver.ticket-detail', [
             'role' => 'approver',
             'currentUser' => $this->currentUserPayload($approver),
+            // Identitas pembaca — dipakai layar untuk memutuskan gelembung mana
+            // miliknya sendiri di Forum Diskusi. Dipisah dari payload header
+            // yang tidak membawa id. Lihat lib/discussion.js.
+            'viewer' => ['id' => $approver->id, 'name' => $approver->name],
             'notifications' => $this->notifications($approver),
             'ticket' => $this->presentTicket($ticket, $lastDecision),
             'comments' => $ticket->comments->map(fn (TicketComment $c) => TicketDiscussion::present($c))->values(),

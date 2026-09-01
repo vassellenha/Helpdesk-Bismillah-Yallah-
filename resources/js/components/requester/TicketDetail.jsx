@@ -8,6 +8,7 @@ import SlaPanel from '../SlaPanel';
 import AttachmentViewer from '../AttachmentViewer';
 import CommentAttachmentChip from '../CommentAttachmentChip';
 import CommentComposer from '../CommentComposer';
+import { isMine } from '../../lib/discussion';
 import AutoCloseCountdown from '../AutoCloseCountdown';
 import useLockBodyScroll from '../../lib/useLockBodyScroll';
 
@@ -332,7 +333,7 @@ function ResolvedAnnouncementModal({ ticket, onDismiss, onConfirmNow }) {
     );
 }
 
-export default function TicketDetail({ ticket: initialTicket, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
+export default function TicketDetail({ ticket: initialTicket, viewer = null, comments: initialComments = [], flow: initialFlow = null, dataUrl, commentsUrl, reopenUrl, closeUrl, ticketsUrl, editUrl, catalogUrl, approversUrl }) {
     const [ticket, setTicket] = useState(initialTicket);
     const [flow, setFlow] = useState(initialFlow);
     const status = ticket.status;
@@ -474,17 +475,27 @@ export default function TicketDetail({ ticket: initialTicket, comments: initialC
                                     {trans('requester.detail.forum_empty')}
                                 </p>
                             )}
-                            {comments.map((c) => (
-                                <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${c.authorRole === 'Requester' ? 'ml-auto bg-blue-600 dark:bg-blue-500 text-white' : 'bg-gray-50 dark:bg-panel-3 text-gray-800 dark:text-ink-1'}`}>
-                                    <div className={`mb-1 flex items-center gap-2 text-[11px] font-semibold ${c.authorRole === 'Requester' ? 'text-blue-100' : 'text-gray-500 dark:text-ink-2'}`}>
+                            {/*
+                              | Perataan ditentukan IDENTITAS, bukan peran — lihat
+                              | lib/discussion.js. Peran di bawah hanya dipakai
+                              | sebagai cadangan untuk komentar lama yang belum
+                              | menyimpan id penulisnya.
+                            */}
+                            {comments.map((c) => {
+                                const mine = isMine(c, viewer, 'Requester');
+
+                                return (
+                                <div key={c.id} className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? 'ml-auto bg-blue-600 dark:bg-blue-500 text-white' : 'bg-gray-50 dark:bg-panel-3 text-gray-800 dark:text-ink-1'}`}>
+                                    <div className={`mb-1 flex items-center gap-2 text-[11px] font-semibold ${mine ? 'text-blue-100' : 'text-gray-500 dark:text-ink-2'}`}>
                                         <span>{c.authorName}</span>
                                         <span className="opacity-70">· {c.authorRole}</span>
                                         <span className="opacity-70">· {c.at}</span>
                                     </div>
                                     {c.message && <p className="text-[13px] leading-relaxed">{c.message}</p>}
-                                    <CommentAttachmentChip attachment={c.attachment} dark={c.authorRole === 'Requester'} />
+                                    <CommentAttachmentChip attachment={c.attachment} dark={mine} />
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {status !== 'Closed' && status !== 'Rejected' && (
