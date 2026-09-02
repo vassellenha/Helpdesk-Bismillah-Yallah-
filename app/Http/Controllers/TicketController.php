@@ -8,9 +8,10 @@ use App\Models\SupportAgent;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Support\CurrentActor;
+use App\Support\NotificationService;
+use App\Support\TicketAudit;
 use App\Support\TicketBroadcast;
 use App\Support\TicketNumber;
-use App\Support\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -141,6 +142,13 @@ class TicketController extends Controller
             $this->notifyAgentOfNewAssignment($ticket, $requiresApproval);
         }
 
+        // Draft ikut dicatat. Ia belum terlihat siapa pun selain pembuatnya,
+        // tapi ia sudah memakai nomor tiket — dan nomor yang muncul di jejak
+        // tanpa asal-usul lebih membingungkan daripada draf yang tercatat.
+        TicketAudit::action($requester, 'ticket_requester', 'create', $ticket,
+            "{$requester->name} membuat tiket \"{$ticket->ticket_no}\" (".($isDraft ? 'draf' : $ticket->status).').',
+            ['status' => $ticket->status, 'prioritas' => $ticket->priority, 'layanan' => $ticket->service_name]);
+
         return response()->json([
             ...$ticket->toArray(),
             'sla_status' => $ticket->sla_status,
@@ -242,6 +250,10 @@ class TicketController extends Controller
             $this->notifyAgentOfNewAssignment($ticket->fresh(), $requiresApproval);
         }
 
+        TicketAudit::action($requester, 'ticket_requester', 'update', $ticket->fresh(),
+            "{$requester->name} mengubah tiket \"{$ticket->ticket_no}\" (".($isDraft ? 'disimpan sebagai draf' : 'dikirim').').',
+            ['status' => $ticket->fresh()->status, 'prioritas' => $ticket->fresh()->priority]);
+
         return response()->json([
             ...$ticket->fresh()->toArray(),
             'sla_status' => $ticket->fresh()->sla_status,
@@ -258,6 +270,18 @@ class TicketController extends Controller
         $requester = CurrentActor::requester();
         abort_unless($ticket->requester_id === $requester->id, 403);
         abort_unless(in_array($ticket->status, ['Draft', 'Returned'], true), 422, 'Only draft or returned tickets can be deleted.');
+
+        /*
+         | Dicatat SEBELUM dihapus, dan ini bukan sekadar urutan yang rapi.
+         |
+         | Sesudah delete() tidak ada lagi tiket untuk ditanyai: judulnya,
+         | statusnya, nomornya — semuanya ikut hilang. Inilah satu-satunya
+         | tindakan di aplikasi ini yang membuat objeknya lenyap, jadi barisnya
+         | harus lahir selagi objek itu masih bisa bicara.
+         */
+        TicketAudit::action($requester, 'ticket_requester', 'delete', $ticket,
+            "{$requester->name} menghapus tiket \"{$ticket->ticket_no}\" berstatus {$ticket->status}.",
+            ['judul' => $ticket->title, 'status' => $ticket->status, 'lampiran' => $ticket->attachments->count()]);
 
         foreach ($ticket->attachments as $attachment) {
             Storage::disk('local')->delete($attachment->path);
@@ -364,5 +388,4 @@ class TicketController extends Controller
             "Tiket {$ticket->ticket_no} \"{$ticket->title}\" telah ditugaskan ke Anda."
         );
     }
-
 }

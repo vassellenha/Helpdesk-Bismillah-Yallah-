@@ -294,7 +294,7 @@ return [
 
     'audit' => [
         'title' => 'Audit Trail Viewer',
-        'subtitle' => 'Riwayat aktivitas seluruh pengguna — Service Catalog, Konfigurasi SLA, User & Role Management, Approval, dan Penanganan Tiket.',
+        'subtitle' => 'Riwayat aktivitas seluruh pengguna — konfigurasi, tiket dari sisi Requester sampai Support, catatan & komentar, serta pengelolaan Knowledge.',
         'showing' => 'Menampilkan :from–:to dari :total aktivitas',
         'prev' => '← Sebelumnya',
         'next' => 'Berikutnya →',
@@ -341,6 +341,12 @@ return [
             'reassign' => 'Alihkan Tiket',
             'raise' => 'Naikkan Prioritas',
             'rate' => 'Nilai',
+            'comment' => 'Catatan/Komentar',
+            'close' => 'Tutup Tiket',
+            'reopen' => 'Buka Kembali',
+            'publish' => 'Publikasikan',
+            'reindex' => 'Indeks Ulang',
+            'restore' => 'Pulihkan',
             'sync' => 'Sinkronisasi',
         ],
 
@@ -354,6 +360,8 @@ return [
             'teamlead' => 'Team Lead',
             'integration' => 'Integrasi',
             'auth' => 'Autentikasi',
+            'requester_tickets' => 'Tiket Requester',
+            'knowledge' => 'Knowledge (EVA)',
         ],
     ],
 

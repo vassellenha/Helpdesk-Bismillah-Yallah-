@@ -17,6 +17,7 @@ use App\Support\PriorityRegistry;
 use App\Support\Reports\TeamLeadReport;
 use App\Support\RoleRegistry;
 use App\Support\TeguranNotifier;
+use App\Support\TicketAudit;
 use App\Support\TicketFlow;
 use App\Support\TicketTimeline;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -502,6 +503,11 @@ abstract class TeamLeadController extends Controller
         ]);
 
         NotificationService::notifyDiscussionParticipants($ticket, $lead, $this->roleLabel(), $data['message']);
+
+        // Catatan internal adalah tindakan pengawas atas tiket milik orang
+        // lain, jadi ia masuk Audit Trail seperti teguran dan pemindahan PIC.
+        // Sebelumnya satu-satunya jejaknya ada di riwayat tiket itu sendiri.
+        TicketAudit::comment($lead, 'team_lead', $ticket, $this->roleLabel(), $data['message']);
 
         return response()->json([
             'id' => $comment->id,

@@ -18,6 +18,8 @@ const MODULE_KEYS = {
     ticket_management: 'tickets',
     integration: 'integration',
     auth: 'auth',
+    ticket_requester: 'requester_tickets',
+    knowledge: 'knowledge',
 };
 
 const moduleLabel = (code) => trans(`admin.audit.module_name.${MODULE_KEYS[code]}`, {}, code);
@@ -48,6 +50,12 @@ const ACTION_KEYS = {
     logout: 'logout',
     auto_close: 'auto_close',
     start: 'start',
+    comment: 'comment',
+    close: 'close',
+    reopen: 'reopen',
+    publish: 'publish',
+    reindex: 'reindex',
+    restore: 'restore',
 };
 
 const actionLabel = (code) => (code === 'update'

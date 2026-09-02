@@ -289,7 +289,7 @@ return [
 
     'audit' => [
         'title' => 'Audit Trail Viewer',
-        'subtitle' => 'Activity history for every user — Service Catalog, SLA Configuration, User & Role Management, Approval, and Ticket Handling.',
+        'subtitle' => 'Activity history for every user — configuration, tickets from Requester through Support, notes & comments, and Knowledge management.',
         'showing' => 'Showing :from–:to of :total activities',
         'prev' => '← Previous',
         'next' => 'Next →',
@@ -336,6 +336,12 @@ return [
             'reassign' => 'Reassign Ticket',
             'raise' => 'Raise Priority',
             'rate' => 'Rate',
+            'comment' => 'Comment / Note',
+            'close' => 'Close Ticket',
+            'reopen' => 'Reopen',
+            'publish' => 'Publish',
+            'reindex' => 'Reindex',
+            'restore' => 'Restore',
             'sync' => 'Sync',
         ],
 
@@ -349,6 +355,8 @@ return [
             'teamlead' => 'Team Lead',
             'integration' => 'Integrations',
             'auth' => 'Authentication',
+            'requester_tickets' => 'Requester Tickets',
+            'knowledge' => 'Knowledge (EVA)',
         ],
     ],
 

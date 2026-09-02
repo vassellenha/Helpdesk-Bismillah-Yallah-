@@ -102,7 +102,37 @@ class TicketDiscussion
         $preview = $data['message'] ?? '📎 '.($attributes['attachment_name'] ?? 'Lampiran');
         NotificationService::notifyDiscussionParticipants($ticket, $author, $notifyRoleLabel, $preview);
 
+        /*
+         | Audit dicatat DI SINI, bukan di keempat controller pemanggilnya.
+         |
+         | Requester, Support IT, Support BPO, dan Approver semuanya menulis
+         | komentar lewat pintu ini. Menambal satu per satu di sana berarti
+         | empat blok yang harus dijaga tetap seragam, dan pintu kelima yang
+         | ditambahkan nanti akan diam lagi tanpa ada yang sadar.
+         |
+         | Modulnya diturunkan dari kursi tempat komentar itu ditulis: satu
+         | orang bisa memegang beberapa peran, jadi yang perlu terbaca saat
+         | menelusuri bukan siapa dia melainkan sedang jadi apa.
+         */
+        TicketAudit::comment($author, self::modulUntuk($dbAuthorRole), $ticket, $notifyRoleLabel, $preview);
+
         return $comment;
+    }
+
+    /**
+     * Modul Audit Trail untuk peran penulis komentar.
+     *
+     * Nilai yang tidak dikenal jatuh ke ticket_support, bukan melempar:
+     * kegagalan mencatat audit tidak boleh menggagalkan komentar yang sudah
+     * tersimpan dan sudah dikirim notifikasinya.
+     */
+    private static function modulUntuk(string $dbAuthorRole): string
+    {
+        return match ($dbAuthorRole) {
+            'Requester' => 'ticket_requester',
+            'Approver' => 'ticket_approval',
+            default => 'ticket_support',
+        };
     }
 
     public static function present(TicketComment $c): array

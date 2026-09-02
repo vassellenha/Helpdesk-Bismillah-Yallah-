@@ -152,6 +152,8 @@ class AuditTrailController extends Controller
             'ticket_management' => 'tickets',
             'integration' => 'integration',
             'auth' => 'auth',
+            'ticket_requester' => 'requester_tickets',
+            'knowledge' => 'knowledge',
             default => null,
         };
 
@@ -186,6 +188,12 @@ class AuditTrailController extends Controller
             'logout' => 'logout',
             'auto_close' => 'auto_close',
             'start' => 'start',
+            'comment' => 'comment',
+            'close' => 'close',
+            'reopen' => 'reopen',
+            'publish' => 'publish',
+            'reindex' => 'reindex',
+            'restore' => 'restore',
             default => null,
         };
 

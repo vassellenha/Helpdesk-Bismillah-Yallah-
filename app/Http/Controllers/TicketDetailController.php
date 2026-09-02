@@ -9,6 +9,7 @@ use App\Models\TicketAttachment;
 use App\Models\TicketComment;
 use App\Support\CurrentActor;
 use App\Support\NotificationService;
+use App\Support\TicketAudit;
 use App\Support\TicketDiscussion;
 use App\Support\TicketFlow;
 use App\Support\TicketPeople;
@@ -131,8 +132,16 @@ class TicketDetailController extends Controller
         abort_unless($ticket->requester_id === $requester->id, 403);
         abort_unless($attachment->ticket_id === $ticket->id, 404);
 
+        // Nama berkasnya dicatat SEBELUM baris lampirannya hilang: sesudah
+        // delete() tidak ada lagi yang bisa menyebutkan apa yang dicabut.
+        $namaBerkas = $attachment->name;
+
         Storage::disk('local')->delete($attachment->path);
         $attachment->delete();
+
+        TicketAudit::action($requester, 'ticket_requester', 'delete', $ticket,
+            "{$requester->name} menghapus lampiran \"{$namaBerkas}\" dari tiket \"{$ticket->ticket_no}\".",
+            ['lampiran' => $namaBerkas]);
 
         return response()->json(['deleted' => true]);
     }
@@ -189,6 +198,12 @@ class TicketDetailController extends Controller
             "Tiket {$ticket->ticket_no} dibuka kembali oleh {$requester->name}: {$data['note']}"
         );
 
+        // Membuka kembali membatalkan penyelesaian yang sudah dicatat Support
+        // dan menghidupkan lagi jam SLA — alasannya wajib ikut tersimpan.
+        TicketAudit::action($requester, 'ticket_requester', 'reopen', $ticket,
+            "{$requester->name} membuka kembali tiket \"{$ticket->ticket_no}\": {$data['note']}",
+            ['alasan' => $data['note']]);
+
         return response()->json(['status' => $ticket->status]);
     }
 
@@ -235,6 +250,12 @@ class TicketDetailController extends Controller
             'Tiket Ditutup',
             "Tiket {$ticket->ticket_no} berhasil ditutup. Terima kasih atas penilaian Anda ({$data['rating']}/5)."
         );
+
+        // Penutupan membawa rating yang ikut menghitung kinerja PIC-nya, jadi
+        // nilainya disimpan utuh di new_value — bukan cuma disebut di kalimat.
+        TicketAudit::action($requester, 'ticket_requester', 'close', $ticket,
+            "{$requester->name} menutup tiket \"{$ticket->ticket_no}\" dengan penilaian {$data['rating']}/5.",
+            ['rating' => $data['rating'], 'catatan' => $data['note'] ?? null]);
 
         return response()->json(['status' => $ticket->status]);
     }

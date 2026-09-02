@@ -8,6 +8,7 @@ use App\Services\Knowledge\DocumentIndexer;
 use App\Services\Knowledge\KnowledgeStats;
 use App\Services\Knowledge\TagRegistry;
 use App\Support\Eva\CatalogOptions;
+use App\Support\KnowledgeAudit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -96,6 +97,10 @@ class ArticleController extends Controller
             $this->indexer->syncFromArticle($article);
         }
 
+        KnowledgeAudit::record('update', 'article', $article->id, $article->title,
+            "mengubah artikel \"{$article->title}\".",
+            ['isi_berubah' => $article->wasChanged('body'), 'status' => $article->status]);
+
         return response()->json($this->present(
             $article->fresh(['sourceDocument:id,name', 'catalogSubject:id,name', 'author:id,name', 'editor:id,name', 'subjects:id,name']),
             $this->stats->usageBySource(Article::class),
@@ -123,6 +128,10 @@ class ArticleController extends Controller
                 : Article::STATUS_PUBLISHED,
         ]);
 
+        KnowledgeAudit::record('publish', 'article', $article->id, $article->title,
+            "mengubah status artikel \"{$article->title}\" menjadi {$article->status}.",
+            ['status' => $article->status]);
+
         return response()->json([
             'id' => $article->id,
             'status' => $article->status,
@@ -144,6 +153,11 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article): JsonResponse
     {
+        // Dicatat selagi artikelnya masih ada — sesudah delete() judulnya
+        // ikut hilang bersama satu-satunya cara menyebut apa yang dihapus.
+        KnowledgeAudit::record('delete', 'article', $article->id, $article->title,
+            "menghapus artikel \"{$article->title}\".", ['status' => $article->status]);
+
         $article->delete();
 
         return response()->json(['deleted' => true]);
@@ -152,6 +166,9 @@ class ArticleController extends Controller
     public function toggleVisibility(Article $article): JsonResponse
     {
         $article->update(['is_eva_visible' => ! $article->is_eva_visible]);
+
+        KnowledgeAudit::record($article->is_eva_visible ? 'activate' : 'deactivate', 'article', $article->id, $article->title,
+            ($article->is_eva_visible ? 'menampilkan' : 'menyembunyikan')." artikel \"{$article->title}\" dari EVA.");
 
         return response()->json([
             'id' => $article->id,

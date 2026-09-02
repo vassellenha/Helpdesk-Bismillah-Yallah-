@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Eva;
 
 use App\Http\Controllers\Controller;
-use App\Support\Eva\LogRetention;
 use App\Models\Knowledge\Conversation;
 use App\Models\Knowledge\ConversationTurn;
+use App\Support\Eva\LogRetention;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 

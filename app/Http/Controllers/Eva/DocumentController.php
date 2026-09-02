@@ -10,6 +10,7 @@ use App\Services\Knowledge\TagRegistry;
 use App\Support\CurrentActor;
 use App\Support\Eva\CatalogOptions;
 use App\Support\Eva\SourceDocument;
+use App\Support\KnowledgeAudit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -152,6 +153,10 @@ class DocumentController extends Controller
             'uploaded_by' => CurrentActor::admin()->id,
         ]);
 
+        KnowledgeAudit::record('create', 'document', $document->id, $document->name,
+            "mengunggah dokumen \"{$document->name}\".",
+            ['berkas' => $document->original_filename, 'ukuran_byte' => $document->size_bytes]);
+
         return $this->queueIndexing($document);
     }
 
@@ -230,6 +235,9 @@ class DocumentController extends Controller
             'status' => Document::STATUS_PROCESSING,
             'failure_reason' => null,
         ]);
+
+        KnowledgeAudit::record('reindex', 'document', $document->id, $document->name,
+            "meminta indeks ulang dokumen \"{$document->name}\".");
 
         return $this->queueIndexing($document);
     }
@@ -326,6 +334,9 @@ class DocumentController extends Controller
             $isiBerubah ? ['extracted_text' => $data['extracted_text']] : [],
         ));
 
+        KnowledgeAudit::record('update', 'document', $document->id, $document->name,
+            "mengubah dokumen \"{$document->name}\".", ['isi_berubah' => $isiBerubah]);
+
         if (! $isiBerubah) {
             return response()->json($this->presentFresh($document));
         }
@@ -353,6 +364,9 @@ class DocumentController extends Controller
      */
     public function destroy(Document $document): JsonResponse
     {
+        KnowledgeAudit::record('delete', 'document', $document->id, $document->name,
+            "menghapus dokumen \"{$document->name}\".", ['status' => $document->status]);
+
         if ($document->storage_path !== null) {
             Storage::delete($document->storage_path);
         }

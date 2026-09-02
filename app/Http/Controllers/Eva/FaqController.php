@@ -8,6 +8,7 @@ use App\Services\Knowledge\KnowledgeStats;
 use App\Services\Knowledge\TagRegistry;
 use App\Support\CurrentActor;
 use App\Support\Eva\CatalogOptions;
+use App\Support\KnowledgeAudit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -80,12 +81,19 @@ class FaqController extends Controller
             'author_id' => CurrentActor::admin()->id,
         ]);
 
+        KnowledgeAudit::record('create', 'faq', $faq->id, $faq->question,
+            "menambah FAQ \"{$faq->question}\".", ['tampil_di_eva' => $faq->is_eva_visible]);
+
         return response()->json($this->presentFresh($faq), 201);
     }
 
     public function update(Request $request, Faq $faq): JsonResponse
     {
+        $sebelum = $faq->question;
         $faq->update($this->validated($request));
+
+        KnowledgeAudit::record('update', 'faq', $faq->id, $faq->question,
+            "mengubah FAQ \"{$sebelum}\".");
 
         return response()->json($this->presentFresh($faq));
     }
@@ -93,6 +101,9 @@ class FaqController extends Controller
     public function toggleVisibility(Faq $faq): JsonResponse
     {
         $faq->update(['is_eva_visible' => ! $faq->is_eva_visible]);
+
+        KnowledgeAudit::record($faq->is_eva_visible ? 'activate' : 'deactivate', 'faq', $faq->id, $faq->question,
+            ($faq->is_eva_visible ? 'menampilkan' : 'menyembunyikan')." FAQ \"{$faq->question}\" dari EVA.");
 
         return response()->json([
             'id' => $faq->id,
@@ -102,6 +113,11 @@ class FaqController extends Controller
 
     public function destroy(Faq $faq): JsonResponse
     {
+        // Dicatat sebelum baris FAQ-nya lenyap — sesudahnya tidak ada lagi
+        // yang bisa menyebutkan pertanyaan apa yang dihapus.
+        KnowledgeAudit::record('delete', 'faq', $faq->id, $faq->question,
+            "menghapus FAQ \"{$faq->question}\".", ['jawaban' => $faq->answer]);
+
         $faq->delete();
 
         return response()->json(['deleted' => true]);
