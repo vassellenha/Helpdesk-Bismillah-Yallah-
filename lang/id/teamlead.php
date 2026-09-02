@@ -424,6 +424,14 @@ return [
         'failed' => 'Gagal mengirim teguran.',
     ],
 
+    'teguran' => [
+        'none' => ':prefix tercatat, tapi tidak ada channel yang berhasil (cek kontak penerima / konfigurasi).',
+        'sent' => ':prefix terkirim via :channels.',
+        // Email masih di antrean saat kalimat ini muncul — jangan menjanjikan
+        // sesuatu yang belum terjadi.
+        'queued' => ':prefix diteruskan via :channels. Email dikirim di latar belakang; bila gagal, jejaknya ada di antrean server, bukan di layar ini.',
+    ],
+
     'reassign' => [
         'subtitle' => ':id · pilih tujuan berdasarkan agen, subjek, layanan, atau kategori',
         'recommendation' => 'Rekomendasi PIC',
