@@ -178,13 +178,15 @@ CACHE_STORE=database
 
 FILESYSTEM_DISK=local                # dokumen disimpan di luar public/, jangan diubah
 
-# Surel notifikasi. `log` hanya untuk lokal — di produksi tidak ada yang terkirim.
+# Surel notifikasi. `log` MENELAN semua email tanpa mengeluh — lihat bagian 11b.
+# Nilai di bawah ini SEMENTARA: Gmail dipakai sampai SMTP ADHI tersedia.
 MAIL_MAILER=smtp
-MAIL_HOST=smtp.adhi.co.id
+MAIL_SCHEME=null
+MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
-MAIL_USERNAME=...
-MAIL_PASSWORD=...
-MAIL_FROM_ADDRESS=helpdesk@adhi.co.id
+MAIL_USERNAME=helpdesk.adhikarya@gmail.com
+MAIL_PASSWORD=<App Password 16 huruf, TANPA spasi>
+MAIL_FROM_ADDRESS=helpdesk.adhikarya@gmail.com   # wajib sama dengan MAIL_USERNAME
 MAIL_FROM_NAME="Helpdesk ADHI"
 
 # Sakelar email notifikasi tiket. Setel `false` pada deploy PERTAMA, lalu
@@ -359,6 +361,67 @@ sudo -u deploy sed -i 's/^NOTIFY_EMAIL_ENABLED=.*/NOTIFY_EMAIL_ENABLED=true/' /v
 php artisan config:cache
 sudo systemctl restart helpdesk-worker      # worker memuat config saat start
 ```
+
+---
+
+### 11b. Surel: `log` adalah lubang yang paling lama tidak ketahuan
+
+Terjadi sungguhan, 2 Sep 2026: teguran SLA dikirim dari layar Team Lead, layar
+menjawab "Teguran terkirim via email", tidak ada job gagal, worker sehat —
+dan tidak satu email pun sampai. `MAIL_MAILER` di produksi masih `log`.
+
+Laravel memperlakukan `log` sebagai transport yang SAH. Emailnya benar-benar
+"terkirim" — ke `storage/logs/laravel.log`. Tidak ada yang gagal, jadi tidak ada
+yang mengeluh: `queue:failed` kosong, `jobs` kosong, semuanya hijau.
+
+**Periksa ini lebih dulu sebelum menuduh apa pun.** Urutannya penting — nomor 1
+mematikan tiga kemungkinan sekaligus:
+
+```bash
+# 1. Mailernya benar-benar smtp? (kalau `log`, berhenti di sini — itu jawabannya)
+php artisan tinker --execute="echo config('mail.default').' | '.config('mail.mailers.smtp.host');"
+
+# 2. Worker hidup? Email dikirim lewat antrean, bukan inline.
+systemctl status helpdesk-worker --no-pager | head -5
+
+# 3. Ada yang nyangkut atau gagal?
+php artisan tinker --execute="echo DB::table('jobs')->count().' antre, '.DB::table('failed_jobs')->count().' gagal';"
+```
+
+**Yang BUKAN penyebabnya:** `NOTIFY_EMAIL_ENABLED`. Saklar itu hanya mengatur
+cermin email dari lonceng (`NotificationMailer`). Teguran Team Lead punya jalur
+sendiri lewat `MailDispatcher` dan sengaja dikecualikan, supaya pilihan channel
+yang dicentang Team Lead tidak ditimpa setelan global.
+
+#### Pengaturan Gmail sementara
+
+Sampai tim IT ADHI menyediakan SMTP resmi, pengirimannya lewat akun Gmail milik
+aplikasi (`helpdesk.adhikarya@gmail.com`), bukan milik pribadi siapa pun.
+
+1. Akun Gmail biasa — pilih **"For myself"** saat mendaftar, bukan "To manage a
+   business" (yang itu mengarah ke Workspace berbayar dan menuntut domain).
+2. Nyalakan **2-Step Verification**. Menyiapkan metodenya saja tidak cukup —
+   saklar utamanya harus benar-benar ditekan, kalau tidak menu App Password
+   tidak akan pernah muncul.
+3. Buat **App Password** di https://myaccount.google.com/apppasswords → 16 huruf.
+4. Tempel ke `.env` **tanpa spasi**. Google menampilkannya sebagai
+   `abcd efgh ijkl mnop`; ditempel apa adanya tanpa tanda kutip, Laravel hanya
+   membaca sampai spasi pertama. Pastikan panjangnya:
+
+```bash
+php artisan tinker --execute="echo strlen(config('mail.mailers.smtp.password'));"   # harus 16
+```
+
+5. `MAIL_FROM_ADDRESS` **wajib sama persis** dengan `MAIL_USERNAME`. Gmail
+   menolak mengirim atas nama alamat lain, jadi `helpdesk@adhi.co.id` di sini
+   akan gagal autentikasi.
+
+Batasnya ~500 email/hari dan sebagian bisa mendarat di Spam karena domain
+pengirim tidak cocok dengan domain perusahaan. Dua-duanya hilang begitu pindah
+ke SMTP ADHI — dan saat itu tiba, yang berubah hanya lima baris `MAIL_*`,
+tidak ada kode yang perlu disentuh.
+
+---
 
 **Wajib restart worker setelah mengubah `MAIL_*` atau `NOTIFY_*`.** Config yang
 sudah di-cache tidak membaca `.env` lagi, dan worker menyimpannya di memori sejak

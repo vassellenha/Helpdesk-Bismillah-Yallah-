@@ -6,6 +6,31 @@ import { attachmentFailureNotice } from '../lib/attachmentUpload';
 import { t as trans } from '../lib/i18n';
 import { priorityGlyph, priorityList } from '../lib/priority';
 
+/*
+ * Permukaan seragam untuk SEMUA kolom isian di formulir tiket.
+ *
+ * Sebelumnya tiap kolom memilih latarnya sendiri: dropdown memakai
+ * `bg-gray-50`, kotak teks dan textarea tidak memakai latar sama sekali
+ * (jadi tembus ke panel modal), dan kolom yang belum bisa diisi memakai
+ * `bg-gray-100` + teks kelabu. Di atas panel modal yang nyaris putih,
+ * ketiganya membaur jadi bidang kelabu tanpa tepi — kolom yang sebenarnya
+ * aktif pun terbaca seperti sudah dinonaktifkan.
+ *
+ * Yang memisahkan kolom dari latarnya sekarang GARIS TEPI-nya (gray-300,
+ * bukan gray-200 yang nyaris tak terlihat), bukan warna isinya. Isinya putih
+ * penuh supaya terang dan seragam; kolom yang belum bisa diisi tetap putih
+ * dan hanya dibedakan oleh kursor serta teks penjelas di dalamnya, karena
+ * placeholder-nya sudah menyebutkan syaratnya ("Pilih Layanan terlebih
+ * dahulu").
+ *
+ * Di mode gelap isinya `panel-3`, BUKAN `panel-2`: badan modal sendiri sudah
+ * `panel-2` (lihat `.liquid-glass-dense` gelap di app.css), jadi kolom
+ * ber-`panel-2` akan lenyap ke dalam panelnya — persis keluhan yang sama,
+ * hanya terbalik warnanya.
+ */
+const FIELD_SURFACE = 'border border-gray-300 dark:border-edge-strong bg-white dark:bg-panel-3';
+const FIELD_FOCUS = 'outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/20';
+
 const OTHER = '__other__';
 const MAX_ATTACHMENT_BYTES = 30 * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
@@ -66,7 +91,7 @@ function SearchableSelect({ value, placeholder, disabled, options, onChange, sea
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((v) => !v)}
-                className={`flex w-full items-center justify-between rounded-[10px] border border-gray-200 dark:border-edge-strong px-3 py-2.5 text-left text-[13px] outline-none ${disabled ? 'cursor-not-allowed bg-gray-100 dark:bg-panel-3 text-gray-400 dark:text-ink-3' : 'bg-gray-50 dark:bg-panel-3 text-gray-700 dark:text-ink-2 hover:border-gray-300'}`}
+                className={`flex w-full items-center justify-between rounded-[10px] ${FIELD_SURFACE} ${FIELD_FOCUS} px-3 py-2.5 text-left text-[13px] ${disabled ? 'cursor-not-allowed text-gray-400 dark:text-ink-3' : 'text-gray-700 dark:text-ink-2 hover:border-gray-400 dark:hover:border-ink-3'}`}
             >
                 <span className={selected ? 'text-gray-900 dark:text-ink-1' : ''}>{selected ? selected.label : placeholder}</span>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-400 dark:text-ink-3"><path d="m6 9 6 6 6-6"/></svg>
@@ -80,7 +105,7 @@ function SearchableSelect({ value, placeholder, disabled, options, onChange, sea
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder={searchPlaceholder}
-                            className="w-full rounded-md border border-gray-200 dark:border-edge-strong px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-400"
+                            className={`w-full rounded-md ${FIELD_SURFACE} ${FIELD_FOCUS} px-2.5 py-1.5 text-[13px] text-gray-900 dark:text-ink-1`}
                         />
                     </div>
                     <ul className="max-h-56 overflow-y-auto py-1">
@@ -688,7 +713,7 @@ export default function NewTicketModal({
                                                 value={form.subjectText}
                                                 onChange={(e) => set({ subjectText: e.target.value })}
                                                 placeholder="Jelaskan kebutuhan Anda"
-                                                className="w-full rounded-[10px] border border-gray-200 dark:border-edge-strong px-3.5 py-2.5 text-[13px] text-gray-900 dark:text-ink-1 outline-none focus:border-blue-400"
+                                                className={`w-full rounded-[10px] ${FIELD_SURFACE} ${FIELD_FOCUS} px-3.5 py-2.5 text-[13px] text-gray-900 dark:text-ink-1`}
                                             />
                                         ) : (
                                             <SearchableSelect
@@ -712,7 +737,7 @@ export default function NewTicketModal({
                                                 ]}
                                             />
                                         ) : (
-                                            <div className="flex w-full items-center rounded-[10px] border border-gray-200 dark:border-edge-strong bg-gray-100 dark:bg-panel-3 px-3.5 py-2.5 text-[13px] text-gray-500 dark:text-ink-2">
+                                            <div className={`flex w-full items-center rounded-[10px] ${FIELD_SURFACE} px-3.5 py-2.5 text-[13px] text-gray-500 dark:text-ink-2`}>
                                                 {issueCategoryName || 'Pilih Subjek terlebih dahulu'}
                                             </div>
                                         )}
@@ -735,7 +760,7 @@ export default function NewTicketModal({
                                         </p>
                                         <div ref={approverRef} className="relative">
                                             {form.approverId ? (
-                                                <div className="flex items-center justify-between rounded-[10px] border border-blue-200 bg-white dark:bg-panel-2 px-3.5 py-2.5 text-[13px]">
+                                                <div className="flex items-center justify-between rounded-[10px] border border-blue-300 dark:border-edge-strong bg-white dark:bg-panel-3 px-3.5 py-2.5 text-[13px]">
                                                     <span className="font-semibold text-blue-900 dark:text-accent-text">{form.approverName}</span>
                                                     <button
                                                         type="button"
@@ -753,7 +778,7 @@ export default function NewTicketModal({
                                                         onChange={(e) => setApproverQuery(e.target.value)}
                                                         onFocus={() => setApproverOpen(true)}
                                                         placeholder="Cari nama approver"
-                                                        className="w-full rounded-[10px] border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 py-2.5 pl-9 pr-3.5 text-[13px] text-gray-900 dark:text-ink-1 outline-none focus:border-blue-400"
+                                                        className={`w-full rounded-[10px] ${FIELD_SURFACE} ${FIELD_FOCUS} py-2.5 pl-9 pr-3.5 text-[13px] text-gray-900 dark:text-ink-1`}
                                                     />
                                                 </div>
                                             )}
@@ -795,7 +820,7 @@ export default function NewTicketModal({
                                         value={form.description}
                                         onChange={(e) => set({ description: e.target.value })}
                                         placeholder="Jelaskan masalah yang Anda hadapi secara detail…"
-                                        className="min-h-[96px] w-full resize-y rounded-xl border border-gray-200 dark:border-edge-strong px-3.5 py-3 text-[13px] text-gray-900 dark:text-ink-1 outline-none focus:border-blue-400"
+                                        className={`min-h-[96px] w-full resize-y rounded-xl ${FIELD_SURFACE} ${FIELD_FOCUS} px-3.5 py-3 text-[13px] text-gray-900 dark:text-ink-1`}
                                     />
                                 </Field>
 

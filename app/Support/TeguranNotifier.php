@@ -121,6 +121,39 @@ class TeguranNotifier
         return MailDispatcher::send($email, $mail, $tag);
     }
 
+    /**
+     * Kalimat hasil untuk layar Team Lead.
+     *
+     * Memisahkan yang SUDAH terjadi dari yang baru DIJADWALKAN, dan itu bukan
+     * kehalusan bahasa. Lonceng in-app benar-benar sudah terisi saat fungsi ini
+     * dipanggil; email baru dititipkan ke antrean, dan pengiriman SMTP-nya
+     * terjadi belakangan di worker. Kalau SMTP-nya bermasalah, kegagalan itu
+     * mendarat di `failed_jobs` — jauh dari mata orang yang menekan tombolnya.
+     *
+     * Kalimat lama berbunyi "Teguran terkirim via email" untuk kedua keadaan.
+     * Selama berhari-hari MAIL_MAILER di produksi masih `log`, kalimat itu
+     * tampil setiap kali dan tidak sekali pun keliru secara teknis — emailnya
+     * memang "terkirim", cuma ke berkas log. Justru itu yang membuat masalahnya
+     * tidak ketahuan: layar tidak pernah memberi alasan untuk curiga.
+     *
+     * @param  array<int,string>  $delivered
+     */
+    public static function resultMessage(array $delivered, string $prefix = 'Teguran'): string
+    {
+        if ($delivered === []) {
+            return __('teamlead.teguran.none', ['prefix' => $prefix]);
+        }
+
+        $channels = implode(', ', $delivered);
+
+        // Antrean `sync` mengirim inline, jadi di sana "terkirim" memang benar.
+        $ditunda = in_array('email', $delivered, true) && config('queue.default') !== 'sync';
+
+        return $ditunda
+            ? __('teamlead.teguran.queued', ['prefix' => $prefix, 'channels' => $channels])
+            : __('teamlead.teguran.sent', ['prefix' => $prefix, 'channels' => $channels]);
+    }
+
     private static function gateway(): WhatsAppGateway
     {
         $driver = config('notifications.whatsapp.driver', 'log');

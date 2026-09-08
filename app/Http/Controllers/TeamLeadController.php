@@ -759,9 +759,7 @@ abstract class TeamLeadController extends Controller
 
         return response()->json([
             'delivered' => $delivered,
-            'message' => empty($delivered)
-                ? 'Teguran tercatat, tapi tidak ada channel yang berhasil (cek kontak PIC / konfigurasi).'
-                : 'Teguran terkirim via '.implode(', ', $delivered).'.',
+            'message' => TeguranNotifier::resultMessage($delivered),
         ]);
     }
 
@@ -803,9 +801,7 @@ abstract class TeamLeadController extends Controller
 
         return response()->json([
             'delivered' => $delivered,
-            'message' => empty($delivered)
-                ? 'Teguran tercatat, tapi tidak ada channel yang berhasil (cek kontak agent / konfigurasi).'
-                : 'Teguran rating terkirim via '.implode(', ', $delivered).'.',
+            'message' => TeguranNotifier::resultMessage($delivered, 'Teguran rating'),
         ]);
     }
 

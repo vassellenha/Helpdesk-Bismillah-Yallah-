@@ -414,6 +414,12 @@ return [
         'failed' => 'Failed to send the reminder.',
     ],
 
+    'teguran' => [
+        'none' => ':prefix recorded, but no channel succeeded (check the recipient contact / configuration).',
+        'sent' => ':prefix sent via :channels.',
+        'queued' => ':prefix handed over via :channels. Email is sent in the background; if it fails, the trace is in the server queue, not on this screen.',
+    ],
+
     'reassign' => [
         'subtitle' => ':id · pick a target by agent, subject, service, or category',
         'recommendation' => 'Recommended PIC',

@@ -104,7 +104,7 @@ export default function SelectMenu({ value, onChange, options, searchable = fals
                 ref={triggerRef}
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className={`flex w-full min-w-[160px] items-center justify-between gap-2 rounded-[10px] border bg-white dark:bg-panel-2 px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 hover:border-gray-300 dark:hover:border-ink-3 focus:outline-none ${open ? 'border-blue-400' : 'border-gray-200 dark:border-edge-strong'}`}
+                className={`flex w-full min-w-[160px] items-center justify-between gap-2 rounded-[10px] border bg-white dark:bg-panel-2 px-3 py-2.5 text-[13px] text-gray-700 dark:text-ink-2 hover:border-gray-400 dark:hover:border-ink-3 focus:outline-none ${open ? 'border-blue-500' : 'border-gray-300 dark:border-edge-strong'}`}
             >
                 <span>{current?.label ?? value}</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 text-gray-400 dark:text-ink-3 transition-transform ${open ? 'rotate-180' : ''}`}>
