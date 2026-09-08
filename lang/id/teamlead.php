@@ -128,7 +128,7 @@ return [
         'breach' => 'SLA Breach',
         'breach_hint' => 'Sudah lewat batas',
         'near' => 'Mendekati SLA',
-        'near_hint' => '< ambang warning',
+        'near_hint' => 'Mendekati batas waktu SLA',
         'ticket_count' => ':count tiket',
         'donut_footnote' => ':pct% dari :total tiket ber-SLA aktif memenuhi target.',
         'productivity' => 'Produktivitas SLA',
