@@ -166,6 +166,43 @@ abstract class TeamLeadController extends Controller
     }
 
     /**
+     * Padanan per-tiket dari applySubcategoryScope(), untuk gerbang yang
+     * memeriksa satu tiket dan bukan sebuah query. Keduanya harus memberi
+     * jawaban yang sama: kalau tidak, tiket yang sudah hilang dari setiap
+     * daftar masih bisa dibuka lewat URL langsung.
+     */
+    private function inSubcategoryScope(Ticket $ticket): bool
+    {
+        if (! TeamLeadScope::isNarrowed($this->deskType())) {
+            return true;
+        }
+
+        if ($ticket->catalog_subject_id === null) {
+            return true;
+        }
+
+        return TeamLeadScope::visibleSubcategoryIds($this->lead(), $this->deskType())
+            ->contains($ticket->catalogSubject?->subcategory_id);
+    }
+
+    /**
+     * Menyempitkan query tiket ke Sub Kategori jatah lead ini. Tiket tanpa
+     * Subjek katalog dilewatkan — lihat alasannya di scopeTickets().
+     */
+    private function applySubcategoryScope($query): void
+    {
+        if (! TeamLeadScope::isNarrowed($this->deskType())) {
+            return;
+        }
+
+        $subcategoryIds = TeamLeadScope::visibleSubcategoryIds($this->lead(), $this->deskType());
+
+        $query->where(fn ($q) => $q
+            ->whereNull('catalog_subject_id')
+            ->orWhereHas('catalogSubject', fn ($q2) => $q2->whereIn('subcategory_id', $subcategoryIds)));
+    }
+
+    /**
      * user_id petugas dalam cakupan — null berarti tanpa penyempitan.
      *
      * Panel "Teguran Terkirim" membaca notifikasi, dan notifikasi menunjuk
@@ -223,6 +260,23 @@ abstract class TeamLeadController extends Controller
      */
     private function scopeTickets($query)
     {
+        /*
+         | Saringan KEDUA, di samping saringan PIC di bawah.
+         |
+         | Seorang PIC bisa berada di cakupan beberapa Team Lead sekaligus —
+         | di data nyata tiap PIC BPO tersebar di 2-4 Sub Kategori. Tanpa
+         | baris ini, Team Lead yang cuma diberi satu Sub Kategori tetap
+         | membaca tiket Sub Kategori lain asal PIC-nya kebetulan sama.
+         |
+         | Tiket TANPA Subjek katalog (tiket "Lainnya", dan tiket lama dari
+         | sebelum kolomnya ada) sengaja dilewatkan: tidak ada Sub Kategori
+         | yang bisa menentukan pemiliknya, jadi satu-satunya penanggung
+         | jawab yang masuk akal adalah Team Lead dari PIC-nya. Menyaringnya
+         | keluar akan melenyapkannya dari pengawasan siapa pun — dan justru
+         | tiket seperti itulah yang paling mudah telantar.
+         */
+        $this->applySubcategoryScope($query);
+
         return $query->where(function ($q) {
             $q->whereHas('assignedAgent', function ($q2) {
                 $q2->where('type', $this->deskType());
@@ -420,7 +474,8 @@ abstract class TeamLeadController extends Controller
         $ids = $this->scopedAgentIds();
         $isTeamAgent = $ticket->assignedAgent
             && $ticket->assignedAgent->type === $this->deskType()
-            && ($ids === null || in_array($ticket->assignedAgent->id, $ids, true));
+            && ($ids === null || in_array($ticket->assignedAgent->id, $ids, true))
+            && $this->inSubcategoryScope($ticket);
         $isUnclaimedItBroadcast = $this->isItDesk()
             && $ticket->assigned_agent_id === null
             && $ticket->catalog_subject_id === null
@@ -1330,8 +1385,25 @@ abstract class TeamLeadController extends Controller
         $column = $this->isItDesk() ? 'it_agent_id' : 'support_agent_id';
         $relation = $this->isItDesk() ? 'itAgent' : 'supportAgent';
 
+        /*
+         | Disaring DUA kali: per petugas DAN per Sub Kategori.
+         |
+         | Petugas saja tidak cukup. Orang yang sama sering memegang Subjek di
+         | beberapa Sub Kategori milik Team Lead berbeda, jadi begitu ia masuk
+         | cakupan lewat satu Sub Kategori, seluruh Subjeknya ikut terbawa —
+         | termasuk yang bukan urusan pembacanya. Ketahuan di produksi: Team
+         | Lead yang hanya diberi "SILO (OTHER APPS)" membaca baris ber-Sub
+         | Kategori "SAP" di tabel ini.
+         */
         return ServiceCatalogSubject::where('is_active', true)
             ->whereIn($column, $scoped)
+            ->when(
+                TeamLeadScope::isNarrowed($this->deskType()),
+                fn ($q) => $q->whereIn(
+                    'subcategory_id',
+                    TeamLeadScope::visibleSubcategoryIds($this->lead(), $this->deskType()),
+                ),
+            )
             ->with(['service:id,name', 'subcategory:id,name', $relation.':id,name'])
             ->get()
             ->map(function (ServiceCatalogSubject $s) use ($relation) {

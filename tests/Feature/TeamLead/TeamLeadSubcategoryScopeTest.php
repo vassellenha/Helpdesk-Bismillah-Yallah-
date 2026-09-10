@@ -90,6 +90,84 @@ final class TeamLeadSubcategoryScopeTest extends TestCase
      * yang lupa diisi bisa diawasi — dan PIC-nya bisa dipindahkan tiketnya —
      * oleh setiap Team Lead BPO sekaligus.
      */
+    /**
+     * Petugas yang sama sering memegang Subjek di BEBERAPA Sub Kategori milik
+     * Team Lead berbeda. Menyaring tabel ini hanya lewat petugasnya tidak
+     * cukup: begitu ia masuk cakupan lewat satu Sub Kategori, seluruh
+     * Subjeknya ikut terbawa — termasuk yang berada di Sub Kategori milik
+     * Team Lead lain.
+     *
+     * Ditemukan di produksi: Team Lead yang hanya diberi "SILO (OTHER APPS)"
+     * melihat baris ber-Sub Kategori "SAP" di tabel ini.
+     */
+    /**
+     * Tiket disaring lewat PIC-nya, dan seorang PIC bisa berada di cakupan
+     * beberapa Team Lead sekaligus. Tanpa saringan kedua, Team Lead yang
+     * hanya diberi satu Sub Kategori tetap membaca tiket Sub Kategori lain
+     * asal PIC-nya kebetulan sama.
+     *
+     * Ditemukan di produksi: Team Lead yang cuma diberi "SILO (OTHER APPS)"
+     * melihat dua tiket ber-Sub Kategori "SAP" di SLA Monitoring.
+     */
+    public function test_tiket_dari_subkategori_lain_tidak_terlihat_walau_pic_nya_sama(): void
+    {
+        $dunia = $this->duaSubkategoriSatuLayanan();
+
+        // Subjek milik lead B, tapi PIC-nya orang yang ada di cakupan lead A.
+        $subjekLuar = $this->subjek($dunia['subB'], $dunia['picA']);
+        $tiketLuar = $this->deskTicket($dunia['picA'], ['catalog_subject_id' => $subjekLuar->id]);
+
+        $feedA = $this->feedSebagai($dunia['leadA']);
+
+        $this->assertFalse(
+            $this->punyaTiket($feedA->json('monitorRows'), $tiketLuar),
+            'tiket dari Sub Kategori milik Team Lead lain tidak boleh terbaca, walau PIC-nya orang yang sama',
+        );
+
+        $this->actingAsUserWithRoles($dunia['leadA'], 'team-lead-bpo');
+        $this->getJson(route('team-lead-bpo.tickets.data', $tiketLuar))->assertStatus(403);
+    }
+
+    /**
+     * Tiket "Lainnya" tidak punya Subjek katalog sama sekali, jadi tidak ada
+     * Sub Kategori yang bisa menentukan pemiliknya. Satu-satunya penanggung
+     * jawab yang masuk akal adalah Team Lead dari PIC-nya — kalau tiket
+     * seperti ini ikut disaring keluar, ia lenyap dari pengawasan siapa pun.
+     */
+    public function test_tiket_tanpa_subjek_katalog_tetap_terbaca_lewat_pic_nya(): void
+    {
+        $dunia = $this->duaSubkategoriSatuLayanan();
+
+        $lainnya = $this->deskTicket($dunia['picA'], ['catalog_subject_id' => null]);
+
+        $this->assertTrue(
+            $this->punyaTiket($this->feedSebagai($dunia['leadA'])->json('monitorRows'), $lainnya),
+            'tiket tanpa Subjek katalog harus tetap terbaca Team Lead dari PIC-nya',
+        );
+    }
+
+    public function test_pic_per_subjek_tidak_memuat_subkategori_di_luar_cakupan(): void
+    {
+        $dunia = $this->duaSubkategoriSatuLayanan();
+
+        // PIC yang sama juga memegang Subjek di Sub Kategori milik lead lain.
+        $subjekLuar = $this->subjek($dunia['subB'], $dunia['picA']);
+
+        $feedA = $this->feedSebagai($dunia['leadA']);
+        $subCats = collect($feedA->json('picRows'))->pluck('subCat')->unique()->all();
+
+        $this->assertContains('Akses & Otorisasi', $subCats);
+        $this->assertNotContains(
+            'Data & Laporan',
+            $subCats,
+            'Subjek dari Sub Kategori milik Team Lead lain tidak boleh muncul, walau PIC-nya orang yang sama',
+        );
+        $this->assertNotContains(
+            $subjekLuar->name,
+            collect($feedA->json('picRows'))->pluck('subject')->all(),
+        );
+    }
+
     public function test_subkategori_yang_belum_ditugaskan_tidak_terlihat_siapa_pun(): void
     {
         $dunia = $this->duaSubkategoriSatuLayanan();
@@ -202,13 +280,18 @@ final class TeamLeadSubcategoryScopeTest extends TestCase
         $picA = $this->deskAgent('bpo', 'Genta Pratama');
         $picB = $this->deskAgent('bpo', 'Rio Saputra');
 
-        $this->subjek($this->subkategori('Akses & Otorisasi', $service, $leadA), $picA);
-        $this->subjek($this->subkategori('Data & Laporan', $service, $leadB), $picB);
+        $subA = $this->subkategori('Akses & Otorisasi', $service, $leadA);
+        $subB = $this->subkategori('Data & Laporan', $service, $leadB);
+        $this->subjek($subA, $picA);
+        $this->subjek($subB, $picB);
 
         return [
             'leadA' => $leadA,
             'leadB' => $leadB,
             'service' => $service,
+            'subA' => $subA,
+            'subB' => $subB,
+            'picA' => $picA,
             'tiketA' => $this->deskTicket($picA),
             'tiketB' => $this->deskTicket($picB),
         ];
