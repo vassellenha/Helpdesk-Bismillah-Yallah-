@@ -355,6 +355,52 @@ class ServiceCatalogController extends Controller
         return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory.teamLeadBpo', 'supportAgent', 'itAgent'])));
     }
 
+    /**
+     * Membuang Sub Kategori dan Layanan yang jadi kosong setelah Subjek
+     * terakhirnya dihapus.
+     *
+     * store() MEMBUAT keduanya lewat firstOrCreate saat Admin menambah
+     * Subjek, tapi destroy() dulu hanya menghapus Subjeknya. Wadahnya
+     * tertinggal selamanya — tidak ketahuan selama tidak ada layar yang
+     * menampilkan Sub Kategori, lalu muncul semua begitu tab "Cakupan Team
+     * Lead" ada, sebagai baris berisi 0 Subjek yang menunggu ditugaskan.
+     *
+     * Hanya yang benar-benar nol. Foreign key `subjects.service_id` dan
+     * `subjects.subcategory_id` sengaja tanpa cascade, jadi kalau perhitungan
+     * di sini keliru, basis datanya sendiri yang menolak — bukan diam-diam
+     * ikut menghapus Subjek orang.
+     *
+     * @return list<string> kalimat untuk ditempelkan ke deskripsi audit
+     */
+    private function pruneEmptyContainers(ServiceCatalogSubject $subject): array
+    {
+        $catatan = [];
+
+        $subcategory = ServiceCatalogSubcategory::find($subject->subcategory_id);
+
+        if ($subcategory && $subcategory->subjects()->count() === 0) {
+            $catatan[] = "Sub Kategori \"{$subcategory->name}\" ikut dihapus karena tidak lagi berisi Subjek.";
+            $subcategory->delete();
+        }
+
+        /*
+         | LAYANAN SENGAJA TIDAK IKUT DIHAPUS, meski jadi kosong.
+         |
+         | Layanan tanpa Sub Kategori TETAP muncul di pemilih Aplikasi pada
+         | form Tiket Baru — Sub Category-nya jatuh ke "Other" (lihat
+         | MASTER_APPLICATIONS di ServiceCatalogSeeder dan NewTicketModal).
+         | Di data nyata ada 28 Layanan seperti itu, dan semuanya disengaja:
+         | daftar aplikasi perusahaan yang belum punya definisi Subjek.
+         |
+         | Membuangnya otomatis berarti menghapus 28 pilihan dari layar
+         | requester tanpa ada yang meminta. Layanan yang benar-benar sampah
+         | dibuang lewat `catalog:prune-empty --drop-service=ID`, yang
+         | menuntut Admin menyebut id-nya satu per satu.
+         */
+
+        return $catatan;
+    }
+
     public function destroy(ServiceCatalogSubject $subject): JsonResponse
     {
         $actor = CurrentActor::admin();
@@ -362,7 +408,7 @@ class ServiceCatalogController extends Controller
         DB::transaction(function () use ($subject, $actor) {
             // Dicatat SEBELUM baris hilang: setelah dihapus, old_value ini
             // satu-satunya jejak isi subjek yang tersisa.
-            AuditTrail::record($actor, [
+            $jejak = AuditTrail::record($actor, [
                 'module' => 'service_catalog',
                 'action' => 'delete',
                 'target_type' => 'subject',
@@ -374,6 +420,17 @@ class ServiceCatalogController extends Controller
             ]);
 
             $subject->delete();
+
+            $dibersihkan = $this->pruneEmptyContainers($subject);
+
+            if ($dibersihkan !== []) {
+                // Disebut di jejak yang SUDAH ada, bukan jadi baris audit
+                // sendiri: menghapus satu Subjek tidak boleh meledak jadi
+                // tiga baris yang harus dibaca satu per satu.
+                $jejak->update([
+                    'description' => $jejak->description.' '.implode(' ', $dibersihkan),
+                ]);
+            }
         });
 
         return response()->json(['deleted' => true]);
