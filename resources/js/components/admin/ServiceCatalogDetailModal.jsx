@@ -25,6 +25,7 @@ export default function ServiceCatalogDetailModal({ subject, onClose }) {
                 <Detail label={trans('admin.common.status')} value={subject.status === 'active' ? trans('admin.common.active') : trans('admin.common.inactive')} />
                 <Detail label={trans('admin.catalog.col_level')} value={levelLabel(subject)} />
                 <Detail label={trans('admin.catalog.col_support')} value={supportLabel(subject)} />
+                <Detail label={trans('admin.catalog.col_team_lead_bpo')} value={subject.team_lead_bpo_name ?? trans('admin.catalog.team_lead_unset')} />
             </div>
 
             <ModalFooter>

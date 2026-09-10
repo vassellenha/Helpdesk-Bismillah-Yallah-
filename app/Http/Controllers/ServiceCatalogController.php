@@ -9,6 +9,7 @@ use App\Models\ServiceCatalogSubcategory;
 use App\Models\ServiceCatalogSubject;
 use App\Models\SupportAgent;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Support\AuditDescriber;
 use App\Support\CurrentActor;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,17 @@ use Illuminate\View\View;
 
 class ServiceCatalogController extends Controller
 {
+    /**
+     * Label untuk Subkategori yang belum ditugaskan, dipakai di deskripsi
+     * Audit Trail supaya terbaca sebagai kalimat, bukan sebagai tanda hubung.
+     *
+     * Bukan "Semua Team Lead BPO" — itu justru kebalikan dari yang terjadi.
+     * NULL di kolom itu berarti TIDAK ADA Team Lead yang berwenang atasnya
+     * (lihat App\Support\TeamLeadScope), dan label yang mengatakan
+     * sebaliknya membuat Admin mengira barisnya sudah aman ditinggal.
+     */
+    private const TEAM_LEAD_UNSET = 'Belum ditugaskan';
+
     private const FIELD_LABELS = [
         'issue_category' => 'Issue Category',
         'layanan' => 'Layanan',
@@ -38,13 +50,24 @@ class ServiceCatalogController extends Controller
             'subjects' => $subjects->map($this->presentSubject(...)),
             'issueCategories' => IssueCategory::orderBy('name')->pluck('name'),
             'services' => ServiceCatalogService::orderBy('name')->get(['id', 'name']),
-            'subcategories' => ServiceCatalogSubcategory::orderBy('name')->get(['id', 'service_id', 'name']),
+            // Diperkaya, bukan diganti bentuknya: modal Subjek hanya membaca
+            // id/service_id/name, jadi tambahan kunci di sini aman baginya.
+            'subcategories' => ServiceCatalogSubcategory::with(['service:id,name', 'teamLeadBpo:id,name'])
+                ->withCount([
+                    'subjects',
+                    'subjects as active_subjects_count' => fn ($q) => $q->where('is_active', true),
+                ])
+                ->orderBy('name')->get()->map($this->presentSubcategory(...)),
+            'teamLeadBpoOptions' => User::active()
+                ->whereHas('roles', fn ($q) => $q->where('name', 'Team Lead BPO'))
+                ->orderBy('name')->get(['users.id', 'users.name']),
             'supportAgents' => SupportAgent::where('is_active', true)->orderBy('name')->get(['id', 'name', 'type']),
             'stats' => [
                 'total_subject' => $subjects->count(),
                 'aktif' => $subjects->where('is_active', true)->count(),
                 'requires_approval' => $subjects->where('requires_approval', true)->count(),
                 'total_layanan' => ServiceCatalogService::count(),
+                'subkategori_tanpa_team_lead' => ServiceCatalogSubcategory::whereNull('team_lead_bpo_user_id')->count(),
             ],
         ]);
     }
@@ -92,7 +115,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])), 201);
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory.teamLeadBpo', 'supportAgent', 'itAgent'])), 201);
     }
 
     public function update(Request $request, ServiceCatalogSubject $subject): JsonResponse
@@ -151,7 +174,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])));
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory.teamLeadBpo', 'supportAgent', 'itAgent'])));
     }
 
     /**
@@ -159,6 +182,98 @@ class ServiceCatalogController extends Controller
      * Subject must never ripple to sibling subjects under the same Layanan
      * or Sub Category. Route-model-bound by {subject}, nothing else.
      */
+    /**
+     * Menugaskan (atau mencabut) Team Lead BPO yang mengawasi satu
+     * Subkategori. Dari sinilah seluruh cakupan Team Lead diturunkan —
+     * siapa yang dia awasi, tiket mana yang dia lihat, dan ke siapa dia
+     * boleh memindahkan PIC (App\Support\TeamLeadScope).
+     *
+     * Endpoint tersendiri, mengikuti updateSupport(): satu perkara, tidak
+     * pernah merembet ke kolom Subjek. Mengirim null berarti mengembalikan
+     * Subkategori ini menjadi milik semua Team Lead BPO.
+     */
+    public function updateTeamLead(Request $request, ServiceCatalogSubcategory $subcategory): JsonResponse
+    {
+        $data = $request->validate([
+            /*
+             | Rule::in atas daftar yang SUDAH disaring, bukan
+             | Rule::exists('users','id'). Yang harus dijamin bukan "user ini
+             | ada", melainkan "user ini memegang role Team Lead BPO DAN
+             | akunnya masih hidup". Menugaskan Subkategori ke akun terkunci
+             | menghasilkan Subkategori yang tampak bertuan padahal tidak
+             | diawasi siapa pun — dan tidak ada satu layar pun yang akan
+             | berbunyi soal itu.
+             */
+            'team_lead_bpo_user_id' => ['nullable', 'integer', Rule::in($this->teamLeadBpoOptionIds())],
+        ]);
+
+        $actor = CurrentActor::admin();
+
+        $subcategory = DB::transaction(function () use ($data, $subcategory, $actor) {
+            $old = $subcategory->teamLeadBpo?->name ?? self::TEAM_LEAD_UNSET;
+
+            $subcategory->update(['team_lead_bpo_user_id' => $data['team_lead_bpo_user_id'] ?? null]);
+            $subcategory->refresh()->load('teamLeadBpo:id,name');
+
+            $new = $subcategory->teamLeadBpo?->name ?? self::TEAM_LEAD_UNSET;
+
+            if ($old !== $new) {
+                AuditTrail::record($actor, [
+                    'module' => 'service_catalog',
+                    'action' => 'assign_team_lead',
+                    'target_type' => 'subcategory',
+                    'target_id' => $subcategory->id,
+                    'target_name' => $subcategory->name,
+                    'old_value' => ['team_lead_bpo' => $old],
+                    'new_value' => ['team_lead_bpo' => $new],
+                    'description' => "{$actor->name} mengubah Team Lead BPO Sub Category \"{$subcategory->name}\" dari {$old} menjadi {$new}.",
+                ]);
+            }
+
+            return $subcategory;
+        });
+
+        // loadCount ikut dipanggil: presentSubcategory() membaca
+        // `subjects_count`/`active_subjects_count`, dan tanpa keduanya ia
+        // menjawab 0. Layar menggabungkan jawaban ini ke barisnya, jadi
+        // kolom "Subjek" berubah jadi 0 tepat setelah penugasan tersimpan —
+        // seolah Subkategori itu baru saja dikosongkan.
+        $subcategory->loadMissing(['service:id,name', 'teamLeadBpo:id,name'])
+            ->loadCount([
+                'subjects',
+                'subjects as active_subjects_count' => fn ($q) => $q->where('is_active', true),
+            ]);
+
+        return response()->json($this->presentSubcategory($subcategory));
+    }
+
+    /**
+     * id user yang boleh dipasang sebagai Team Lead BPO: memegang rolenya,
+     * dan akunnya masih bisa masuk Helpdesk.
+     *
+     * @return list<int>
+     */
+    private function teamLeadBpoOptionIds(): array
+    {
+        return User::active()
+            ->whereHas('roles', fn ($q) => $q->where('name', 'Team Lead BPO'))
+            ->pluck('users.id')->all();
+    }
+
+    private function presentSubcategory(ServiceCatalogSubcategory $s): array
+    {
+        return [
+            'id' => $s->id,
+            'service_id' => $s->service_id,
+            'service_name' => $s->service?->name,
+            'name' => $s->name,
+            'team_lead_bpo_user_id' => $s->team_lead_bpo_user_id,
+            'team_lead_bpo_name' => $s->teamLeadBpo?->name,
+            'subject_count' => $s->subjects_count ?? 0,
+            'active_subject_count' => $s->active_subjects_count ?? 0,
+        ];
+    }
+
     public function updateSupport(Request $request, ServiceCatalogSubject $subject): JsonResponse
     {
         $data = $request->validate([
@@ -210,7 +325,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])));
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory.teamLeadBpo', 'supportAgent', 'itAgent'])));
     }
 
     public function toggleStatus(ServiceCatalogSubject $subject): JsonResponse
@@ -237,7 +352,7 @@ class ServiceCatalogController extends Controller
             return $subject;
         });
 
-        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])));
+        return response()->json($this->presentSubject($subject->fresh(['issueCategory', 'service', 'subcategory.teamLeadBpo', 'supportAgent', 'itAgent'])));
     }
 
     public function destroy(ServiceCatalogSubject $subject): JsonResponse
@@ -266,7 +381,7 @@ class ServiceCatalogController extends Controller
 
     private function subjectsQuery()
     {
-        return ServiceCatalogSubject::with(['issueCategory', 'service', 'subcategory', 'supportAgent', 'itAgent'])->orderBy('id');
+        return ServiceCatalogSubject::with(['issueCategory', 'service', 'subcategory.teamLeadBpo', 'supportAgent', 'itAgent'])->orderBy('id');
     }
 
     private function displaySnapshot(ServiceCatalogSubject $s): array
@@ -310,6 +425,10 @@ class ServiceCatalogController extends Controller
             'it_agent_id' => $s->it_agent_id,
             'it_name' => $s->itAgent?->name,
             'support_level' => $s->support_level,
+            // Dari Subkategori induknya — penugasan Team Lead hidup di sana,
+            // bukan di Subjek. Ditampilkan supaya Admin bisa melihat siapa
+            // yang mengawasi tanpa berpindah tab.
+            'team_lead_bpo_name' => $s->subcategory?->teamLeadBpo?->name,
             'requires_approval' => $s->requires_approval,
             'status' => $s->is_active ? 'active' : 'inactive',
         ];

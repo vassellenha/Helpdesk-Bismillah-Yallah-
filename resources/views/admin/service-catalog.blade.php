@@ -17,6 +17,7 @@
         'services' => $services,
         'subcategories' => $subcategories,
         'supportAgents' => $supportAgents,
+        'teamLeadBpoOptions' => $teamLeadBpoOptions,
     ]) }}"
 ></div>
 @endsection

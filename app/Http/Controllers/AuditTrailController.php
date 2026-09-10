@@ -170,6 +170,7 @@ class AuditTrailController extends Controller
             'activate' => 'activate',
             'deactivate' => 'deactivate',
             'assign_support' => 'update_support',
+            'assign_team_lead' => 'assign_team_lead',
             'change_level' => 'update_level',
             'change_role' => 'update_role',
             'approve' => 'approve',

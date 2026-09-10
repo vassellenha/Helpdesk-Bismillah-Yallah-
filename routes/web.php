@@ -234,6 +234,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::delete('/{slaPolicy}', [SlaPolicyController::class, 'destroy'])->name('destroy');
     });
 
+    Route::prefix('service-catalog/subcategories')->name('service-catalog.subcategories.')->group(function () {
+        Route::patch('/{subcategory}/team-lead', [ServiceCatalogController::class, 'updateTeamLead'])->name('team-lead');
+    });
+
     Route::prefix('service-catalog/subjects')->name('service-catalog.subjects.')->group(function () {
         Route::post('/', [ServiceCatalogController::class, 'store'])->name('store');
         Route::put('/{subject}', [ServiceCatalogController::class, 'update'])->name('update');

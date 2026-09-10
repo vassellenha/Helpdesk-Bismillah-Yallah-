@@ -1,16 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import ServiceCatalogFormModal from './ServiceCatalogFormModal';
 import ServiceCatalogDetailModal from './ServiceCatalogDetailModal';
-import SelectMenu from '../SelectMenu';
+import ServiceSubcategoryTeamLeadTable from './ServiceSubcategoryTeamLeadTable';
+import { ALL, Select, SearchableSelect } from './CatalogFilterSelect';
 import AnchoredMenu from '../AnchoredMenu';
 import { apiFetch } from '../../lib/api';
 import { t as trans } from '../../lib/i18n';
 import { LEVEL_LABELS } from '../../lib/formatters';
 
-// Language-independent sentinel: this is compared against real catalog values.
-const ALL = '__all';
-
-export default function ServiceCatalogConsole({ subjects: initialSubjects, issueCategories, services: initialServices, subcategories: initialSubcategories, supportAgents }) {
+export default function ServiceCatalogConsole({ subjects: initialSubjects, issueCategories, services: initialServices, subcategories: initialSubcategories, supportAgents, teamLeadBpoOptions = [] }) {
     const [subjects, setSubjects] = useState(initialSubjects);
     const [services, setServices] = useState(initialServices);
     const [subcategories, setSubcategories] = useState(initialSubcategories);
@@ -21,6 +19,10 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
     const [issueFilter, setIssueFilter] = useState(ALL);
     const [approvalFilter, setApprovalFilter] = useState(ALL);
     const [statusFilter, setStatusFilter] = useState(ALL);
+
+    // 'catalog' = daftar Subjek yang dipilih requester; 'scope' = pembagian
+    // Sub Kategori ke Team Lead.
+    const [tab, setTab] = useState('catalog');
 
     const [modal, setModal] = useState(null); // 'add' | { type: 'edit'|'detail'|'duplicate', subject }
     const [menu, setMenu] = useState(null); // { subject, anchorEl }
@@ -102,9 +104,11 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-ink-1">{trans('admin.catalog.title')}</h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-ink-2">{trans('admin.catalog.subtitle')}</p>
                 </div>
-                <button onClick={() => setModal('add')} className="shrink-0 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
-                    {trans('admin.catalog.add_service')}
-                </button>
+                {tab === 'catalog' && (
+                    <button onClick={() => setModal('add')} className="shrink-0 rounded-lg bg-blue-700 dark:bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-blue-400">
+                        {trans('admin.catalog.add_service')}
+                    </button>
+                )}
             </div>
 
             {error && <p className="mb-4 rounded-lg bg-red-50 dark:bg-bad-soft p-3 text-sm text-red-700 dark:text-bad-text">{error}</p>}
@@ -116,7 +120,27 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
                 <Stat label={trans('admin.catalog.stat_total_service')} value={layananOptions.length} bg="bg-gray-100 dark:bg-panel-3" color="text-gray-600 dark:text-ink-2" />
             </div>
 
-            <div className="rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm">
+            <div className="mb-4 flex gap-1 border-b border-gray-200 dark:border-edge-strong">
+                {[['catalog', trans('admin.catalog.tab_catalog')], ['scope', trans('admin.catalog.tab_scope')]].map(([key, label]) => (
+                    <button
+                        key={key}
+                        onClick={() => setTab(key)}
+                        className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${
+                            tab === key
+                                ? 'border-blue-600 text-blue-700 dark:border-accent-text dark:text-accent-text'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-ink-3 dark:hover:text-ink-2'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {tab === 'scope' && (
+                <ServiceSubcategoryTeamLeadTable subcategories={subcategories} teamLeadOptions={teamLeadBpoOptions} />
+            )}
+
+            <div className={`rounded-xl border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-sm${tab === 'catalog' ? '' : ' hidden'}`}>
                 <div className="flex flex-col gap-3 border-b border-gray-100 dark:border-edge p-4 lg:flex-row lg:items-center lg:justify-between">
                     <input
                         value={search}
@@ -236,93 +260,6 @@ export default function ServiceCatalogConsole({ subjects: initialSubjects, issue
             )}
             {modal?.type === 'detail' && (
                 <ServiceCatalogDetailModal subject={modal.subject} onClose={() => setModal(null)} />
-            )}
-        </div>
-    );
-}
-
-function Select({ value, onChange, label, options }) {
-    const opts = useMemo(() => [
-        { value: ALL, label },
-        ...options.map((opt) => {
-            const [val, text] = Array.isArray(opt) ? opt : [opt, opt];
-            return { value: val, label: text };
-        }),
-    ], [label, options]);
-
-    return <SelectMenu value={value} onChange={onChange} options={opts} />;
-}
-
-// Layanan/Sub Category/Issue Category can run into dozens of options —
-// a plain <select> makes those unscannable, so this swaps in a search box
-// over a styled, height-capped list instead (same pattern as the PIC
-// filter in Admin Ticket Management).
-function SearchableSelect({ value, onChange, label, options, searchPlaceholder = trans('admin.common.search') }) {
-    const [open, setOpen] = useState(false);
-    const [query, setQuery] = useState('');
-    const ref = useRef(null);
-
-    useEffect(() => {
-        function onClickOutside(e) {
-            if (ref.current && !ref.current.contains(e.target)) {
-                setOpen(false);
-                setQuery('');
-            }
-        }
-        document.addEventListener('mousedown', onClickOutside);
-        return () => document.removeEventListener('mousedown', onClickOutside);
-    }, []);
-
-    const normalized = options.map((opt) => (Array.isArray(opt) ? opt : [opt, opt]));
-    const filtered = normalized.filter(([, text]) => text.toLowerCase().includes(query.toLowerCase()));
-    const selectedText = normalized.find(([val]) => val === value)?.[1];
-
-    return (
-        <div ref={ref} className="relative">
-            <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="flex min-w-[160px] items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-ink-2 hover:border-gray-300 dark:hover:border-ink-3 focus:border-blue-400 focus:outline-none"
-            >
-                <span className="truncate">{value === ALL ? label : selectedText ?? label}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-400 dark:text-ink-3"><path d="m6 9 6 6 6-6" /></svg>
-            </button>
-
-            {open && (
-                <div className="absolute left-0 top-[calc(100%+4px)] z-30 w-64 overflow-hidden rounded-lg border border-gray-200 dark:border-edge-strong bg-white dark:bg-panel-2 shadow-lg">
-                    <div className="border-b border-gray-100 dark:border-edge p-2">
-                        <input
-                            autoFocus
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder={searchPlaceholder}
-                            className="w-full rounded-md border border-gray-200 dark:border-edge-strong px-2.5 py-1.5 text-sm outline-none focus:border-blue-400"
-                        />
-                    </div>
-                    <ul className="max-h-64 overflow-y-auto py-1">
-                        <li>
-                            <button
-                                type="button"
-                                onClick={() => { onChange(ALL); setOpen(false); setQuery(''); }}
-                                className={`block w-full px-3 py-2 text-left text-sm hover:bg-blue-50 dark:hover:bg-panel-hover ${value === ALL ? 'bg-blue-50 dark:bg-accent-soft font-semibold text-blue-700 dark:text-accent-text' : 'text-gray-700 dark:text-ink-2'}`}
-                            >
-                                {label}
-                            </button>
-                        </li>
-                        {filtered.map(([val, text]) => (
-                            <li key={val}>
-                                <button
-                                    type="button"
-                                    onClick={() => { onChange(val); setOpen(false); setQuery(''); }}
-                                    className={`block w-full truncate px-3 py-2 text-left text-sm hover:bg-blue-50 dark:hover:bg-panel-hover ${val === value ? 'bg-blue-50 dark:bg-accent-soft font-semibold text-blue-700 dark:text-accent-text' : 'text-gray-700 dark:text-ink-2'}`}
-                                >
-                                    {text}
-                                </button>
-                            </li>
-                        ))}
-                        {filtered.length === 0 && <li className="px-3 py-4 text-center text-xs text-gray-400 dark:text-ink-3">{trans('admin.common.no_result')}</li>}
-                    </ul>
-                </div>
             )}
         </div>
     );
