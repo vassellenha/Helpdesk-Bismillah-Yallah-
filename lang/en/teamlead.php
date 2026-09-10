@@ -26,6 +26,11 @@ return [
         'role' => 'Team Lead',
     ],
 
+    'scope_empty' => [
+        'title' => 'No sub category has been assigned to you yet.',
+        'body' => 'Team Lead scope is divided by the Administrator in Service Catalog & Ticket Category. Until a sub category becomes yours, this screen stays empty — ask the Administrator to assign one.',
+    ],
+
     'periods' => [
         'today' => 'Today',
         '7d' => '7 Days',

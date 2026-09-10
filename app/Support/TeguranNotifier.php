@@ -173,9 +173,13 @@ class TeguranNotifier
      *
      * @return Collection<int,TicketNotification>
      */
-    public static function recent(int $limit = 15)
+    public static function recent(int $limit = 15, ?array $agentUserIds = null)
     {
         return TicketNotification::where('type', 'sla_teguran')
+            // Tanpa saringan ini panel "Teguran Terkirim" membocorkan teguran
+            // seluruh petugas — bukan cuma lintas Team Lead, tapi lintas desk.
+            // null berarti pemanggilnya memang tidak disempitkan.
+            ->when($agentUserIds !== null, fn ($q) => $q->whereIn('user_id', $agentUserIds))
             ->with(['ticket:id,ticket_no,title', 'user:id,name'])
             ->latest('created_at')
             ->take($limit)

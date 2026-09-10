@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\TeamLead;
 
+use App\Models\SupportAgent;
 use App\Models\Ticket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\ActsAsRole;
@@ -29,7 +30,7 @@ final class DeskIsolationTest extends TestCase
 
     public function test_dashboard_tiap_desk_hanya_memuat_tiket_timnya_sendiri(): void
     {
-        [$tiketIt, $tiketBpo] = $this->duaDesk();
+        [$tiketIt, $tiketBpo, $bpoAgent] = $this->duaDesk();
 
         $this->actingAsRole('team-lead');
         $it = $this->getJson(route('team-lead.data-feed'))->assertOk();
@@ -40,7 +41,7 @@ final class DeskIsolationTest extends TestCase
             'Tiket BPO tidak boleh muncul di dashboard Team Lead IT.'
         );
 
-        $this->actingAsRole('team-lead-bpo');
+        $this->masukSebagaiLeadBpoYangMengawasi($bpoAgent);
         $bpo = $this->getJson(route('team-lead-bpo.data-feed'))->assertOk();
 
         $this->assertTrue($this->punyaTiket($bpo->json('monitorRows'), $tiketBpo));
@@ -52,14 +53,14 @@ final class DeskIsolationTest extends TestCase
 
     public function test_daftar_agent_tiap_desk_tidak_memuat_petugas_tim_lain(): void
     {
-        $this->duaDesk();
+        [, , $bpoAgent] = $this->duaDesk();
 
         $this->actingAsRole('team-lead');
         $namaIt = collect($this->getJson(route('team-lead.data-feed'))->json('agentOptions'))->pluck('name');
         $this->assertContains('Agung Wijayanto', $namaIt->all());
         $this->assertNotContains('Denny Firmansyah', $namaIt->all());
 
-        $this->actingAsRole('team-lead-bpo');
+        $this->masukSebagaiLeadBpoYangMengawasi($bpoAgent);
         $namaBpo = collect($this->getJson(route('team-lead-bpo.data-feed'))->json('agentOptions'))->pluck('name');
         $this->assertContains('Denny Firmansyah', $namaBpo->all());
         $this->assertNotContains(
@@ -108,13 +109,21 @@ final class DeskIsolationTest extends TestCase
      * Setelah BPO mengeskalasi, tiketnya jadi milik Tim IT. Team Lead BPO masih
      * MELIHAT-nya sebagai catatan bahwa timnya pernah memegangnya, tapi tidak
      * boleh lagi menindaknya — kalau boleh, satu tiket punya dua atasan.
+     *
+     * `escalated_by_agent_id` yang menentukan "timnya": setelah eskalasi, PIC
+     * tiket sudah orang IT, jadi hanya jejak PIC BPO asal yang bisa menjawab
+     * Team Lead BPO mana yang berhak membacanya.
      */
     public function test_tiket_yang_sudah_dieskalasi_hanya_bisa_dilihat_team_lead_bpo(): void
     {
-        [$tiketIt] = $this->duaDesk();
-        $tiketIt->update(['escalated_at' => now(), 'escalation_note' => 'perlu penanganan IT']);
+        [$tiketIt, , $bpoAgent] = $this->duaDesk();
+        $tiketIt->update([
+            'escalated_at' => now(),
+            'escalation_note' => 'perlu penanganan IT',
+            'escalated_by_agent_id' => $bpoAgent->id,
+        ]);
 
-        $this->actingAsRole('team-lead-bpo');
+        $this->masukSebagaiLeadBpoYangMengawasi($bpoAgent);
         $data = $this->getJson(route('team-lead-bpo.data-feed'))->assertOk();
 
         $this->assertContains(
@@ -161,13 +170,28 @@ final class DeskIsolationTest extends TestCase
         $this->getJson(route('team-lead-bpo.tickets.data', $siaran))->assertStatus(403);
     }
 
-    /** @return array{0:Ticket,1:Ticket} */
+    /** @return array{0:Ticket,1:Ticket,2:SupportAgent} */
     private function duaDesk(): array
     {
         $it = $this->deskAgent('it', 'Agung Wijayanto');
         $bpo = $this->deskAgent('bpo', 'Denny Firmansyah');
 
-        return [$this->deskTicket($it), $this->deskTicket($bpo)];
+        return [$this->deskTicket($it), $this->deskTicket($bpo), $bpo];
+    }
+
+    /**
+     * Masuk sebagai Team Lead BPO YANG PUNYA CAKUPAN atas petugas ini.
+     *
+     * Sejak cakupan dibagi per Subkategori (App\Support\TeamLeadScope),
+     * Subkategori yang belum ditugaskan tidak terbaca Team Lead manapun —
+     * jadi tanpa penugasan, dashboardnya kosong dan tes ini menguji layar
+     * kosong alih-alih pemisahan desk.
+     */
+    private function masukSebagaiLeadBpoYangMengawasi(SupportAgent $bpo): void
+    {
+        $lead = $this->actingAsRole('team-lead-bpo');
+        $this->deskScope($lead, $bpo);
+        $this->actingAsUserWithRoles($lead, 'team-lead-bpo');
     }
 
     /** @param  array<int,array<string,mixed>>|null  $rows */

@@ -30,6 +30,11 @@ return [
         'role' => 'Team Lead',
     ],
 
+    'scope_empty' => [
+        'title' => 'Belum ada Sub Kategori yang ditugaskan kepada Anda.',
+        'body' => 'Cakupan Team Lead dibagi Administrator lewat Service Catalog & Kategori Tiket. Selama belum ada Sub Kategori yang menjadi jatah Anda, layar ini akan tetap kosong — hubungi Administrator untuk pembagiannya.',
+    ],
+
     'periods' => [
         'today' => 'Hari Ini',
         '7d' => '7 Hari',

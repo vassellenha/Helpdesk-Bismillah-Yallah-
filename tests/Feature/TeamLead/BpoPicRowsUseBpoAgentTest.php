@@ -48,12 +48,18 @@ final class BpoPicRowsUseBpoAgentTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Subkategori ini harus punya pemiliknya, kalau tidak ia tidak terbaca
+        // Team Lead BPO manapun (App\Support\TeamLeadScope) dan yang diuji
+        // jadi layar kosong, bukan pemilihan kolom PIC.
+        $leadBpo = $this->actingAsRole('team-lead-bpo');
+        $subcategory->update(['team_lead_bpo_user_id' => $leadBpo->id]);
+
         $this->actingAsRole('team-lead');
         $picIt = collect($this->getJson(route('team-lead.data-feed'))->json('picRows'))->pluck('pic');
         $this->assertContains('Agung Wijayanto', $picIt->all());
         $this->assertNotContains('Denny Firmansyah', $picIt->all());
 
-        $this->actingAsRole('team-lead-bpo');
+        $this->actingAsUserWithRoles($leadBpo, 'team-lead-bpo');
         $picBpo = collect($this->getJson(route('team-lead-bpo.data-feed'))->json('picRows'))->pluck('pic');
         $this->assertContains('Denny Firmansyah', $picBpo->all());
         $this->assertNotContains(

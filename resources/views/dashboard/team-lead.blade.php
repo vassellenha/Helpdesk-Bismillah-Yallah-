@@ -11,6 +11,7 @@
         'roleLabel' => $roleLabel,
         'teamLabel' => $teamLabel,
         'escalationDirection' => $escalationDirection,
+        'scopeEmpty' => $scopeEmpty,
         'period' => $period,
         'escalateUrl' => $escalateUrl,
         'notifications' => $notifications['items'],

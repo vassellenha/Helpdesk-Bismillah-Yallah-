@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Concerns;
 
+use App\Models\IssueCategory;
 use App\Models\Role;
+use App\Models\ServiceCatalogService;
+use App\Models\ServiceCatalogSubcategory;
+use App\Models\ServiceCatalogSubject;
 use App\Models\SlaPolicy;
 use App\Models\SupportAgent;
 use App\Models\Ticket;
@@ -43,6 +47,42 @@ trait MakesSupportDesks
             'is_active' => true,
             'user_id' => $user->id,
         ])->load('user');
+    }
+
+    /**
+     * Memberi seorang Team Lead cakupan atas seorang petugas: satu Subkategori
+     * yang ditugaskan kepadanya, berisi satu Subjek yang PIC-nya petugas itu.
+     *
+     * Wajib dipanggil di tes Team Lead BPO manapun yang mengharapkan
+     * petugasnya terlihat. Sejak cakupan dibagi per Subkategori
+     * (App\Support\TeamLeadScope), Subkategori yang belum ditugaskan tidak
+     * terbaca Team Lead manapun — jadi dunia tes yang hanya berisi agent
+     * tanpa katalog menghasilkan dashboard kosong, bukan dashboard penuh.
+     */
+    protected function deskScope(User $lead, SupportAgent $agent, string $nama = 'Cakupan Uji'): ServiceCatalogSubcategory
+    {
+        $service = ServiceCatalogService::firstOrCreate(['name' => 'Layanan Uji']);
+
+        $subcategory = ServiceCatalogSubcategory::firstOrCreate(
+            ['service_id' => $service->id, 'name' => $nama],
+            ['team_lead_bpo_user_id' => $lead->id],
+        );
+        $subcategory->update(['team_lead_bpo_user_id' => $lead->id]);
+
+        $picColumn = $agent->type === 'it' ? 'it_agent_id' : 'support_agent_id';
+
+        ServiceCatalogSubject::create([
+            'issue_category_id' => IssueCategory::firstOrCreate(['name' => 'Incident'])->id,
+            'service_id' => $service->id,
+            'subcategory_id' => $subcategory->id,
+            'name' => 'Subjek '.$agent->name.' '.random_int(1000, 9999),
+            'requires_approval' => false,
+            $picColumn => $agent->id,
+            'support_level' => 1,
+            'is_active' => true,
+        ]);
+
+        return $subcategory;
     }
 
     protected function deskSlaPolicy(string $priority = 'Medium'): SlaPolicy

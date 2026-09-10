@@ -186,6 +186,13 @@ export default function TeamLeadWorkspace(props) {
                     )}
                 </div>
 
+                {data.scopeEmpty && (
+                    <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-warn-soft dark:bg-warn-soft dark:text-warn-text">
+                        <p className="font-semibold">{trans('teamlead.scope_empty.title')}</p>
+                        <p className="mt-1">{trans('teamlead.scope_empty.body')}</p>
+                    </div>
+                )}
+
                 {active === 'operational' && <OperationalTab {...shared} />}
                 {active === 'sla' && <SlaTab {...shared} />}
                 {active === 'support' && <SupportTab {...shared} />}

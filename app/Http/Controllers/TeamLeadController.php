@@ -16,6 +16,7 @@ use App\Support\NotificationService;
 use App\Support\PriorityRegistry;
 use App\Support\Reports\TeamLeadReport;
 use App\Support\RoleRegistry;
+use App\Support\TeamLeadScope;
 use App\Support\TeguranNotifier;
 use App\Support\TicketAudit;
 use App\Support\TicketFlow;
@@ -116,14 +117,97 @@ abstract class TeamLeadController extends Controller
 
     private const I_CHECK = 'M9 12l2 2 4-5 M21 12a9 9 0 1 1-9-9';
 
+    /** @var list<int>|null */
+    private ?array $memoAgentIds = null;
+
+    /**
+     * Request tempat memo di atas dihitung — dipegang sebagai objek, bukan
+     * id-nya, supaya identitasnya tidak pernah tertukar (id objek yang sudah
+     * dibebaskan bisa dipakai ulang oleh objek berikutnya).
+     */
+    private ?Request $memoRequest = null;
+
+    /**
+     * id agent yang boleh diawasi desk ini — null berarti tanpa penyempitan.
+     *
+     * Dihafal karena jawabannya dibaca sebelas kali dalam satu pemuatan
+     * dashboard (enam lewat scopedAgentQuery, lima lewat scopeTickets).
+     * Tanpa memo, tiap pemuatan membayar puluhan query tambahan untuk
+     * jawaban yang tidak mungkin berubah di tengah satu request.
+     *
+     * DIIKAT KE REQUEST, bukan ke instance controller. Illuminate\Routing\
+     * Route menyimpan controller yang sudah dibangunnya (`$this->controller`)
+     * dan objek Route itu hidup selama aplikasi hidup — jadi SATU instance
+     * controller melayani banyak request berturut-turut selama proses tidak
+     * mati. Memo per-instance akan menjawab request Team Lead berikutnya
+     * dengan cakupan Team Lead sebelumnya: dashboard yang memuat orang dan
+     * tiket milik orang lain, tanpa satu pun error. Terlihat lebih dulu di
+     * tes (dua permintaan dalam satu proses), tapi mode kegagalan yang sama
+     * menunggu di server yang hidup terus seperti Octane.
+     *
+     * @return list<int>|null
+     */
+    private function scopedAgentIds(): ?array
+    {
+        $request = request();
+
+        if ($this->memoRequest !== $request) {
+            $this->memoAgentIds = TeamLeadScope::agentIds($this->lead(), $this->deskType());
+            $this->memoRequest = $request;
+        }
+
+        return $this->memoAgentIds;
+    }
+
+    /** Kolom PIC di service_catalog_subjects milik desk ini. */
+    private function picColumn(): string
+    {
+        return $this->isItDesk() ? 'it_agent_id' : 'support_agent_id';
+    }
+
+    /**
+     * user_id petugas dalam cakupan — null berarti tanpa penyempitan.
+     *
+     * Panel "Teguran Terkirim" membaca notifikasi, dan notifikasi menunjuk
+     * USER, bukan baris support_agents.
+     *
+     * @return list<int>|null
+     */
+    private function scopedAgentUserIds(): ?array
+    {
+        $ids = $this->scopedAgentIds();
+
+        if ($ids === null) {
+            return null;
+        }
+
+        return SupportAgent::whereIn('id', $ids)
+            ->whereNotNull('user_id')
+            ->distinct()
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
     /**
      * Active agents in this Team Lead's team.
+     *
+     * Sejak cakupan dibagi per Subkategori (App\Support\TeamLeadScope),
+     * "tim" tidak lagi berarti seluruh desk melainkan petugas pada
+     * Subkategori yang ditugaskan Admin kepada Team Lead ini. Enam pemanggil
+     * ikut menyempit lewat sini sekaligus: dashboard, laporan, detail tiket,
+     * tabel PIC per Subjek, filter SLA Monitoring, dan feed Riwayat.
      *
      * @return Builder
      */
     private function scopedAgentQuery()
     {
-        return SupportAgent::where('is_active', true)->where('type', $this->deskType());
+        $query = SupportAgent::where('is_active', true)->where('type', $this->deskType());
+        $ids = $this->scopedAgentIds();
+
+        // Nama tabel disebut penuh: query ini ikut dipakai di dalam whereHas,
+        // dan `id` telanjang di sana ambigu.
+        return $ids === null ? $query : $query->whereIn('support_agents.id', $ids);
     }
 
     /**
@@ -140,7 +224,13 @@ abstract class TeamLeadController extends Controller
     private function scopeTickets($query)
     {
         return $query->where(function ($q) {
-            $q->whereHas('assignedAgent', fn ($q2) => $q2->where('type', $this->deskType()));
+            $q->whereHas('assignedAgent', function ($q2) {
+                $q2->where('type', $this->deskType());
+
+                if (($ids = $this->scopedAgentIds()) !== null) {
+                    $q2->whereIn('support_agents.id', $ids);
+                }
+            });
 
             // HANYA desk IT. Siaran adalah mekanisme milik Tim IT — BPO tidak
             // punya padanannya — jadi bagi desk BPO klausa ini tidak menambah
@@ -206,6 +296,15 @@ abstract class TeamLeadController extends Controller
             // Dibaca EscalationTab: 'in' berarti eskalasi MASUK ke tim ini
             // (dan barisnya bisa dibuka), 'out' berarti keluar — catatan saja.
             'escalationDirection' => $this->isItDesk() ? 'in' : 'out',
+            /*
+             | Cakupan sudah dibagi Admin, tapi tidak satu pun Subkategori
+             | jatuh ke Team Lead ini. Tanpa penanda ini layarnya cuma
+             | menampilkan angka nol dan tabel kosong di mana-mana — keadaan
+             | yang tidak bisa dibedakan dari "timnya sedang tidak punya
+             | pekerjaan", dan tidak menunjuk ke siapa pun yang bisa
+             | membetulkannya.
+             */
+            'scopeEmpty' => $this->scopedAgentIds() !== null && $agents->isEmpty(),
             'period' => $period,
             'escalateUrl' => route($this->routeName('escalation.raise')),
             'currentUser' => $this->currentUserPayload($lead),
@@ -238,7 +337,7 @@ abstract class TeamLeadController extends Controller
                 ->map(fn (Ticket $t) => $this->presentBreachRow($t))
                 ->values(),
             'agentOptions' => $this->agentOptions($agents, $tickets),
-            'reminderLog' => TeguranNotifier::recent()->map(fn (TicketNotification $n) => [
+            'reminderLog' => TeguranNotifier::recent(agentUserIds: $this->scopedAgentUserIds())->map(fn (TicketNotification $n) => [
                 'id' => $n->id,
                 'ticket' => $n->ticket?->ticket_no ?? '—',
                 'subject' => $n->ticket?->title ?? '—',
@@ -315,7 +414,13 @@ abstract class TeamLeadController extends Controller
      */
     private function assertInScope(Ticket $ticket): void
     {
-        $isTeamAgent = $ticket->assignedAgent && $ticket->assignedAgent->type === $this->deskType();
+        // Cakupan yang sama dengan scopeTickets(): tanpa baris ini, tiket di
+        // luar jatah tetap bisa dibuka lewat URL langsung meski sudah hilang
+        // dari setiap daftar — penyempitan yang cuma kosmetik.
+        $ids = $this->scopedAgentIds();
+        $isTeamAgent = $ticket->assignedAgent
+            && $ticket->assignedAgent->type === $this->deskType()
+            && ($ids === null || in_array($ticket->assignedAgent->id, $ids, true));
         $isUnclaimedItBroadcast = $this->isItDesk()
             && $ticket->assigned_agent_id === null
             && $ticket->catalog_subject_id === null
@@ -678,19 +783,42 @@ abstract class TeamLeadController extends Controller
      */
     private function agentOptions(Collection $agents, Collection $tickets): array
     {
+        $pic = $this->picColumn();
+
+        /*
+         | HANYA kolom PIC desk ini, bukan dua-duanya. Versi lama membaca
+         | support_agent_id DAN it_agent_id sekaligus, sehingga seorang agent
+         | BPO yang namanya kebetulan juga tercantum sebagai PIC IT sebuah
+         | Subjek menampilkan Subjek IT itu di kartunya — di modal Pemindahan
+         | PIC desk BPO. picRows() sudah lama memilih kolom per desk; ini
+         | menyusulkannya.
+         |
+         | Dan dibatasi Subkategori yang sama dengan yang membatasi roster:
+         | kartu ini menyebut Subjek apa saja yang dipegang seseorang, lalu
+         | modal menghitung "PIC terdekat" darinya. Diambil dari seluruh
+         | katalog, Team Lead membaca cakupan yang bukan urusannya dan
+         | rekomendasinya ikut condong ke sana.
+         */
+        $subjects = ServiceCatalogSubject::where('is_active', true)
+            ->whereNotNull($pic)
+            ->with(['service:id,name', 'subcategory:id,name']);
+
+        if (TeamLeadScope::isNarrowed($this->deskType())) {
+            $subjects->whereIn(
+                'subcategory_id',
+                TeamLeadScope::visibleSubcategoryIds($this->lead(), $this->deskType()),
+            );
+        }
+
         $map = [];
-        foreach (ServiceCatalogSubject::where('is_active', true)->with(['service:id,name', 'subcategory:id,name'])->get() as $s) {
-            foreach ([$s->support_agent_id, $s->it_agent_id] as $aid) {
-                if (! $aid) {
-                    continue;
-                }
-                $map[$aid]['subjects'][] = $s->name;
-                if ($s->subcategory?->name) {
-                    $map[$aid]['subcats'][] = $s->subcategory->name;
-                }
-                if ($s->service?->name) {
-                    $map[$aid]['apps'][] = $s->service->name;
-                }
+        foreach ($subjects->get() as $s) {
+            $aid = $s->{$pic};
+            $map[$aid]['subjects'][] = $s->name;
+            if ($s->subcategory?->name) {
+                $map[$aid]['subcats'][] = $s->subcategory->name;
+            }
+            if ($s->service?->name) {
+                $map[$aid]['apps'][] = $s->service->name;
             }
         }
 
@@ -772,7 +900,19 @@ abstract class TeamLeadController extends Controller
     public function remindRating(Request $request, SupportAgent $agent): JsonResponse
     {
         $lead = $this->lead();
-        abort_unless($agent->type === $this->deskType(), 403, 'Agent ini di luar cakupan Team Lead.');
+        // `is_active` ikut diperiksa supaya definisinya sama persis dengan
+        // scopedAgentQuery(). Agent nonaktif memang sudah tidak muncul di
+        // roster maupun tabel rapor, jadi satu-satunya cara mencapainya
+        // adalah POST langsung — menegur orang yang sudah tidak bekerja di
+        // situ.
+        $scopedIds = $this->scopedAgentIds();
+        abort_unless(
+            $agent->type === $this->deskType()
+                && $agent->is_active
+                && ($scopedIds === null || in_array($agent->id, $scopedIds, true)),
+            403,
+            'Agent ini di luar cakupan Team Lead.'
+        );
 
         $data = $request->validate([
             'message' => 'required|string|max:2000',
@@ -833,7 +973,7 @@ abstract class TeamLeadController extends Controller
          | pengalihan sepihak.
          */
         $data = $request->validate([
-            'agent_id' => 'required|integer|exists:support_agents,id',
+            'agent_id' => ['required', 'integer', Rule::exists('support_agents', 'id')->where('type', $this->deskType())],
             'reason' => 'required|string|max:1000',
         ]);
 
@@ -841,7 +981,18 @@ abstract class TeamLeadController extends Controller
         $newAgent = SupportAgent::findOrFail($data['agent_id']);
         $oldAgent = $ticket->assignedAgent;
 
-        abort_unless($newAgent->is_active && $newAgent->type === $this->deskType(), 422, 'Agent tujuan bukan anggota aktif tim yang diawasi Team Lead.');
+        // Gerbang wewenang yang sesungguhnya. Sebelum penyempitan cakupan,
+        // validasi di atas hanya `exists:support_agents,id` — satu id yang
+        // ditebak sudah cukup untuk melempar tiket ke petugas tim mana pun,
+        // termasuk orang yang tidak terdaftar di katalog manapun.
+        $scopedIds = $this->scopedAgentIds();
+        abort_unless(
+            $newAgent->is_active
+                && $newAgent->type === $this->deskType()
+                && ($scopedIds === null || in_array($newAgent->id, $scopedIds, true)),
+            422,
+            'Agent tujuan bukan anggota aktif tim yang diawasi Team Lead.'
+        );
         abort_if($oldAgent && $oldAgent->id === $newAgent->id, 422, 'Tiket sudah ditangani agent tersebut.');
 
         $ticket->update(['assigned_agent_id' => $newAgent->id]);
@@ -1346,18 +1497,36 @@ abstract class TeamLeadController extends Controller
      * tetap perlu terbaca sebagai ukuran seberapa sering timnya menyerahkan
      * tiket ke IT.
      *
-     * Daftar desk BPO sengaja tidak disaring lebih jauh. Eskalasi di sistem ini
-     * hanya berjalan satu arah — SupportBpoController::escalate() satu-satunya
-     * yang mengisi `escalated_at` — sehingga setiap tiket yang pernah
-     * dieskalasi pasti berangkat dari BPO. Menyaringnya lewat PIC lama akan
-     * bersandar pada nama yang tersimpan di Audit Trail, dan nama bisa berubah
-     * sementara barisnya tidak.
+     * Cakupan desk BPO TIDAK boleh diambil dari PIC sekarang: begitu
+     * dieskalasi, tiketnya sudah di tangan agent IT. Yang menentukan adalah
+     * PIC BPO ASAL, dan barisnya tersimpan di `escalated_by_agent_id` (diisi
+     * SupportBpoController::escalate() dan TicketBroadcast::
+     * escalateBroadcast()). Kolom itu belum ada waktu komentar sebelumnya
+     * ditulis, jadi satu-satunya jejak PIC asal memang nama di Audit Trail —
+     * sekarang tidak lagi.
+     *
+     * Tiket yang dieskalasi SEBELUM kolom itu ada tidak menyimpan jejak PIC
+     * asal sama sekali, jadi tidak ada cara mengetahui tim mana yang
+     * mengirimnya. Ia TIDAK ditampilkan ke siapa pun — aturan yang sama
+     * dengan Subkategori yang belum bertuan (App\Support\TeamLeadScope):
+     * tanpa penugasan yang bisa ditunjuk, tidak ada wewenang. Riwayat itu
+     * tetap utuh dan terbaca Administrator lewat Ticket Management.
      */
     private function escalationQuery(): Builder
     {
         $query = Ticket::whereNotNull('escalated_at');
 
-        return $this->isItDesk() ? $this->scopeTickets($query) : $query;
+        if ($this->isItDesk()) {
+            return $this->scopeTickets($query);
+        }
+
+        $ids = $this->scopedAgentIds();
+
+        if ($ids === null) {
+            return $query;
+        }
+
+        return $query->whereIn('escalated_by_agent_id', $ids);
     }
 
     private function presentBreachRow(Ticket $t): array
